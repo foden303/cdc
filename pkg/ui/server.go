@@ -78,7 +78,7 @@ func (s *Server) handleInspect(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Queue is nil", http.StatusInternalServerError)
 		return
 	}
-	events, err := s.queue.InspectRaw(0, 100) // Top 100 from partition 0
+	events, err := s.queue.InspectRaw(0, 0, 100) // Top 100 from partition 0, start from offset 0
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

@@ -38,7 +38,7 @@ func (s *GRPCService) ListTopics(_ context.Context, _ *cdcpb.ListTopicsRequest) 
 
 	for _, id := range ids {
 
-		msgs, _ := s.manager.InspectRaw(id, 1)
+		msgs, _ := s.manager.InspectRaw(id, 0, 1)
 		topicName := "default"
 
 		if len(msgs) > 0 && len(msgs[0].Key) > 0 {
@@ -128,7 +128,7 @@ func (s *GRPCService) GetMessages(_ context.Context, req *cdcpb.GetMessagesReque
 		// Global view: fetch from all partitions and sort by timestamp
 		ids := s.manager.GetPartitionIDs()
 		for _, id := range ids {
-			msgs, _ := s.manager.InspectRaw(id, limit)
+			msgs, _ := s.manager.InspectRaw(id, 0, limit)
 			allMsgs = append(allMsgs, msgs...)
 		}
 
@@ -144,7 +144,7 @@ func (s *GRPCService) GetMessages(_ context.Context, req *cdcpb.GetMessagesReque
 	} else {
 		// Single partition view
 		partID := int(*req.PartitionId)
-		msgs, err := s.manager.InspectRaw(partID, limit)
+		msgs, err := s.manager.InspectRaw(partID, 0, limit)
 		if err != nil {
 			return nil, err
 		}
@@ -222,8 +222,8 @@ func (s *GRPCService) GetConfig(_ context.Context, _ *cdcpb.GetConfigRequest) (*
 
 func (s *GRPCService) partitionSummary(id int) *cdcpb.PartitionSummary {
 
-	q, err := s.manager.GetPartition(id)
-	if err != nil {
+	q := s.manager.GetPartition(id)
+	if q == nil {
 		return &cdcpb.PartitionSummary{Id: int32(id)}
 	}
 

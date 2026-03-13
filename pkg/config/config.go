@@ -15,6 +15,7 @@ type Config struct {
 	WAL      WALConfig      `mapstructure:"wal"`
 	UI       UIConfig       `mapstructure:"ui"`
 	Server   ServerConfig   `mapstructure:"server"`
+	Cluster  ClusterConfig  `mapstructure:"cluster"`
 	Sinks    []SinkConfig   `mapstructure:"sinks"`
 }
 
@@ -40,9 +41,12 @@ type PipelineConfig struct {
 
 // WALConfig holds the configuration for the Write-Ahead Log queue.
 type WALConfig struct {
-	Dir            string `mapstructure:"dir"`
-	MaxSegmentSize int64  `mapstructure:"max_segment_size"`
-	RetentionHours int    `mapstructure:"retention_hours"`
+	Dir             string `mapstructure:"dir"`
+	Partitions      int    `mapstructure:"partitions"`
+	MaxSegmentSize  int64  `mapstructure:"max_segment_size"`
+	RetentionHours  int    `mapstructure:"retention_hours"`
+	IndexInterval   int64  `mapstructure:"index_interval"`
+	MaxOpenSegments int    `mapstructure:"max_open_segments"`
 }
 
 // UIConfig holds the configuration for the HTTP UI Server.
@@ -55,6 +59,20 @@ type UIConfig struct {
 type ServerConfig struct {
 	GRPCPort int `mapstructure:"grpc_port"`
 	HTTPPort int `mapstructure:"http_port"`
+}
+
+// ClusterConfig holds Raft cluster configuration.
+type ClusterConfig struct {
+	Enabled                    bool     `mapstructure:"enabled"`
+	NodeID                     string   `mapstructure:"node_id"`
+	BindAddr                   string   `mapstructure:"bind_addr"`
+	DataDir                    string   `mapstructure:"data_dir"`
+	Bootstrap                  bool     `mapstructure:"bootstrap"` // true for initial leader
+	Peers                      []string `mapstructure:"peers"`
+	RaftTimeoutMs              int      `mapstructure:"raft_timeout_ms"`
+	SnapshotRetention          int      `mapstructure:"snapshot_retention"`
+	SnapshotCompressionEnabled bool     `mapstructure:"snapshot_compression_enabled"`
+	ProposalQueueSize          int      `mapstructure:"proposal_queue_size"`
 }
 
 // SinkConfig holds the configuration for the CDC sink.
@@ -114,11 +132,20 @@ func (c *Config) applyDefaults() {
 	if c.WAL.Dir == "" {
 		c.WAL.Dir = "./data/wal"
 	}
+	if c.WAL.Partitions <= 0 {
+		c.WAL.Partitions = 4
+	}
 	if c.WAL.MaxSegmentSize <= 0 {
 		c.WAL.MaxSegmentSize = 10 * 1024 * 1024 // 10MB default
 	}
 	if c.WAL.RetentionHours <= 0 {
 		c.WAL.RetentionHours = 24
+	}
+	if c.WAL.IndexInterval <= 0 {
+		c.WAL.IndexInterval = 4096 // 4KB default
+	}
+	if c.WAL.MaxOpenSegments <= 0 {
+		c.WAL.MaxOpenSegments = 10
 	}
 	if c.UI.Port <= 0 {
 		c.UI.Port = 8080
@@ -128,6 +155,23 @@ func (c *Config) applyDefaults() {
 	}
 	if c.Server.HTTPPort <= 0 {
 		c.Server.HTTPPort = 8080
+	}
+	if c.Cluster.Enabled {
+		if c.Cluster.DataDir == "" {
+			c.Cluster.DataDir = "./data/raft"
+		}
+		if c.Cluster.BindAddr == "" {
+			c.Cluster.BindAddr = "127.0.0.1:7000"
+		}
+		if c.Cluster.RaftTimeoutMs <= 0 {
+			c.Cluster.RaftTimeoutMs = 10000 // 10s default
+		}
+		if c.Cluster.SnapshotRetention <= 0 {
+			c.Cluster.SnapshotRetention = 2
+		}
+		if c.Cluster.ProposalQueueSize <= 0 {
+			c.Cluster.ProposalQueueSize = 1000
+		}
 	}
 	for i := range c.Sinks {
 		if c.Sinks[i].BatchSize <= 0 {

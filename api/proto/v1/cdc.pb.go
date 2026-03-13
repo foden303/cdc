@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.11
 // 	protoc        v3.12.4
-// source: api/proto/v1/cdc.proto
+// source: cdc.proto
 
 package cdcpb
 
@@ -31,7 +31,7 @@ type GetConfigRequest struct {
 
 func (x *GetConfigRequest) Reset() {
 	*x = GetConfigRequest{}
-	mi := &file_api_proto_v1_cdc_proto_msgTypes[0]
+	mi := &file_cdc_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -43,7 +43,7 @@ func (x *GetConfigRequest) String() string {
 func (*GetConfigRequest) ProtoMessage() {}
 
 func (x *GetConfigRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_v1_cdc_proto_msgTypes[0]
+	mi := &file_cdc_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -56,7 +56,7 @@ func (x *GetConfigRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetConfigRequest.ProtoReflect.Descriptor instead.
 func (*GetConfigRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_v1_cdc_proto_rawDescGZIP(), []int{0}
+	return file_cdc_proto_rawDescGZIP(), []int{0}
 }
 
 type GetConfigResponse struct {
@@ -70,7 +70,7 @@ type GetConfigResponse struct {
 
 func (x *GetConfigResponse) Reset() {
 	*x = GetConfigResponse{}
-	mi := &file_api_proto_v1_cdc_proto_msgTypes[1]
+	mi := &file_cdc_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -82,7 +82,7 @@ func (x *GetConfigResponse) String() string {
 func (*GetConfigResponse) ProtoMessage() {}
 
 func (x *GetConfigResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_v1_cdc_proto_msgTypes[1]
+	mi := &file_cdc_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -95,7 +95,7 @@ func (x *GetConfigResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetConfigResponse.ProtoReflect.Descriptor instead.
 func (*GetConfigResponse) Descriptor() ([]byte, []int) {
-	return file_api_proto_v1_cdc_proto_rawDescGZIP(), []int{1}
+	return file_cdc_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *GetConfigResponse) GetConfig() *AppConfig {
@@ -131,7 +131,7 @@ type AppConfig struct {
 
 func (x *AppConfig) Reset() {
 	*x = AppConfig{}
-	mi := &file_api_proto_v1_cdc_proto_msgTypes[2]
+	mi := &file_cdc_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -143,7 +143,7 @@ func (x *AppConfig) String() string {
 func (*AppConfig) ProtoMessage() {}
 
 func (x *AppConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_v1_cdc_proto_msgTypes[2]
+	mi := &file_cdc_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -156,7 +156,7 @@ func (x *AppConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AppConfig.ProtoReflect.Descriptor instead.
 func (*AppConfig) Descriptor() ([]byte, []int) {
-	return file_api_proto_v1_cdc_proto_rawDescGZIP(), []int{2}
+	return file_cdc_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *AppConfig) GetName() string {
@@ -200,7 +200,7 @@ type SourceConfig struct {
 
 func (x *SourceConfig) Reset() {
 	*x = SourceConfig{}
-	mi := &file_api_proto_v1_cdc_proto_msgTypes[3]
+	mi := &file_cdc_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -212,7 +212,7 @@ func (x *SourceConfig) String() string {
 func (*SourceConfig) ProtoMessage() {}
 
 func (x *SourceConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_v1_cdc_proto_msgTypes[3]
+	mi := &file_cdc_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -225,7 +225,7 @@ func (x *SourceConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SourceConfig.ProtoReflect.Descriptor instead.
 func (*SourceConfig) Descriptor() ([]byte, []int) {
-	return file_api_proto_v1_cdc_proto_rawDescGZIP(), []int{3}
+	return file_cdc_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *SourceConfig) GetType() string {
@@ -274,7 +274,7 @@ type SinkConfig struct {
 
 func (x *SinkConfig) Reset() {
 	*x = SinkConfig{}
-	mi := &file_api_proto_v1_cdc_proto_msgTypes[4]
+	mi := &file_cdc_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -286,7 +286,7 @@ func (x *SinkConfig) String() string {
 func (*SinkConfig) ProtoMessage() {}
 
 func (x *SinkConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_v1_cdc_proto_msgTypes[4]
+	mi := &file_cdc_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -299,7 +299,7 @@ func (x *SinkConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SinkConfig.ProtoReflect.Descriptor instead.
 func (*SinkConfig) Descriptor() ([]byte, []int) {
-	return file_api_proto_v1_cdc_proto_rawDescGZIP(), []int{4}
+	return file_cdc_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *SinkConfig) GetType() string {
@@ -332,7 +332,7 @@ type ListTopicsRequest struct {
 
 func (x *ListTopicsRequest) Reset() {
 	*x = ListTopicsRequest{}
-	mi := &file_api_proto_v1_cdc_proto_msgTypes[5]
+	mi := &file_cdc_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -344,7 +344,7 @@ func (x *ListTopicsRequest) String() string {
 func (*ListTopicsRequest) ProtoMessage() {}
 
 func (x *ListTopicsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_v1_cdc_proto_msgTypes[5]
+	mi := &file_cdc_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -357,7 +357,7 @@ func (x *ListTopicsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListTopicsRequest.ProtoReflect.Descriptor instead.
 func (*ListTopicsRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_v1_cdc_proto_rawDescGZIP(), []int{5}
+	return file_cdc_proto_rawDescGZIP(), []int{5}
 }
 
 type ListTopicsResponse struct {
@@ -369,7 +369,7 @@ type ListTopicsResponse struct {
 
 func (x *ListTopicsResponse) Reset() {
 	*x = ListTopicsResponse{}
-	mi := &file_api_proto_v1_cdc_proto_msgTypes[6]
+	mi := &file_cdc_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -381,7 +381,7 @@ func (x *ListTopicsResponse) String() string {
 func (*ListTopicsResponse) ProtoMessage() {}
 
 func (x *ListTopicsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_v1_cdc_proto_msgTypes[6]
+	mi := &file_cdc_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -394,7 +394,7 @@ func (x *ListTopicsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListTopicsResponse.ProtoReflect.Descriptor instead.
 func (*ListTopicsResponse) Descriptor() ([]byte, []int) {
-	return file_api_proto_v1_cdc_proto_rawDescGZIP(), []int{6}
+	return file_cdc_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *ListTopicsResponse) GetTopics() []*TopicSummary {
@@ -415,7 +415,7 @@ type TopicSummary struct {
 
 func (x *TopicSummary) Reset() {
 	*x = TopicSummary{}
-	mi := &file_api_proto_v1_cdc_proto_msgTypes[7]
+	mi := &file_cdc_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -427,7 +427,7 @@ func (x *TopicSummary) String() string {
 func (*TopicSummary) ProtoMessage() {}
 
 func (x *TopicSummary) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_v1_cdc_proto_msgTypes[7]
+	mi := &file_cdc_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -440,7 +440,7 @@ func (x *TopicSummary) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TopicSummary.ProtoReflect.Descriptor instead.
 func (*TopicSummary) Descriptor() ([]byte, []int) {
-	return file_api_proto_v1_cdc_proto_rawDescGZIP(), []int{7}
+	return file_cdc_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *TopicSummary) GetName() string {
@@ -473,7 +473,7 @@ type GetTopicRequest struct {
 
 func (x *GetTopicRequest) Reset() {
 	*x = GetTopicRequest{}
-	mi := &file_api_proto_v1_cdc_proto_msgTypes[8]
+	mi := &file_cdc_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -485,7 +485,7 @@ func (x *GetTopicRequest) String() string {
 func (*GetTopicRequest) ProtoMessage() {}
 
 func (x *GetTopicRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_v1_cdc_proto_msgTypes[8]
+	mi := &file_cdc_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -498,7 +498,7 @@ func (x *GetTopicRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetTopicRequest.ProtoReflect.Descriptor instead.
 func (*GetTopicRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_v1_cdc_proto_rawDescGZIP(), []int{8}
+	return file_cdc_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *GetTopicRequest) GetName() string {
@@ -520,7 +520,7 @@ type TopicDetail struct {
 
 func (x *TopicDetail) Reset() {
 	*x = TopicDetail{}
-	mi := &file_api_proto_v1_cdc_proto_msgTypes[9]
+	mi := &file_cdc_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -532,7 +532,7 @@ func (x *TopicDetail) String() string {
 func (*TopicDetail) ProtoMessage() {}
 
 func (x *TopicDetail) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_v1_cdc_proto_msgTypes[9]
+	mi := &file_cdc_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -545,7 +545,7 @@ func (x *TopicDetail) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TopicDetail.ProtoReflect.Descriptor instead.
 func (*TopicDetail) Descriptor() ([]byte, []int) {
-	return file_api_proto_v1_cdc_proto_rawDescGZIP(), []int{9}
+	return file_cdc_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *TopicDetail) GetName() string {
@@ -586,7 +586,7 @@ type ListPartitionsRequest struct {
 
 func (x *ListPartitionsRequest) Reset() {
 	*x = ListPartitionsRequest{}
-	mi := &file_api_proto_v1_cdc_proto_msgTypes[10]
+	mi := &file_cdc_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -598,7 +598,7 @@ func (x *ListPartitionsRequest) String() string {
 func (*ListPartitionsRequest) ProtoMessage() {}
 
 func (x *ListPartitionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_v1_cdc_proto_msgTypes[10]
+	mi := &file_cdc_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -611,7 +611,7 @@ func (x *ListPartitionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPartitionsRequest.ProtoReflect.Descriptor instead.
 func (*ListPartitionsRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_v1_cdc_proto_rawDescGZIP(), []int{10}
+	return file_cdc_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ListPartitionsRequest) GetTopic() string {
@@ -630,7 +630,7 @@ type ListPartitionsResponse struct {
 
 func (x *ListPartitionsResponse) Reset() {
 	*x = ListPartitionsResponse{}
-	mi := &file_api_proto_v1_cdc_proto_msgTypes[11]
+	mi := &file_cdc_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -642,7 +642,7 @@ func (x *ListPartitionsResponse) String() string {
 func (*ListPartitionsResponse) ProtoMessage() {}
 
 func (x *ListPartitionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_v1_cdc_proto_msgTypes[11]
+	mi := &file_cdc_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -655,7 +655,7 @@ func (x *ListPartitionsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPartitionsResponse.ProtoReflect.Descriptor instead.
 func (*ListPartitionsResponse) Descriptor() ([]byte, []int) {
-	return file_api_proto_v1_cdc_proto_rawDescGZIP(), []int{11}
+	return file_cdc_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *ListPartitionsResponse) GetPartitions() []*PartitionSummary {
@@ -678,7 +678,7 @@ type PartitionSummary struct {
 
 func (x *PartitionSummary) Reset() {
 	*x = PartitionSummary{}
-	mi := &file_api_proto_v1_cdc_proto_msgTypes[12]
+	mi := &file_cdc_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -690,7 +690,7 @@ func (x *PartitionSummary) String() string {
 func (*PartitionSummary) ProtoMessage() {}
 
 func (x *PartitionSummary) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_v1_cdc_proto_msgTypes[12]
+	mi := &file_cdc_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -703,7 +703,7 @@ func (x *PartitionSummary) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PartitionSummary.ProtoReflect.Descriptor instead.
 func (*PartitionSummary) Descriptor() ([]byte, []int) {
-	return file_api_proto_v1_cdc_proto_rawDescGZIP(), []int{12}
+	return file_cdc_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *PartitionSummary) GetId() int32 {
@@ -751,7 +751,7 @@ type GetPartitionRequest struct {
 
 func (x *GetPartitionRequest) Reset() {
 	*x = GetPartitionRequest{}
-	mi := &file_api_proto_v1_cdc_proto_msgTypes[13]
+	mi := &file_cdc_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -763,7 +763,7 @@ func (x *GetPartitionRequest) String() string {
 func (*GetPartitionRequest) ProtoMessage() {}
 
 func (x *GetPartitionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_v1_cdc_proto_msgTypes[13]
+	mi := &file_cdc_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -776,7 +776,7 @@ func (x *GetPartitionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPartitionRequest.ProtoReflect.Descriptor instead.
 func (*GetPartitionRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_v1_cdc_proto_rawDescGZIP(), []int{13}
+	return file_cdc_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *GetPartitionRequest) GetTopic() string {
@@ -807,7 +807,7 @@ type PartitionDetail struct {
 
 func (x *PartitionDetail) Reset() {
 	*x = PartitionDetail{}
-	mi := &file_api_proto_v1_cdc_proto_msgTypes[14]
+	mi := &file_cdc_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -819,7 +819,7 @@ func (x *PartitionDetail) String() string {
 func (*PartitionDetail) ProtoMessage() {}
 
 func (x *PartitionDetail) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_v1_cdc_proto_msgTypes[14]
+	mi := &file_cdc_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -832,7 +832,7 @@ func (x *PartitionDetail) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PartitionDetail.ProtoReflect.Descriptor instead.
 func (*PartitionDetail) Descriptor() ([]byte, []int) {
-	return file_api_proto_v1_cdc_proto_rawDescGZIP(), []int{14}
+	return file_cdc_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *PartitionDetail) GetId() int32 {
@@ -887,7 +887,7 @@ type SegmentInfo struct {
 
 func (x *SegmentInfo) Reset() {
 	*x = SegmentInfo{}
-	mi := &file_api_proto_v1_cdc_proto_msgTypes[15]
+	mi := &file_cdc_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -899,7 +899,7 @@ func (x *SegmentInfo) String() string {
 func (*SegmentInfo) ProtoMessage() {}
 
 func (x *SegmentInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_v1_cdc_proto_msgTypes[15]
+	mi := &file_cdc_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -912,7 +912,7 @@ func (x *SegmentInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SegmentInfo.ProtoReflect.Descriptor instead.
 func (*SegmentInfo) Descriptor() ([]byte, []int) {
-	return file_api_proto_v1_cdc_proto_rawDescGZIP(), []int{15}
+	return file_cdc_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *SegmentInfo) GetBaseOffset() uint64 {
@@ -941,7 +941,7 @@ type GetMessagesRequest struct {
 
 func (x *GetMessagesRequest) Reset() {
 	*x = GetMessagesRequest{}
-	mi := &file_api_proto_v1_cdc_proto_msgTypes[16]
+	mi := &file_cdc_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -953,7 +953,7 @@ func (x *GetMessagesRequest) String() string {
 func (*GetMessagesRequest) ProtoMessage() {}
 
 func (x *GetMessagesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_v1_cdc_proto_msgTypes[16]
+	mi := &file_cdc_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -966,7 +966,7 @@ func (x *GetMessagesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMessagesRequest.ProtoReflect.Descriptor instead.
 func (*GetMessagesRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_v1_cdc_proto_rawDescGZIP(), []int{16}
+	return file_cdc_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *GetMessagesRequest) GetPartitionId() int32 {
@@ -999,7 +999,7 @@ type GetMessagesResponse struct {
 
 func (x *GetMessagesResponse) Reset() {
 	*x = GetMessagesResponse{}
-	mi := &file_api_proto_v1_cdc_proto_msgTypes[17]
+	mi := &file_cdc_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1011,7 +1011,7 @@ func (x *GetMessagesResponse) String() string {
 func (*GetMessagesResponse) ProtoMessage() {}
 
 func (x *GetMessagesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_v1_cdc_proto_msgTypes[17]
+	mi := &file_cdc_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1024,7 +1024,7 @@ func (x *GetMessagesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMessagesResponse.ProtoReflect.Descriptor instead.
 func (*GetMessagesResponse) Descriptor() ([]byte, []int) {
-	return file_api_proto_v1_cdc_proto_rawDescGZIP(), []int{17}
+	return file_cdc_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *GetMessagesResponse) GetMessages() []*MessageItem {
@@ -1046,7 +1046,7 @@ type MessageItem struct {
 
 func (x *MessageItem) Reset() {
 	*x = MessageItem{}
-	mi := &file_api_proto_v1_cdc_proto_msgTypes[18]
+	mi := &file_cdc_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1058,7 +1058,7 @@ func (x *MessageItem) String() string {
 func (*MessageItem) ProtoMessage() {}
 
 func (x *MessageItem) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_v1_cdc_proto_msgTypes[18]
+	mi := &file_cdc_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1071,7 +1071,7 @@ func (x *MessageItem) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MessageItem.ProtoReflect.Descriptor instead.
 func (*MessageItem) Descriptor() ([]byte, []int) {
-	return file_api_proto_v1_cdc_proto_rawDescGZIP(), []int{18}
+	return file_cdc_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *MessageItem) GetOffset() uint64 {
@@ -1111,7 +1111,7 @@ type GetStatsRequest struct {
 
 func (x *GetStatsRequest) Reset() {
 	*x = GetStatsRequest{}
-	mi := &file_api_proto_v1_cdc_proto_msgTypes[19]
+	mi := &file_cdc_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1123,7 +1123,7 @@ func (x *GetStatsRequest) String() string {
 func (*GetStatsRequest) ProtoMessage() {}
 
 func (x *GetStatsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_v1_cdc_proto_msgTypes[19]
+	mi := &file_cdc_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1136,7 +1136,7 @@ func (x *GetStatsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetStatsRequest.ProtoReflect.Descriptor instead.
 func (*GetStatsRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_v1_cdc_proto_rawDescGZIP(), []int{19}
+	return file_cdc_proto_rawDescGZIP(), []int{19}
 }
 
 type StatsResponse struct {
@@ -1153,7 +1153,7 @@ type StatsResponse struct {
 
 func (x *StatsResponse) Reset() {
 	*x = StatsResponse{}
-	mi := &file_api_proto_v1_cdc_proto_msgTypes[20]
+	mi := &file_cdc_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1165,7 +1165,7 @@ func (x *StatsResponse) String() string {
 func (*StatsResponse) ProtoMessage() {}
 
 func (x *StatsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_v1_cdc_proto_msgTypes[20]
+	mi := &file_cdc_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1178,7 +1178,7 @@ func (x *StatsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StatsResponse.ProtoReflect.Descriptor instead.
 func (*StatsResponse) Descriptor() ([]byte, []int) {
-	return file_api_proto_v1_cdc_proto_rawDescGZIP(), []int{20}
+	return file_cdc_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *StatsResponse) GetTotalEnqueued() uint64 {
@@ -1231,7 +1231,7 @@ type HealthCheckRequest struct {
 
 func (x *HealthCheckRequest) Reset() {
 	*x = HealthCheckRequest{}
-	mi := &file_api_proto_v1_cdc_proto_msgTypes[21]
+	mi := &file_cdc_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1243,7 +1243,7 @@ func (x *HealthCheckRequest) String() string {
 func (*HealthCheckRequest) ProtoMessage() {}
 
 func (x *HealthCheckRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_v1_cdc_proto_msgTypes[21]
+	mi := &file_cdc_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1256,7 +1256,7 @@ func (x *HealthCheckRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HealthCheckRequest.ProtoReflect.Descriptor instead.
 func (*HealthCheckRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_v1_cdc_proto_rawDescGZIP(), []int{21}
+	return file_cdc_proto_rawDescGZIP(), []int{21}
 }
 
 type HealthCheckResponse struct {
@@ -1270,7 +1270,7 @@ type HealthCheckResponse struct {
 
 func (x *HealthCheckResponse) Reset() {
 	*x = HealthCheckResponse{}
-	mi := &file_api_proto_v1_cdc_proto_msgTypes[22]
+	mi := &file_cdc_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1282,7 +1282,7 @@ func (x *HealthCheckResponse) String() string {
 func (*HealthCheckResponse) ProtoMessage() {}
 
 func (x *HealthCheckResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_v1_cdc_proto_msgTypes[22]
+	mi := &file_cdc_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1295,7 +1295,7 @@ func (x *HealthCheckResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HealthCheckResponse.ProtoReflect.Descriptor instead.
 func (*HealthCheckResponse) Descriptor() ([]byte, []int) {
-	return file_api_proto_v1_cdc_proto_rawDescGZIP(), []int{22}
+	return file_cdc_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *HealthCheckResponse) GetStatus() string {
@@ -1319,11 +1319,632 @@ func (x *HealthCheckResponse) GetUptime() int64 {
 	return 0
 }
 
-var File_api_proto_v1_cdc_proto protoreflect.FileDescriptor
+// Messages for Sink Consumer Service
+type ProtoSinkConfig struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Type          string                 `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`
+	Config        map[string]string      `protobuf:"bytes,2,rep,name=config,proto3" json:"config,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
 
-const file_api_proto_v1_cdc_proto_rawDesc = "" +
+func (x *ProtoSinkConfig) Reset() {
+	*x = ProtoSinkConfig{}
+	mi := &file_cdc_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ProtoSinkConfig) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ProtoSinkConfig) ProtoMessage() {}
+
+func (x *ProtoSinkConfig) ProtoReflect() protoreflect.Message {
+	mi := &file_cdc_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ProtoSinkConfig.ProtoReflect.Descriptor instead.
+func (*ProtoSinkConfig) Descriptor() ([]byte, []int) {
+	return file_cdc_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *ProtoSinkConfig) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *ProtoSinkConfig) GetConfig() map[string]string {
+	if x != nil {
+		return x.Config
+	}
+	return nil
+}
+
+type CreateConsumerRequest struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Name            string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	TopicName       string                 `protobuf:"bytes,2,opt,name=topic_name,json=topicName,proto3" json:"topic_name,omitempty"`
+	Partitions      []int32                `protobuf:"varint,3,rep,packed,name=partitions,proto3" json:"partitions,omitempty"`
+	Sinks           []*ProtoSinkConfig     `protobuf:"bytes,4,rep,name=sinks,proto3" json:"sinks,omitempty"`
+	BatchSize       int32                  `protobuf:"varint,5,opt,name=batch_size,json=batchSize,proto3" json:"batch_size,omitempty"`
+	FlushIntervalMs int32                  `protobuf:"varint,6,opt,name=flush_interval_ms,json=flushIntervalMs,proto3" json:"flush_interval_ms,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *CreateConsumerRequest) Reset() {
+	*x = CreateConsumerRequest{}
+	mi := &file_cdc_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateConsumerRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateConsumerRequest) ProtoMessage() {}
+
+func (x *CreateConsumerRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_cdc_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateConsumerRequest.ProtoReflect.Descriptor instead.
+func (*CreateConsumerRequest) Descriptor() ([]byte, []int) {
+	return file_cdc_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *CreateConsumerRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *CreateConsumerRequest) GetTopicName() string {
+	if x != nil {
+		return x.TopicName
+	}
+	return ""
+}
+
+func (x *CreateConsumerRequest) GetPartitions() []int32 {
+	if x != nil {
+		return x.Partitions
+	}
+	return nil
+}
+
+func (x *CreateConsumerRequest) GetSinks() []*ProtoSinkConfig {
+	if x != nil {
+		return x.Sinks
+	}
+	return nil
+}
+
+func (x *CreateConsumerRequest) GetBatchSize() int32 {
+	if x != nil {
+		return x.BatchSize
+	}
+	return 0
+}
+
+func (x *CreateConsumerRequest) GetFlushIntervalMs() int32 {
+	if x != nil {
+		return x.FlushIntervalMs
+	}
+	return 0
+}
+
+type CreateConsumerResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Stats         *ProtoConsumerStats    `protobuf:"bytes,3,opt,name=stats,proto3" json:"stats,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateConsumerResponse) Reset() {
+	*x = CreateConsumerResponse{}
+	mi := &file_cdc_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateConsumerResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateConsumerResponse) ProtoMessage() {}
+
+func (x *CreateConsumerResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_cdc_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateConsumerResponse.ProtoReflect.Descriptor instead.
+func (*CreateConsumerResponse) Descriptor() ([]byte, []int) {
+	return file_cdc_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *CreateConsumerResponse) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *CreateConsumerResponse) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *CreateConsumerResponse) GetStats() *ProtoConsumerStats {
+	if x != nil {
+		return x.Stats
+	}
+	return nil
+}
+
+type ListConsumersRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListConsumersRequest) Reset() {
+	*x = ListConsumersRequest{}
+	mi := &file_cdc_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListConsumersRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListConsumersRequest) ProtoMessage() {}
+
+func (x *ListConsumersRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_cdc_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListConsumersRequest.ProtoReflect.Descriptor instead.
+func (*ListConsumersRequest) Descriptor() ([]byte, []int) {
+	return file_cdc_proto_rawDescGZIP(), []int{26}
+}
+
+type ListConsumersResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Consumers     []*ProtoConsumerStats  `protobuf:"bytes,1,rep,name=consumers,proto3" json:"consumers,omitempty"`
+	Total         int32                  `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListConsumersResponse) Reset() {
+	*x = ListConsumersResponse{}
+	mi := &file_cdc_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListConsumersResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListConsumersResponse) ProtoMessage() {}
+
+func (x *ListConsumersResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_cdc_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListConsumersResponse.ProtoReflect.Descriptor instead.
+func (*ListConsumersResponse) Descriptor() ([]byte, []int) {
+	return file_cdc_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *ListConsumersResponse) GetConsumers() []*ProtoConsumerStats {
+	if x != nil {
+		return x.Consumers
+	}
+	return nil
+}
+
+func (x *ListConsumersResponse) GetTotal() int32 {
+	if x != nil {
+		return x.Total
+	}
+	return 0
+}
+
+type GetConsumerRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetConsumerRequest) Reset() {
+	*x = GetConsumerRequest{}
+	mi := &file_cdc_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetConsumerRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetConsumerRequest) ProtoMessage() {}
+
+func (x *GetConsumerRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_cdc_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetConsumerRequest.ProtoReflect.Descriptor instead.
+func (*GetConsumerRequest) Descriptor() ([]byte, []int) {
+	return file_cdc_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *GetConsumerRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type DeleteConsumerRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteConsumerRequest) Reset() {
+	*x = DeleteConsumerRequest{}
+	mi := &file_cdc_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteConsumerRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteConsumerRequest) ProtoMessage() {}
+
+func (x *DeleteConsumerRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_cdc_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteConsumerRequest.ProtoReflect.Descriptor instead.
+func (*DeleteConsumerRequest) Descriptor() ([]byte, []int) {
+	return file_cdc_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *DeleteConsumerRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type DeleteConsumerResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Message       string                 `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteConsumerResponse) Reset() {
+	*x = DeleteConsumerResponse{}
+	mi := &file_cdc_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteConsumerResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteConsumerResponse) ProtoMessage() {}
+
+func (x *DeleteConsumerResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_cdc_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteConsumerResponse.ProtoReflect.Descriptor instead.
+func (*DeleteConsumerResponse) Descriptor() ([]byte, []int) {
+	return file_cdc_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *DeleteConsumerResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+type PauseConsumerRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PauseConsumerRequest) Reset() {
+	*x = PauseConsumerRequest{}
+	mi := &file_cdc_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PauseConsumerRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PauseConsumerRequest) ProtoMessage() {}
+
+func (x *PauseConsumerRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_cdc_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PauseConsumerRequest.ProtoReflect.Descriptor instead.
+func (*PauseConsumerRequest) Descriptor() ([]byte, []int) {
+	return file_cdc_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *PauseConsumerRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type ResumeConsumerRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ResumeConsumerRequest) Reset() {
+	*x = ResumeConsumerRequest{}
+	mi := &file_cdc_proto_msgTypes[32]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResumeConsumerRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResumeConsumerRequest) ProtoMessage() {}
+
+func (x *ResumeConsumerRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_cdc_proto_msgTypes[32]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResumeConsumerRequest.ProtoReflect.Descriptor instead.
+func (*ResumeConsumerRequest) Descriptor() ([]byte, []int) {
+	return file_cdc_proto_rawDescGZIP(), []int{32}
+}
+
+func (x *ResumeConsumerRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type ProtoConsumerStats struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name           string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	TopicName      string                 `protobuf:"bytes,3,opt,name=topic_name,json=topicName,proto3" json:"topic_name,omitempty"`
+	Status         string                 `protobuf:"bytes,4,opt,name=status,proto3" json:"status,omitempty"`
+	TotalProcessed uint64                 `protobuf:"varint,5,opt,name=total_processed,json=totalProcessed,proto3" json:"total_processed,omitempty"`
+	TotalErrors    uint64                 `protobuf:"varint,6,opt,name=total_errors,json=totalErrors,proto3" json:"total_errors,omitempty"`
+	LastOffset     map[int32]uint64       `protobuf:"bytes,7,rep,name=last_offset,json=lastOffset,proto3" json:"last_offset,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
+	LastUpdated    int64                  `protobuf:"varint,8,opt,name=last_updated,json=lastUpdated,proto3" json:"last_updated,omitempty"`
+	UpSince        int64                  `protobuf:"varint,9,opt,name=up_since,json=upSince,proto3" json:"up_since,omitempty"`
+	Sinks          []string               `protobuf:"bytes,10,rep,name=sinks,proto3" json:"sinks,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ProtoConsumerStats) Reset() {
+	*x = ProtoConsumerStats{}
+	mi := &file_cdc_proto_msgTypes[33]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ProtoConsumerStats) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ProtoConsumerStats) ProtoMessage() {}
+
+func (x *ProtoConsumerStats) ProtoReflect() protoreflect.Message {
+	mi := &file_cdc_proto_msgTypes[33]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ProtoConsumerStats.ProtoReflect.Descriptor instead.
+func (*ProtoConsumerStats) Descriptor() ([]byte, []int) {
+	return file_cdc_proto_rawDescGZIP(), []int{33}
+}
+
+func (x *ProtoConsumerStats) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ProtoConsumerStats) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *ProtoConsumerStats) GetTopicName() string {
+	if x != nil {
+		return x.TopicName
+	}
+	return ""
+}
+
+func (x *ProtoConsumerStats) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *ProtoConsumerStats) GetTotalProcessed() uint64 {
+	if x != nil {
+		return x.TotalProcessed
+	}
+	return 0
+}
+
+func (x *ProtoConsumerStats) GetTotalErrors() uint64 {
+	if x != nil {
+		return x.TotalErrors
+	}
+	return 0
+}
+
+func (x *ProtoConsumerStats) GetLastOffset() map[int32]uint64 {
+	if x != nil {
+		return x.LastOffset
+	}
+	return nil
+}
+
+func (x *ProtoConsumerStats) GetLastUpdated() int64 {
+	if x != nil {
+		return x.LastUpdated
+	}
+	return 0
+}
+
+func (x *ProtoConsumerStats) GetUpSince() int64 {
+	if x != nil {
+		return x.UpSince
+	}
+	return 0
+}
+
+func (x *ProtoConsumerStats) GetSinks() []string {
+	if x != nil {
+		return x.Sinks
+	}
+	return nil
+}
+
+var File_cdc_proto protoreflect.FileDescriptor
+
+const file_cdc_proto_rawDesc = "" +
 	"\n" +
-	"\x16api/proto/v1/cdc.proto\x12\x06cdc.v1\x1a\x1cgoogle/api/annotations.proto\"\x12\n" +
+	"\tcdc.proto\x12\x06cdc.v1\x1a\x1cgoogle/api/annotations.proto\"\x12\n" +
 	"\x10GetConfigRequest\"\x94\x01\n" +
 	"\x11GetConfigResponse\x12)\n" +
 	"\x06config\x18\x01 \x01(\v2\x11.cdc.v1.AppConfigR\x06config\x12+\n" +
@@ -1414,7 +2035,59 @@ const file_api_proto_v1_cdc_proto_rawDesc = "" +
 	"\x13HealthCheckResponse\x12\x16\n" +
 	"\x06status\x18\x01 \x01(\tR\x06status\x12\x18\n" +
 	"\aversion\x18\x02 \x01(\tR\aversion\x12\x16\n" +
-	"\x06uptime\x18\x03 \x01(\x03R\x06uptime2\x85\x06\n" +
+	"\x06uptime\x18\x03 \x01(\x03R\x06uptime\"\x9d\x01\n" +
+	"\x0fProtoSinkConfig\x12\x12\n" +
+	"\x04type\x18\x01 \x01(\tR\x04type\x12;\n" +
+	"\x06config\x18\x02 \x03(\v2#.cdc.v1.ProtoSinkConfig.ConfigEntryR\x06config\x1a9\n" +
+	"\vConfigEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xe4\x01\n" +
+	"\x15CreateConsumerRequest\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1d\n" +
+	"\n" +
+	"topic_name\x18\x02 \x01(\tR\ttopicName\x12\x1e\n" +
+	"\n" +
+	"partitions\x18\x03 \x03(\x05R\n" +
+	"partitions\x12-\n" +
+	"\x05sinks\x18\x04 \x03(\v2\x17.cdc.v1.ProtoSinkConfigR\x05sinks\x12\x1d\n" +
+	"\n" +
+	"batch_size\x18\x05 \x01(\x05R\tbatchSize\x12*\n" +
+	"\x11flush_interval_ms\x18\x06 \x01(\x05R\x0fflushIntervalMs\"n\n" +
+	"\x16CreateConsumerResponse\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x120\n" +
+	"\x05stats\x18\x03 \x01(\v2\x1a.cdc.v1.ProtoConsumerStatsR\x05stats\"\x16\n" +
+	"\x14ListConsumersRequest\"g\n" +
+	"\x15ListConsumersResponse\x128\n" +
+	"\tconsumers\x18\x01 \x03(\v2\x1a.cdc.v1.ProtoConsumerStatsR\tconsumers\x12\x14\n" +
+	"\x05total\x18\x02 \x01(\x05R\x05total\"$\n" +
+	"\x12GetConsumerRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"'\n" +
+	"\x15DeleteConsumerRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"2\n" +
+	"\x16DeleteConsumerResponse\x12\x18\n" +
+	"\amessage\x18\x01 \x01(\tR\amessage\"&\n" +
+	"\x14PauseConsumerRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"'\n" +
+	"\x15ResumeConsumerRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\x9b\x03\n" +
+	"\x12ProtoConsumerStats\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1d\n" +
+	"\n" +
+	"topic_name\x18\x03 \x01(\tR\ttopicName\x12\x16\n" +
+	"\x06status\x18\x04 \x01(\tR\x06status\x12'\n" +
+	"\x0ftotal_processed\x18\x05 \x01(\x04R\x0etotalProcessed\x12!\n" +
+	"\ftotal_errors\x18\x06 \x01(\x04R\vtotalErrors\x12K\n" +
+	"\vlast_offset\x18\a \x03(\v2*.cdc.v1.ProtoConsumerStats.LastOffsetEntryR\n" +
+	"lastOffset\x12!\n" +
+	"\flast_updated\x18\b \x01(\x03R\vlastUpdated\x12\x19\n" +
+	"\bup_since\x18\t \x01(\x03R\aupSince\x12\x14\n" +
+	"\x05sinks\x18\n" +
+	" \x03(\tR\x05sinks\x1a=\n" +
+	"\x0fLastOffsetEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\x05R\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x04R\x05value:\x028\x012\x85\x06\n" +
 	"\n" +
 	"CDCService\x12[\n" +
 	"\n" +
@@ -1425,22 +2098,29 @@ const file_api_proto_v1_cdc_proto_rawDesc = "" +
 	"\vGetMessages\x12\x1a.cdc.v1.GetMessagesRequest\x1a\x1b.cdc.v1.GetMessagesResponse\"\x18\x82\xd3\xe4\x93\x02\x12\x12\x10/api/v1/messages\x12Q\n" +
 	"\bGetStats\x12\x17.cdc.v1.GetStatsRequest\x1a\x15.cdc.v1.StatsResponse\"\x15\x82\xd3\xe4\x93\x02\x0f\x12\r/api/v1/stats\x12^\n" +
 	"\vHealthCheck\x12\x1a.cdc.v1.HealthCheckRequest\x1a\x1b.cdc.v1.HealthCheckResponse\"\x16\x82\xd3\xe4\x93\x02\x10\x12\x0e/api/v1/health\x12X\n" +
-	"\tGetConfig\x12\x18.cdc.v1.GetConfigRequest\x1a\x19.cdc.v1.GetConfigResponse\"\x16\x82\xd3\xe4\x93\x02\x10\x12\x0e/api/v1/configB)Z'github.com/foden/cdc/api/proto/v1;cdcpbb\x06proto3"
+	"\tGetConfig\x12\x18.cdc.v1.GetConfigRequest\x1a\x19.cdc.v1.GetConfigResponse\"\x16\x82\xd3\xe4\x93\x02\x10\x12\x0e/api/v1/config2\xce\x05\n" +
+	"\x13SinkConsumerService\x12r\n" +
+	"\x0eCreateConsumer\x12\x1d.cdc.v1.CreateConsumerRequest\x1a\x1e.cdc.v1.CreateConsumerResponse\"!\x82\xd3\xe4\x93\x02\x1b:\x01*\"\x16/api/v1/sink-consumers\x12l\n" +
+	"\rListConsumers\x12\x1c.cdc.v1.ListConsumersRequest\x1a\x1d.cdc.v1.ListConsumersResponse\"\x1e\x82\xd3\xe4\x93\x02\x18\x12\x16/api/v1/sink-consumers\x12j\n" +
+	"\vGetConsumer\x12\x1a.cdc.v1.GetConsumerRequest\x1a\x1a.cdc.v1.ProtoConsumerStats\"#\x82\xd3\xe4\x93\x02\x1d\x12\x1b/api/v1/sink-consumers/{id}\x12t\n" +
+	"\x0eDeleteConsumer\x12\x1d.cdc.v1.DeleteConsumerRequest\x1a\x1e.cdc.v1.DeleteConsumerResponse\"#\x82\xd3\xe4\x93\x02\x1d*\x1b/api/v1/sink-consumers/{id}\x12w\n" +
+	"\rPauseConsumer\x12\x1c.cdc.v1.PauseConsumerRequest\x1a\x1a.cdc.v1.ProtoConsumerStats\",\x82\xd3\xe4\x93\x02&:\x01*\"!/api/v1/sink-consumers/{id}/pause\x12z\n" +
+	"\x0eResumeConsumer\x12\x1d.cdc.v1.ResumeConsumerRequest\x1a\x1a.cdc.v1.ProtoConsumerStats\"-\x82\xd3\xe4\x93\x02':\x01*\"\"/api/v1/sink-consumers/{id}/resumeB)Z'github.com/foden/cdc/api/proto/v1;cdcpbb\x06proto3"
 
 var (
-	file_api_proto_v1_cdc_proto_rawDescOnce sync.Once
-	file_api_proto_v1_cdc_proto_rawDescData []byte
+	file_cdc_proto_rawDescOnce sync.Once
+	file_cdc_proto_rawDescData []byte
 )
 
-func file_api_proto_v1_cdc_proto_rawDescGZIP() []byte {
-	file_api_proto_v1_cdc_proto_rawDescOnce.Do(func() {
-		file_api_proto_v1_cdc_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_api_proto_v1_cdc_proto_rawDesc), len(file_api_proto_v1_cdc_proto_rawDesc)))
+func file_cdc_proto_rawDescGZIP() []byte {
+	file_cdc_proto_rawDescOnce.Do(func() {
+		file_cdc_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_cdc_proto_rawDesc), len(file_cdc_proto_rawDesc)))
 	})
-	return file_api_proto_v1_cdc_proto_rawDescData
+	return file_cdc_proto_rawDescData
 }
 
-var file_api_proto_v1_cdc_proto_msgTypes = make([]protoimpl.MessageInfo, 23)
-var file_api_proto_v1_cdc_proto_goTypes = []any{
+var file_cdc_proto_msgTypes = make([]protoimpl.MessageInfo, 36)
+var file_cdc_proto_goTypes = []any{
 	(*GetConfigRequest)(nil),       // 0: cdc.v1.GetConfigRequest
 	(*GetConfigResponse)(nil),      // 1: cdc.v1.GetConfigResponse
 	(*AppConfig)(nil),              // 2: cdc.v1.AppConfig
@@ -1464,8 +2144,21 @@ var file_api_proto_v1_cdc_proto_goTypes = []any{
 	(*StatsResponse)(nil),          // 20: cdc.v1.StatsResponse
 	(*HealthCheckRequest)(nil),     // 21: cdc.v1.HealthCheckRequest
 	(*HealthCheckResponse)(nil),    // 22: cdc.v1.HealthCheckResponse
+	(*ProtoSinkConfig)(nil),        // 23: cdc.v1.ProtoSinkConfig
+	(*CreateConsumerRequest)(nil),  // 24: cdc.v1.CreateConsumerRequest
+	(*CreateConsumerResponse)(nil), // 25: cdc.v1.CreateConsumerResponse
+	(*ListConsumersRequest)(nil),   // 26: cdc.v1.ListConsumersRequest
+	(*ListConsumersResponse)(nil),  // 27: cdc.v1.ListConsumersResponse
+	(*GetConsumerRequest)(nil),     // 28: cdc.v1.GetConsumerRequest
+	(*DeleteConsumerRequest)(nil),  // 29: cdc.v1.DeleteConsumerRequest
+	(*DeleteConsumerResponse)(nil), // 30: cdc.v1.DeleteConsumerResponse
+	(*PauseConsumerRequest)(nil),   // 31: cdc.v1.PauseConsumerRequest
+	(*ResumeConsumerRequest)(nil),  // 32: cdc.v1.ResumeConsumerRequest
+	(*ProtoConsumerStats)(nil),     // 33: cdc.v1.ProtoConsumerStats
+	nil,                            // 34: cdc.v1.ProtoSinkConfig.ConfigEntry
+	nil,                            // 35: cdc.v1.ProtoConsumerStats.LastOffsetEntry
 }
-var file_api_proto_v1_cdc_proto_depIdxs = []int32{
+var file_cdc_proto_depIdxs = []int32{
 	2,  // 0: cdc.v1.GetConfigResponse.config:type_name -> cdc.v1.AppConfig
 	3,  // 1: cdc.v1.AppConfig.source:type_name -> cdc.v1.SourceConfig
 	4,  // 2: cdc.v1.AppConfig.sinks:type_name -> cdc.v1.SinkConfig
@@ -1474,50 +2167,67 @@ var file_api_proto_v1_cdc_proto_depIdxs = []int32{
 	12, // 5: cdc.v1.ListPartitionsResponse.partitions:type_name -> cdc.v1.PartitionSummary
 	15, // 6: cdc.v1.PartitionDetail.segments:type_name -> cdc.v1.SegmentInfo
 	18, // 7: cdc.v1.GetMessagesResponse.messages:type_name -> cdc.v1.MessageItem
-	5,  // 8: cdc.v1.CDCService.ListTopics:input_type -> cdc.v1.ListTopicsRequest
-	8,  // 9: cdc.v1.CDCService.GetTopic:input_type -> cdc.v1.GetTopicRequest
-	10, // 10: cdc.v1.CDCService.ListPartitions:input_type -> cdc.v1.ListPartitionsRequest
-	13, // 11: cdc.v1.CDCService.GetPartition:input_type -> cdc.v1.GetPartitionRequest
-	16, // 12: cdc.v1.CDCService.GetMessages:input_type -> cdc.v1.GetMessagesRequest
-	19, // 13: cdc.v1.CDCService.GetStats:input_type -> cdc.v1.GetStatsRequest
-	21, // 14: cdc.v1.CDCService.HealthCheck:input_type -> cdc.v1.HealthCheckRequest
-	0,  // 15: cdc.v1.CDCService.GetConfig:input_type -> cdc.v1.GetConfigRequest
-	6,  // 16: cdc.v1.CDCService.ListTopics:output_type -> cdc.v1.ListTopicsResponse
-	9,  // 17: cdc.v1.CDCService.GetTopic:output_type -> cdc.v1.TopicDetail
-	11, // 18: cdc.v1.CDCService.ListPartitions:output_type -> cdc.v1.ListPartitionsResponse
-	14, // 19: cdc.v1.CDCService.GetPartition:output_type -> cdc.v1.PartitionDetail
-	17, // 20: cdc.v1.CDCService.GetMessages:output_type -> cdc.v1.GetMessagesResponse
-	20, // 21: cdc.v1.CDCService.GetStats:output_type -> cdc.v1.StatsResponse
-	22, // 22: cdc.v1.CDCService.HealthCheck:output_type -> cdc.v1.HealthCheckResponse
-	1,  // 23: cdc.v1.CDCService.GetConfig:output_type -> cdc.v1.GetConfigResponse
-	16, // [16:24] is the sub-list for method output_type
-	8,  // [8:16] is the sub-list for method input_type
-	8,  // [8:8] is the sub-list for extension type_name
-	8,  // [8:8] is the sub-list for extension extendee
-	0,  // [0:8] is the sub-list for field type_name
+	34, // 8: cdc.v1.ProtoSinkConfig.config:type_name -> cdc.v1.ProtoSinkConfig.ConfigEntry
+	23, // 9: cdc.v1.CreateConsumerRequest.sinks:type_name -> cdc.v1.ProtoSinkConfig
+	33, // 10: cdc.v1.CreateConsumerResponse.stats:type_name -> cdc.v1.ProtoConsumerStats
+	33, // 11: cdc.v1.ListConsumersResponse.consumers:type_name -> cdc.v1.ProtoConsumerStats
+	35, // 12: cdc.v1.ProtoConsumerStats.last_offset:type_name -> cdc.v1.ProtoConsumerStats.LastOffsetEntry
+	5,  // 13: cdc.v1.CDCService.ListTopics:input_type -> cdc.v1.ListTopicsRequest
+	8,  // 14: cdc.v1.CDCService.GetTopic:input_type -> cdc.v1.GetTopicRequest
+	10, // 15: cdc.v1.CDCService.ListPartitions:input_type -> cdc.v1.ListPartitionsRequest
+	13, // 16: cdc.v1.CDCService.GetPartition:input_type -> cdc.v1.GetPartitionRequest
+	16, // 17: cdc.v1.CDCService.GetMessages:input_type -> cdc.v1.GetMessagesRequest
+	19, // 18: cdc.v1.CDCService.GetStats:input_type -> cdc.v1.GetStatsRequest
+	21, // 19: cdc.v1.CDCService.HealthCheck:input_type -> cdc.v1.HealthCheckRequest
+	0,  // 20: cdc.v1.CDCService.GetConfig:input_type -> cdc.v1.GetConfigRequest
+	24, // 21: cdc.v1.SinkConsumerService.CreateConsumer:input_type -> cdc.v1.CreateConsumerRequest
+	26, // 22: cdc.v1.SinkConsumerService.ListConsumers:input_type -> cdc.v1.ListConsumersRequest
+	28, // 23: cdc.v1.SinkConsumerService.GetConsumer:input_type -> cdc.v1.GetConsumerRequest
+	29, // 24: cdc.v1.SinkConsumerService.DeleteConsumer:input_type -> cdc.v1.DeleteConsumerRequest
+	31, // 25: cdc.v1.SinkConsumerService.PauseConsumer:input_type -> cdc.v1.PauseConsumerRequest
+	32, // 26: cdc.v1.SinkConsumerService.ResumeConsumer:input_type -> cdc.v1.ResumeConsumerRequest
+	6,  // 27: cdc.v1.CDCService.ListTopics:output_type -> cdc.v1.ListTopicsResponse
+	9,  // 28: cdc.v1.CDCService.GetTopic:output_type -> cdc.v1.TopicDetail
+	11, // 29: cdc.v1.CDCService.ListPartitions:output_type -> cdc.v1.ListPartitionsResponse
+	14, // 30: cdc.v1.CDCService.GetPartition:output_type -> cdc.v1.PartitionDetail
+	17, // 31: cdc.v1.CDCService.GetMessages:output_type -> cdc.v1.GetMessagesResponse
+	20, // 32: cdc.v1.CDCService.GetStats:output_type -> cdc.v1.StatsResponse
+	22, // 33: cdc.v1.CDCService.HealthCheck:output_type -> cdc.v1.HealthCheckResponse
+	1,  // 34: cdc.v1.CDCService.GetConfig:output_type -> cdc.v1.GetConfigResponse
+	25, // 35: cdc.v1.SinkConsumerService.CreateConsumer:output_type -> cdc.v1.CreateConsumerResponse
+	27, // 36: cdc.v1.SinkConsumerService.ListConsumers:output_type -> cdc.v1.ListConsumersResponse
+	33, // 37: cdc.v1.SinkConsumerService.GetConsumer:output_type -> cdc.v1.ProtoConsumerStats
+	30, // 38: cdc.v1.SinkConsumerService.DeleteConsumer:output_type -> cdc.v1.DeleteConsumerResponse
+	33, // 39: cdc.v1.SinkConsumerService.PauseConsumer:output_type -> cdc.v1.ProtoConsumerStats
+	33, // 40: cdc.v1.SinkConsumerService.ResumeConsumer:output_type -> cdc.v1.ProtoConsumerStats
+	27, // [27:41] is the sub-list for method output_type
+	13, // [13:27] is the sub-list for method input_type
+	13, // [13:13] is the sub-list for extension type_name
+	13, // [13:13] is the sub-list for extension extendee
+	0,  // [0:13] is the sub-list for field type_name
 }
 
-func init() { file_api_proto_v1_cdc_proto_init() }
-func file_api_proto_v1_cdc_proto_init() {
-	if File_api_proto_v1_cdc_proto != nil {
+func init() { file_cdc_proto_init() }
+func file_cdc_proto_init() {
+	if File_cdc_proto != nil {
 		return
 	}
-	file_api_proto_v1_cdc_proto_msgTypes[16].OneofWrappers = []any{}
+	file_cdc_proto_msgTypes[16].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_proto_v1_cdc_proto_rawDesc), len(file_api_proto_v1_cdc_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_cdc_proto_rawDesc), len(file_cdc_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   23,
+			NumMessages:   36,
 			NumExtensions: 0,
-			NumServices:   1,
+			NumServices:   2,
 		},
-		GoTypes:           file_api_proto_v1_cdc_proto_goTypes,
-		DependencyIndexes: file_api_proto_v1_cdc_proto_depIdxs,
-		MessageInfos:      file_api_proto_v1_cdc_proto_msgTypes,
+		GoTypes:           file_cdc_proto_goTypes,
+		DependencyIndexes: file_cdc_proto_depIdxs,
+		MessageInfos:      file_cdc_proto_msgTypes,
 	}.Build()
-	File_api_proto_v1_cdc_proto = out.File
-	file_api_proto_v1_cdc_proto_goTypes = nil
-	file_api_proto_v1_cdc_proto_depIdxs = nil
+	File_cdc_proto = out.File
+	file_cdc_proto_goTypes = nil
+	file_cdc_proto_depIdxs = nil
 }

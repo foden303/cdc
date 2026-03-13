@@ -15,7 +15,7 @@ service CDCService {
       get : "/api/v1/topics"
     };
   }
-
+  // Get details about a specific topic, including partition info and message counts
   rpc GetTopic(GetTopicRequest) returns (TopicDetail) {
     option (google.api.http) = {
       get : "/api/v1/topics/{name}"
@@ -29,6 +29,7 @@ service CDCService {
     };
   }
 
+  // Get details about a specific partition, including size, offsets, and segments
   rpc GetPartition(GetPartitionRequest) returns (PartitionDetail) {
     option (google.api.http) = {
       get : "/api/v1/partitions/{id}"
@@ -49,12 +50,14 @@ service CDCService {
     };
   }
 
+  // Health check endpoint to verify service is running and get version info
   rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse) {
     option (google.api.http) = {
       get : "/api/v1/health"
     };
   }
 
+  // Get the current configuration of the CDC service, including source and sink details
   rpc GetConfig(GetConfigRequest) returns (GetConfigResponse) {
     option (google.api.http) = {
       get : "/api/v1/config"
@@ -150,7 +153,7 @@ message SegmentInfo {
 message GetMessagesRequest {
   optional int32 partition_id = 1;
   uint64 offset = 2; // start reading from this offset
-  int32 limit = 3;   // max messages to return (default 50)
+  int32 limit = 3; // max messages to return (default 50)
 }
 
 message GetMessagesResponse { repeated MessageItem messages = 1; }
@@ -180,4 +183,114 @@ message HealthCheckResponse {
   string status = 1; // "ok"
   string version = 2;
   int64 uptime = 3; // seconds since start
+}
+
+// ── Sink Consumer Service ──────────────────────────────────
+service SinkConsumerService {
+
+  // CreateConsumer creates a new sink consumer with the specified configuration, including topic, partitions, and sink details
+  rpc CreateConsumer(CreateConsumerRequest) returns (CreateConsumerResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/sink-consumers"
+      body: "*"
+    };
+  }
+
+  // ListConsumers returns a list of all active sink consumers with their current stats and configurations
+  rpc ListConsumers(ListConsumersRequest) returns (ListConsumersResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/sink-consumers"
+    };
+  }
+
+  // GetConsumer returns detailed information and stats about a specific sink consumer by ID
+  rpc GetConsumer(GetConsumerRequest) returns (ProtoConsumerStats) {
+    option (google.api.http) = {
+      get: "/api/v1/sink-consumers/{id}"
+    };
+  }
+
+  // DeleteConsumer removes a sink consumer by ID, stopping it from consuming messages and cleaning up resources
+  rpc DeleteConsumer(DeleteConsumerRequest) returns (DeleteConsumerResponse) {
+    option (google.api.http) = {
+      delete: "/api/v1/sink-consumers/{id}"
+    };
+  }
+
+  // PauseConsumer temporarily halts a sink consumer's message consumption without deleting it, allowing for maintenance or troubleshooting
+  rpc PauseConsumer(PauseConsumerRequest) returns (ProtoConsumerStats) {
+    option (google.api.http) = {
+      post: "/api/v1/sink-consumers/{id}/pause"
+      body: "*"
+    };
+  }
+
+  // ResumeConsumer restarts a paused sink consumer, allowing it to continue consuming messages from where it left off
+  rpc ResumeConsumer(ResumeConsumerRequest) returns (ProtoConsumerStats) {
+    option (google.api.http) = {
+      post: "/api/v1/sink-consumers/{id}/resume"
+      body: "*"
+    };
+  }
+}
+
+// Messages for Sink Consumer Service
+message ProtoSinkConfig {
+  string type = 1;
+  map<string, string> config = 2;
+}
+
+message CreateConsumerRequest {
+  string name = 1;
+  string topic_name = 2;
+  repeated int32 partitions = 3;
+  repeated ProtoSinkConfig sinks = 4;
+  int32 batch_size = 5;
+  int32 flush_interval_ms = 6;
+}
+
+message CreateConsumerResponse {
+  string id = 1;
+  string name = 2;
+  ProtoConsumerStats stats = 3;
+}
+
+message ListConsumersRequest {}
+
+message ListConsumersResponse {
+  repeated ProtoConsumerStats consumers = 1;
+  int32 total = 2;
+}
+
+message GetConsumerRequest {
+  string id = 1;
+}
+
+message DeleteConsumerRequest {
+  string id = 1;
+}
+
+message DeleteConsumerResponse {
+  string message = 1;
+}
+
+message PauseConsumerRequest {
+  string id = 1;
+}
+
+message ResumeConsumerRequest {
+  string id = 1;
+}
+
+message ProtoConsumerStats {
+  string id = 1;
+  string name = 2;
+  string topic_name = 3;
+  string status = 4;
+  uint64 total_processed = 5;
+  uint64 total_errors = 6;
+  map<int32, uint64> last_offset = 7;
+  int64 last_updated = 8;
+  int64 up_since = 9;
+  repeated string sinks = 10;
 }

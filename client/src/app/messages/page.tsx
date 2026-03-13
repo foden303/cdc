@@ -68,7 +68,7 @@ export default function MessagesPage() {
       const parsed = JSON.parse(raw);
       op = (parsed?.op || "").toLowerCase();
     } catch { }
-    if (op === "i" || op === "insert") return <span className="tag green">INSERT</span>;
+    if (op === "c" || op === "create") return <span className="tag green">CREATE</span>;
     if (op === "u" || op === "update") return <span className="tag yellow">UPDATE</span>;
     if (op === "d" || op === "delete") return <span className="tag red">DELETE</span>;
     return <span className="tag">{op || "?"}</span>;

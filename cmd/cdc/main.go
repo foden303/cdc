@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/foden/cdc/pkg/cluster"
 	"github.com/foden/cdc/pkg/config"
 	"github.com/foden/cdc/pkg/interfaces"
 	"github.com/foden/cdc/pkg/logger"
@@ -54,10 +55,25 @@ func main() {
 	}
 
 	// Initialize WAL Queue
-	manager, err := wal.OpenManager[*models.Event](cfg.WAL.Dir, cfg.WAL.MaxSegmentSize, cfg.WAL.RetentionHours)
+	manager, err := wal.OpenManager[*models.Event](cfg.WAL.Dir, cfg.Name, cfg.WAL.Partitions, cfg.WAL.MaxSegmentSize, cfg.WAL.RetentionHours)
 	if err != nil {
 		slog.Error("failed to open WAL manager", "err", err)
 		os.Exit(1)
+	}
+
+	// ── Start Raft cluster (if enabled) ──────────────────────
+	if cfg.Cluster.Enabled {
+		raftNode, err := cluster.NewRaftNode(&cfg.Cluster, manager.GetBroker())
+		if err != nil {
+			slog.Error("failed to start raft node", "err", err)
+			os.Exit(1)
+		}
+		manager.SetRaftNode(raftNode)
+		slog.Info("raft cluster enabled",
+			"node_id", cfg.Cluster.NodeID,
+			"bind_addr", cfg.Cluster.BindAddr,
+			"bootstrap", cfg.Cluster.Bootstrap,
+		)
 	}
 
 	// ── Start gRPC + REST server ───────────────────────────
@@ -68,6 +84,7 @@ func main() {
 		},
 		cfg,
 		manager,
+		manager.GetBroker(),
 	)
 
 	if err := appServer.Start(); err != nil {

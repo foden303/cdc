@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.6.1
 // - protoc             v3.12.4
-// source: api/proto/v1/cdc.proto
+// source: cdc.proto
 
 package cdcpb
 
@@ -395,5 +395,301 @@ var CDCService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "api/proto/v1/cdc.proto",
+	Metadata: "cdc.proto",
+}
+
+const (
+	SinkConsumerService_CreateConsumer_FullMethodName = "/cdc.v1.SinkConsumerService/CreateConsumer"
+	SinkConsumerService_ListConsumers_FullMethodName  = "/cdc.v1.SinkConsumerService/ListConsumers"
+	SinkConsumerService_GetConsumer_FullMethodName    = "/cdc.v1.SinkConsumerService/GetConsumer"
+	SinkConsumerService_DeleteConsumer_FullMethodName = "/cdc.v1.SinkConsumerService/DeleteConsumer"
+	SinkConsumerService_PauseConsumer_FullMethodName  = "/cdc.v1.SinkConsumerService/PauseConsumer"
+	SinkConsumerService_ResumeConsumer_FullMethodName = "/cdc.v1.SinkConsumerService/ResumeConsumer"
+)
+
+// SinkConsumerServiceClient is the client API for SinkConsumerService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// ── Sink Consumer Service ──────────────────────────────────
+type SinkConsumerServiceClient interface {
+	CreateConsumer(ctx context.Context, in *CreateConsumerRequest, opts ...grpc.CallOption) (*CreateConsumerResponse, error)
+	ListConsumers(ctx context.Context, in *ListConsumersRequest, opts ...grpc.CallOption) (*ListConsumersResponse, error)
+	GetConsumer(ctx context.Context, in *GetConsumerRequest, opts ...grpc.CallOption) (*ProtoConsumerStats, error)
+	DeleteConsumer(ctx context.Context, in *DeleteConsumerRequest, opts ...grpc.CallOption) (*DeleteConsumerResponse, error)
+	PauseConsumer(ctx context.Context, in *PauseConsumerRequest, opts ...grpc.CallOption) (*ProtoConsumerStats, error)
+	ResumeConsumer(ctx context.Context, in *ResumeConsumerRequest, opts ...grpc.CallOption) (*ProtoConsumerStats, error)
+}
+
+type sinkConsumerServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewSinkConsumerServiceClient(cc grpc.ClientConnInterface) SinkConsumerServiceClient {
+	return &sinkConsumerServiceClient{cc}
+}
+
+func (c *sinkConsumerServiceClient) CreateConsumer(ctx context.Context, in *CreateConsumerRequest, opts ...grpc.CallOption) (*CreateConsumerResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateConsumerResponse)
+	err := c.cc.Invoke(ctx, SinkConsumerService_CreateConsumer_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sinkConsumerServiceClient) ListConsumers(ctx context.Context, in *ListConsumersRequest, opts ...grpc.CallOption) (*ListConsumersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListConsumersResponse)
+	err := c.cc.Invoke(ctx, SinkConsumerService_ListConsumers_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sinkConsumerServiceClient) GetConsumer(ctx context.Context, in *GetConsumerRequest, opts ...grpc.CallOption) (*ProtoConsumerStats, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ProtoConsumerStats)
+	err := c.cc.Invoke(ctx, SinkConsumerService_GetConsumer_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sinkConsumerServiceClient) DeleteConsumer(ctx context.Context, in *DeleteConsumerRequest, opts ...grpc.CallOption) (*DeleteConsumerResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteConsumerResponse)
+	err := c.cc.Invoke(ctx, SinkConsumerService_DeleteConsumer_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sinkConsumerServiceClient) PauseConsumer(ctx context.Context, in *PauseConsumerRequest, opts ...grpc.CallOption) (*ProtoConsumerStats, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ProtoConsumerStats)
+	err := c.cc.Invoke(ctx, SinkConsumerService_PauseConsumer_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sinkConsumerServiceClient) ResumeConsumer(ctx context.Context, in *ResumeConsumerRequest, opts ...grpc.CallOption) (*ProtoConsumerStats, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ProtoConsumerStats)
+	err := c.cc.Invoke(ctx, SinkConsumerService_ResumeConsumer_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// SinkConsumerServiceServer is the server API for SinkConsumerService service.
+// All implementations must embed UnimplementedSinkConsumerServiceServer
+// for forward compatibility.
+//
+// ── Sink Consumer Service ──────────────────────────────────
+type SinkConsumerServiceServer interface {
+	CreateConsumer(context.Context, *CreateConsumerRequest) (*CreateConsumerResponse, error)
+	ListConsumers(context.Context, *ListConsumersRequest) (*ListConsumersResponse, error)
+	GetConsumer(context.Context, *GetConsumerRequest) (*ProtoConsumerStats, error)
+	DeleteConsumer(context.Context, *DeleteConsumerRequest) (*DeleteConsumerResponse, error)
+	PauseConsumer(context.Context, *PauseConsumerRequest) (*ProtoConsumerStats, error)
+	ResumeConsumer(context.Context, *ResumeConsumerRequest) (*ProtoConsumerStats, error)
+	mustEmbedUnimplementedSinkConsumerServiceServer()
+}
+
+// UnimplementedSinkConsumerServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedSinkConsumerServiceServer struct{}
+
+func (UnimplementedSinkConsumerServiceServer) CreateConsumer(context.Context, *CreateConsumerRequest) (*CreateConsumerResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateConsumer not implemented")
+}
+func (UnimplementedSinkConsumerServiceServer) ListConsumers(context.Context, *ListConsumersRequest) (*ListConsumersResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListConsumers not implemented")
+}
+func (UnimplementedSinkConsumerServiceServer) GetConsumer(context.Context, *GetConsumerRequest) (*ProtoConsumerStats, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetConsumer not implemented")
+}
+func (UnimplementedSinkConsumerServiceServer) DeleteConsumer(context.Context, *DeleteConsumerRequest) (*DeleteConsumerResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteConsumer not implemented")
+}
+func (UnimplementedSinkConsumerServiceServer) PauseConsumer(context.Context, *PauseConsumerRequest) (*ProtoConsumerStats, error) {
+	return nil, status.Error(codes.Unimplemented, "method PauseConsumer not implemented")
+}
+func (UnimplementedSinkConsumerServiceServer) ResumeConsumer(context.Context, *ResumeConsumerRequest) (*ProtoConsumerStats, error) {
+	return nil, status.Error(codes.Unimplemented, "method ResumeConsumer not implemented")
+}
+func (UnimplementedSinkConsumerServiceServer) mustEmbedUnimplementedSinkConsumerServiceServer() {}
+func (UnimplementedSinkConsumerServiceServer) testEmbeddedByValue()                             {}
+
+// UnsafeSinkConsumerServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to SinkConsumerServiceServer will
+// result in compilation errors.
+type UnsafeSinkConsumerServiceServer interface {
+	mustEmbedUnimplementedSinkConsumerServiceServer()
+}
+
+func RegisterSinkConsumerServiceServer(s grpc.ServiceRegistrar, srv SinkConsumerServiceServer) {
+	// If the following call panics, it indicates UnimplementedSinkConsumerServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&SinkConsumerService_ServiceDesc, srv)
+}
+
+func _SinkConsumerService_CreateConsumer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateConsumerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SinkConsumerServiceServer).CreateConsumer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SinkConsumerService_CreateConsumer_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SinkConsumerServiceServer).CreateConsumer(ctx, req.(*CreateConsumerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SinkConsumerService_ListConsumers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListConsumersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SinkConsumerServiceServer).ListConsumers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SinkConsumerService_ListConsumers_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SinkConsumerServiceServer).ListConsumers(ctx, req.(*ListConsumersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SinkConsumerService_GetConsumer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetConsumerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SinkConsumerServiceServer).GetConsumer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SinkConsumerService_GetConsumer_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SinkConsumerServiceServer).GetConsumer(ctx, req.(*GetConsumerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SinkConsumerService_DeleteConsumer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteConsumerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SinkConsumerServiceServer).DeleteConsumer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SinkConsumerService_DeleteConsumer_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SinkConsumerServiceServer).DeleteConsumer(ctx, req.(*DeleteConsumerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SinkConsumerService_PauseConsumer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PauseConsumerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SinkConsumerServiceServer).PauseConsumer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SinkConsumerService_PauseConsumer_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SinkConsumerServiceServer).PauseConsumer(ctx, req.(*PauseConsumerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SinkConsumerService_ResumeConsumer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResumeConsumerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SinkConsumerServiceServer).ResumeConsumer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SinkConsumerService_ResumeConsumer_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SinkConsumerServiceServer).ResumeConsumer(ctx, req.(*ResumeConsumerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// SinkConsumerService_ServiceDesc is the grpc.ServiceDesc for SinkConsumerService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var SinkConsumerService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "cdc.v1.SinkConsumerService",
+	HandlerType: (*SinkConsumerServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "CreateConsumer",
+			Handler:    _SinkConsumerService_CreateConsumer_Handler,
+		},
+		{
+			MethodName: "ListConsumers",
+			Handler:    _SinkConsumerService_ListConsumers_Handler,
+		},
+		{
+			MethodName: "GetConsumer",
+			Handler:    _SinkConsumerService_GetConsumer_Handler,
+		},
+		{
+			MethodName: "DeleteConsumer",
+			Handler:    _SinkConsumerService_DeleteConsumer_Handler,
+		},
+		{
+			MethodName: "PauseConsumer",
+			Handler:    _SinkConsumerService_PauseConsumer_Handler,
+		},
+		{
+			MethodName: "ResumeConsumer",
+			Handler:    _SinkConsumerService_ResumeConsumer_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "cdc.proto",
 }

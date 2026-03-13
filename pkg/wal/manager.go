@@ -3,14 +3,12 @@ package wal
 import (
 	"encoding/json"
 	"fmt"
-	"hash/fnv"
-	"log/slog"
+	"io"
 	"os"
-	"path/filepath"
 	"sync"
-	"sync/atomic"
 	"time"
 
+	"github.com/foden/cdc/pkg/cluster"
 	"github.com/foden/cdc/pkg/queue"
 )
 
@@ -25,172 +23,115 @@ type Manager[T any] struct {
 	mu sync.RWMutex
 
 	dir            string
+	topic          string
 	maxSegmentSize int64
 	retentionHours int
 
-	partitions map[int]*queue.Queue
+	broker   *queue.Broker
+	raftNode *cluster.RaftNode
 
-	nextPartition uint64
+	// Per-partition consumed offsets for DequeueBatch
+	consumedOffsets map[int]uint64
 }
 
 // OpenManager initializes a new WAL manager.
-func OpenManager[T any](dir string, maxSegmentSize int64, retentionHours int) (*Manager[T], error) {
+func OpenManager[T any](dir string, topicName string, partitionCount int, maxSegmentSize int64, retentionHours int) (*Manager[T], error) {
 
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create manager dir: %w", err)
 	}
 
-	m := &Manager[T]{
-		dir:            dir,
-		maxSegmentSize: maxSegmentSize,
-		retentionHours: retentionHours,
-		partitions:     make(map[int]*queue.Queue),
+	broker := queue.NewBroker(dir, maxSegmentSize)
+
+	if err := broker.CreateTopic(topicName, partitionCount); err != nil {
+		return nil, fmt.Errorf("failed to create topic: %w", err)
 	}
 
-	entries, err := os.ReadDir(dir)
-	if err == nil {
-
-		for _, entry := range entries {
-
-			if !entry.IsDir() {
-				continue
-			}
-
-			var id int
-
-			if n, _ := fmt.Sscanf(entry.Name(), "partition_%d", &id); n != 1 {
-				continue
-			}
-
-			partDir := filepath.Join(dir, entry.Name())
-
-			q, err := queue.OpenQueue(partDir, maxSegmentSize)
-			if err != nil {
-
-				slog.Error(
-					"failed to open partition queue",
-					"partition", id,
-					"err", err,
-				)
-
-				continue
-			}
-
-			m.partitions[id] = q
-		}
+	m := &Manager[T]{
+		dir:             dir,
+		topic:           topicName,
+		maxSegmentSize:  maxSegmentSize,
+		retentionHours:  retentionHours,
+		broker:          broker,
+		consumedOffsets: make(map[int]uint64),
 	}
 
 	return m, nil
 }
 
-func (m *Manager[T]) GetPartition(id int) (*queue.Queue, error) {
-
-	m.mu.RLock()
-	q, ok := m.partitions[id]
-	m.mu.RUnlock()
-
-	if ok {
-		return q, nil
-	}
-
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	if q, ok := m.partitions[id]; ok {
-		return q, nil
-	}
-
-	partDir := filepath.Join(
-		m.dir,
-		fmt.Sprintf("partition_%d", id),
-	)
-
-	newQ, err := queue.OpenQueue(partDir, m.maxSegmentSize)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create partition %d: %w", id, err)
-	}
-
-	m.partitions[id] = newQ
-
-	return newQ, nil
+func (m *Manager[T]) GetBroker() *queue.Broker {
+	return m.broker
 }
 
-func (m *Manager[T]) partitionCount() int {
-
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	return len(m.partitions)
+// SetRaftNode sets the Raft node for cluster mode.
+// When set, Enqueue routes writes through Raft consensus.
+func (m *Manager[T]) SetRaftNode(node *cluster.RaftNode) {
+	m.raftNode = node
 }
 
-func (m *Manager[T]) selectPartition(key []byte) int {
+func (m *Manager[T]) GetTopic() *queue.Topic {
+	return m.broker.Topic(m.topic)
+}
 
-	n := m.partitionCount()
-
-	if n == 0 {
-		return 0
+func (m *Manager[T]) GetPartition(id int) *queue.Partition {
+	topic := m.GetTopic()
+	if topic == nil {
+		return nil
 	}
-
-	if len(key) > 0 {
-
-		h := fnv.New32a()
-		h.Write(key)
-
-		return int(h.Sum32()) % n
-	}
-
-	id := atomic.AddUint64(&m.nextPartition, 1)
-
-	return int(id % uint64(n))
+	return topic.PartitionByID(id)
 }
 
 func (m *Manager[T]) Enqueue(key []byte, item T) error {
-
-	partitionID := m.selectPartition(key)
-
-	q, err := m.GetPartition(partitionID)
-	if err != nil {
-		return err
-	}
-
 	data, err := json.Marshal(item)
 	if err != nil {
 		return fmt.Errorf("failed to marshal item: %w", err)
 	}
 
-	return q.Enqueue(key, data)
+	// Cluster mode: route through Raft consensus
+	if m.raftNode != nil {
+		cmd := cluster.ProduceCommand{
+			Topic:     m.topic,
+			Key:       key,
+			Value:     data,
+			Timestamp: time.Now().UnixNano(),
+		}
+		return m.raftNode.Propose(cluster.CmdProduce, cmd)
+	}
+
+	// Standalone mode: direct produce
+	msg := &queue.Message{
+		Key:   key,
+		Value: data,
+	}
+
+	_, err = m.GetTopic().Partition(key).Produce(msg)
+	return err
 }
 
 func (m *Manager[T]) DequeueBatch(partitionID int, batchSize int) ([]WalMessage[T], error) {
+	part := m.GetPartition(partitionID)
+	if part == nil {
+		return nil, fmt.Errorf("partition %d not found", partitionID)
+	}
 
-	q, err := m.GetPartition(partitionID)
+	m.mu.RLock()
+	offset := m.consumedOffsets[partitionID]
+	m.mu.RUnlock()
+
+	msgs, err := part.Fetch(offset, batchSize*1024)
 	if err != nil {
+		if err == io.EOF {
+			return nil, nil // no new messages
+		}
 		return nil, err
 	}
 
-	rawMessages, err := q.DequeueBatch(batchSize)
-	if err == queue.ErrQueueClosed {
-		return nil, queue.ErrQueueClosed
-	}
+	items := make([]WalMessage[T], 0, len(msgs))
+	var maxOffset uint64
 
-	if err != nil {
-		return nil, err
-	}
-
-	items := make([]WalMessage[T], 0, len(rawMessages))
-
-	for _, msg := range rawMessages {
-
+	for _, msg := range msgs {
 		var decoded T
-
 		if err := json.Unmarshal(msg.Value, &decoded); err != nil {
-
-			slog.Error(
-				"failed to unmarshal item",
-				"partition", partitionID,
-				"err", err,
-			)
-
 			continue
 		}
 
@@ -200,79 +141,63 @@ func (m *Manager[T]) DequeueBatch(partitionID int, batchSize int) ([]WalMessage[
 			Key:       msg.Key,
 			Item:      decoded,
 		})
+
+		if msg.Offset >= maxOffset {
+			maxOffset = msg.Offset + 1
+		}
+	}
+
+	// Advance consumed offset
+	if len(items) > 0 {
+		m.mu.Lock()
+		m.consumedOffsets[partitionID] = maxOffset
+		m.mu.Unlock()
 	}
 
 	return items, nil
 }
 
 func (m *Manager[T]) Commit(partitionID int) error {
-
-	m.mu.RLock()
-	q, ok := m.partitions[partitionID]
-	m.mu.RUnlock()
-
-	if !ok {
-		return nil
-	}
-
-	return q.Commit()
+	// Offset is already tracked in consumedOffsets via DequeueBatch
+	return nil
 }
 
 func (m *Manager[T]) Close() error {
-
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	var errs []error
-
-	for _, q := range m.partitions {
-
-		if err := q.Close(); err != nil {
-			errs = append(errs, err)
+	if m.raftNode != nil {
+		if err := m.raftNode.Shutdown(); err != nil {
+			return fmt.Errorf("failed to shutdown raft: %w", err)
 		}
 	}
-
-	if len(errs) > 0 {
-		return fmt.Errorf("multiple errors closing partitions: %v", errs)
-	}
-
+	m.broker.Close()
 	return nil
 }
 
 func (m *Manager[T]) GetPartitionIDs() []int {
-
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	ids := make([]int, 0, len(m.partitions))
-
-	for id := range m.partitions {
-		ids = append(ids, id)
+	topic := m.GetTopic()
+	if topic == nil {
+		return nil
 	}
-
+	var ids []int
+	for i := 0; i < topic.PartitionsCount(); i++ {
+		ids = append(ids, i)
+	}
 	return ids
 }
 
-func (m *Manager[T]) InspectRaw(partitionID int, limit int) ([]WalMessage[T], error) {
-
-	q, err := m.GetPartition(partitionID)
-	if err != nil {
+func (m *Manager[T]) InspectRaw(partitionID int, startOffset uint64, limit int) ([]WalMessage[T], error) {
+	part := m.GetPartition(partitionID)
+	if part == nil {
+		return nil, fmt.Errorf("partition %d not found", partitionID)
+	}
+	msgs, err := part.Fetch(startOffset, limit*1024)
+	if err != nil && err != io.EOF {
 		return nil, err
 	}
 
-	rawMessages, err := q.InspectRaw(limit)
-	if err != nil {
-		return nil, err
-	}
-
-	items := make([]WalMessage[T], 0, len(rawMessages))
-
-	for _, msg := range rawMessages {
-
+	items := make([]WalMessage[T], 0, len(msgs))
+	for _, msg := range msgs {
 		var decoded T
-
 		if err := json.Unmarshal(msg.Value, &decoded); err == nil {
-
 			items = append(items, WalMessage[T]{
 				Offset:    msg.Offset,
 				Timestamp: time.Unix(0, msg.Timestamp),
@@ -281,39 +206,25 @@ func (m *Manager[T]) InspectRaw(partitionID int, limit int) ([]WalMessage[T], er
 			})
 		}
 	}
-
 	return items, nil
 }
 
 func (m *Manager[T]) GetTotalStats() queue.QueueStats {
-
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	topic := m.GetTopic()
+	if topic == nil {
+		return queue.QueueStats{}
+	}
 
 	var total queue.QueueStats
-
-	for _, q := range m.partitions {
-
-		s := q.GetStats()
-
-		total.TotalEnqueued += s.TotalEnqueued
-		total.TotalDequeued += s.TotalDequeued
-		total.Pending += s.Pending
-		total.SegmentsCount += s.SegmentsCount
-		total.TotalSizeMB += s.TotalSizeMB
+	for i := 0; i < topic.PartitionsCount(); i++ {
+		p := topic.PartitionByID(i)
+		if p == nil {
+			continue
+		}
+		stats := p.GetStats()
+		total.TotalEnqueued += stats.TotalEnqueued
+		total.TotalSizeMB += stats.TotalSizeMB
+		total.SegmentsCount += stats.SegmentsCount
 	}
-
 	return total
-}
-
-func hashPartition(table, key string, numPartitions int) int {
-	h := fnv.New32a()
-	h.Write([]byte(table))
-	h.Write([]byte(key))
-	// Prevent negative hash
-	val := int(h.Sum32())
-	if val < 0 {
-		val = -val
-	}
-	return val % numPartitions
 }
