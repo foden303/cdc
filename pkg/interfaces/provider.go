@@ -3,7 +3,8 @@ package interfaces
 import (
 	"context"
 
-	"github.com/foden/cdc/api/proto/v1"
+	cdcpb "github.com/foden/cdc/api/proto/v1"
+	"github.com/foden/cdc/pkg/config"
 	"github.com/foden/cdc/pkg/models"
 )
 
@@ -38,16 +39,29 @@ type Sink interface {
 	// MaxRetries returns the maximum number of delivery attempts before DLQ
 	MaxRetries() int32
 }
+
 // PipelineEngine defines the interface for managing the CDC pipeline at runtime
 type PipelineEngine interface {
+	// AddSource adds a new source to the pipeline
 	AddSource(ctx context.Context, src Source) error
+	// RemoveSource removes a source from the pipeline
 	RemoveSource(instanceID string) error
+	// AddSink adds a new sink to the pipeline
 	AddSink(sink Sink)
+	// RemoveSink removes a sink from the pipeline
 	RemoveSink(instanceID string) error
+	// GetStats returns the statistics of the pipeline
 	GetStats() (map[string]*models.ComponentStats, map[string]*models.ComponentStats)
+	// ListMessages lists the messages in the pipeline
 	ListMessages(ctx context.Context, status cdcpb.MessageStatus, limit int, page int, topic string, partition string) ([]*models.Message, uint64, error)
+	// GetConsumerInfo returns the consumer information
 	GetConsumerInfo(ctx context.Context, consumerName string) (uint64, uint64, error)
+	// ListTopics lists the topics in the pipeline
 	ListTopics(ctx context.Context, limit int, page int) ([]string, uint64, error)
+	// ListPartitions lists the partitions in the pipeline
 	ListPartitions(ctx context.Context, topic string, limit int, page int) ([]string, uint64, error)
+	// ReprocessDLQ reprocesses the dead-letter queue
 	ReprocessDLQ(ctx context.Context) (int, error)
+	// UpdatePipelineConfig updates the pipeline configuration
+	UpdatePipelineConfig(cfg config.PipelineConfig)
 }

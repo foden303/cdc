@@ -22,6 +22,10 @@ export async function getPrometheusMetricsAction() {
   }
 }
 
+export async function getPerformanceMetricsAction() {
+  return serialize(await grpc.getPerformanceMetrics());
+}
+
 export async function getConfigAction() {
   return serialize(await grpc.getConfig());
 }
@@ -55,10 +59,28 @@ export async function listMessagesAction(topic?: string, partition?: string, lim
   return serialize(res);
 }
 
+// Sources
 export async function addSourceAction(source: grpc.SourceConfig) {
   return serialize(await grpc.addSource(source));
 }
 
 export async function removeSourceAction(instanceId: string) {
   return serialize(await grpc.removeSource(instanceId));
+}
+
+export async function updateSourceAction(source: grpc.SourceConfig) {
+  return serialize(await grpc.updateSource(source));
+}
+
+// Sinks
+export async function addSinkAction(sink: grpc.SinkConfig) {
+  return serialize(await grpc.addSink(sink));
+}
+
+export async function removeSinkAction(instanceId: string) {
+  return serialize(await grpc.removeSink(instanceId));
+}
+
+export async function updateSinkAction(sink: grpc.SinkConfig) {
+  return serialize(await grpc.updateSink(sink));
 }

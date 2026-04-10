@@ -1,5 +1,20 @@
 name: "cdc-pg-es"
 log_mode: "info"
+# NATS JetStream configuration
+nats:
+  url: "nats://127.0.0.1:4222"
+  stream_name: "cdc_stream"
+
+pipeline:
+  channel_buffer_size: 1000
+  worker_count: 1
+  # subject_filter allows you to filter specific events
+  # default: ["cdc.>"] (all events)
+  subject_filter: ["cdc.>"]
+server:
+  grpc_port: 9090
+  http_port: 9091
+  ui_port: 9092
 
 # Configure multiple database sources
 sources:
@@ -29,18 +44,6 @@ sources:
       - "public.users"
       - "public.profiles"
 
-# NATS JetStream configuration
-nats:
-  url: "nats://127.0.0.1:4222"
-  stream_name: "cdc_stream"
-
-pipeline:
-  channel_buffer_size: 1000
-  worker_count: 4
-  # subject_filter allows you to filter specific events
-  # default: ["cdc.>"] (all events)
-  subject_filter: ["cdc.>"]
-
 sinks:
   - type: "clickhouse"
     host: "127.0.0.1"
@@ -58,13 +61,6 @@ sinks:
       ttl: 3600                                # Cache expiry in seconds
     batch_size: 100
     flush_interval_ms: 500
-
-  # - type: "stdout"
-
-server:
-  grpc_port: 9090
-  http_port: 9091
-  ui_port: 9092
 
 
 

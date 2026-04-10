@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"log/slog"
 	"os"
@@ -19,24 +18,20 @@ import (
 	"github.com/foden/cdc/pkg/server"
 
 	// Drivers registration
+	_ "github.com/foden/cdc/pkg/sink/clickhouse"
 	_ "github.com/foden/cdc/pkg/sink/elasticsearch"
 	_ "github.com/foden/cdc/pkg/sink/postgres"
+	_ "github.com/foden/cdc/pkg/sink/redis"
 	_ "github.com/foden/cdc/pkg/sink/stdout"
 	_ "github.com/foden/cdc/pkg/sink/webhook"
-	_ "github.com/foden/cdc/pkg/sink/redis"
-	_ "github.com/foden/cdc/pkg/sink/clickhouse"
 	_ "github.com/foden/cdc/pkg/source/mysql"
 	_ "github.com/foden/cdc/pkg/source/postgres"
 	_ "github.com/foden/cdc/pkg/source/rest"
 )
 
 func main() {
-	var configPath string
-	flag.StringVar(&configPath, "config", "config.yaml", "Path to config file")
-	flag.Parse()
-
 	// 1. Load static config from file
-	cfg, err := config.LoadConfig(configPath)
+	cfg, err := config.LoadConfig()
 	if err != nil {
 		slog.Error("failed to load initial config", "err", err)
 		os.Exit(1)
@@ -82,15 +77,15 @@ func restoreConfig(client *nats.Client, cfg *config.Config) error {
 		return err
 	}
 
-	slog.Info("restoring config from NATS KV",
-		"sources",
-		len(persistedCfg.Sources),
-		"sinks",
-		len(persistedCfg.Sinks))
+	slog.Info("restoring dynamic instances from NATS KV",
+		"sources", len(persistedCfg.Sources),
+		"sinks", len(persistedCfg.Sinks))
+
+	// 1. Restore Instances (Dynamic)
 	cfg.Sources = persistedCfg.Sources
 	cfg.Sinks = persistedCfg.Sinks
 
-	// RE-WARM CEL Programs: Because 'programs' field is private and not stored in KV.
+	// 2. RE-WARM CEL Programs: Because 'programs' field is private and not stored in KV.
 	for i := range cfg.Sinks {
 		if err := cfg.Sinks[i].CompileTransformations(); err != nil {
 			return fmt.Errorf("failed to re-compile sink %s: %w", cfg.Sinks[i].InstanceID, err)
@@ -103,7 +98,7 @@ func restoreConfig(client *nats.Client, cfg *config.Config) error {
 func buildRegistry(cfg *config.Config) ([]interfaces.Source, []interfaces.Sink, error) {
 	var sources []interfaces.Source
 	for i := range cfg.Sources {
-		src, err := registry.CreateSource(&cfg.Sources[i])
+		src, err := registry.CreateSource(cfg.Sources[i])
 		if err != nil {
 			return nil, nil, fmt.Errorf("source %s error: %w", cfg.Sources[i].InstanceID, err)
 		}
@@ -112,7 +107,7 @@ func buildRegistry(cfg *config.Config) ([]interfaces.Source, []interfaces.Sink, 
 
 	var sinks []interfaces.Sink
 	for i := range cfg.Sinks {
-		snk, err := registry.CreateSink(&cfg.Sinks[i])
+		snk, err := registry.CreateSink(cfg.Sinks[i])
 		if err != nil {
 			slog.Warn("skipping faulty sink", "id", cfg.Sinks[i].InstanceID, "err", err)
 			continue

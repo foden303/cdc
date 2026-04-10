@@ -15,10 +15,10 @@ type Event struct {
 	Op         string `json:"op"`
 	Offset     string `json:"offset"`
 	LSN        uint64 `json:"lsn"`
-
 	// --- Raw Debezium Payload ---
-	// Data is the pre-serialized JSON bytes in Debezium format.
 	Data []byte `json:"-"`
+	// --- Meta for partitioning ---
+	Partition  int    `json:"partition"`
 }
 
 // DebeziumPayload represents the industry-standard CDC format.
@@ -45,7 +45,7 @@ type SourceMetadata struct {
 }
 
 // NewEvent creates a new CDC event envelope.
-func NewEvent(topic, subject, instanceID, schema, table, op string, lsn uint64, offset string, data []byte) *Event {
+func NewEvent(topic, subject, instanceID, schema, table, op string, lsn uint64, offset string, data []byte, partition int) *Event {
 	return &Event{
 		Topic:      topic,
 		Subject:    subject,
@@ -56,6 +56,7 @@ func NewEvent(topic, subject, instanceID, schema, table, op string, lsn uint64, 
 		LSN:        lsn,
 		Offset:     offset,
 		Data:       data,
+		Partition:  partition,
 	}
 }
 

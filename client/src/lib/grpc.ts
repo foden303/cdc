@@ -1,10 +1,15 @@
 import * as grpc from '@grpc/grpc-js';
 import * as protoLoader from '@grpc/proto-loader';
 import path from 'path';
+import googleProtoFiles from 'google-proto-files';
+import fs from 'fs';
 
 // ── Proto loader ─────────────────────────────────────────────────────────────
+const PROTO_ROOT = path.resolve(process.cwd(), '../api/proto/v1');
+const PROTO_PATH = path.join(PROTO_ROOT, 'cdc.proto');
 
-const PROTO_PATH = path.resolve(process.cwd(), '../api/proto/v1/cdc.proto');
+
+const GOOGLE_PROTO_ROOT = path.resolve(process.cwd(), 'node_modules/google-proto-files');
 
 const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
   keepCase: true,
@@ -12,7 +17,7 @@ const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
   enums: String,
   defaults: true,
   oneofs: true,
-  includeDirs: [path.resolve(process.cwd(), '../third_party')],
+  includeDirs: [PROTO_ROOT, GOOGLE_PROTO_ROOT],
 });
 
 const protoDescriptor = grpc.loadPackageDefinition(packageDefinition) as any;
@@ -60,9 +65,30 @@ export interface SourceConfig {
   tables: string[];
   slot_name?: string;
   publication_name?: string;
-  instance_id?: string;
   name?: string;
   topic?: string;
+  instance_id: string;
+}
+
+export interface SourcePerformance {
+  source_id: string;
+  throughput: number;
+  error_rate: number;
+}
+
+export interface SinkPerformance {
+  sink_id: string;
+  throughput: number;
+  avg_latency: number;
+}
+
+export interface GetPerformanceMetricsResponse {
+  throughput: number; // Events per second
+  latency_p99: number; // Milliseconds
+  active_workers: number;
+  error_rate: number; // Percentage
+  sinks: Record<string, SinkPerformance>;
+  sources: Record<string, SourcePerformance>;
 }
 
 export interface SinkConfig {
@@ -78,9 +104,27 @@ export interface SinkConfig {
   max_retries?: number;
   retry_base_ms?: number;
   api_key?: string;
-  instance_id?: string;
-  name?: string;
+  instance_id: string; // Unique ID for sink
   topic?: string;
+  field_mapping?: Record<string, string>;
+}
+
+export interface PipelineConfig {
+  channel_buffer_size: number;
+  worker_count: number;
+  batch_size: number;
+  flush_interval_ms: number;
+  subject_filter: string[];
+}
+
+export interface NATSConfig {
+  enabled: boolean;
+  url: string;
+  stream_name: string;
+  retention_days: number;
+  max_reconnects: number;
+  reconnect_wait_ms: number;
+  reconnect_buffer_size_mb: number;
 }
 
 export interface AppConfig {
@@ -88,6 +132,8 @@ export interface AppConfig {
   log_mode: string;
   sources: SourceConfig[];
   sinks: SinkConfig[];
+  pipeline?: PipelineConfig;
+  nats?: NATSConfig;
 }
 
 export interface GetConfigResponse {
@@ -164,16 +210,23 @@ function call<T>(method: string, req: unknown): Promise<T> {
 export const getStats = () => call<GetStatsResponse>('GetStats', {});
 export const healthCheck = () => call<HealthCheckResponse>('HealthCheck', {});
 export const getConfig = () => call<GetConfigResponse>('GetConfig', {});
+export const getPerformanceMetrics = () =>
+  call<GetPerformanceMetricsResponse>('GetPerformanceMetrics', {});
 
 // Sources / Sinks
 export const addSource = (source: SourceConfig) =>
   call<{ instance_id: string }>('AddSource', { source });
 export const removeSource = (instance_id: string) =>
   call<{ success: boolean }>('RemoveSource', { instance_id });
+export const updateSource = (source: SourceConfig) =>
+  call<{ success: boolean }>('UpdateSource', { source });
+
 export const addSink = (sink: SinkConfig) =>
   call<{ instance_id: string }>('AddSink', { sink });
 export const removeSink = (instance_id: string) =>
   call<{ success: boolean }>('RemoveSink', { instance_id });
+export const updateSink = (sink: SinkConfig) =>
+  call<{ success: boolean }>('UpdateSink', { sink });
 
 // Topics
 export const listTopics = (limit = 20, page = 1) =>

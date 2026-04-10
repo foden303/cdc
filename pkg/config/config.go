@@ -11,14 +11,14 @@ import (
 
 // Config is the main configuration struct for the CDC application.
 type Config struct {
-	Name     string         `mapstructure:"name"`
-	LogMode  string         `mapstructure:"log_mode"` // "json" or "text"
-	Sources  []SourceConfig `mapstructure:"sources"`
-	Pipeline PipelineConfig `mapstructure:"pipeline"`
-	UI       UIConfig       `mapstructure:"ui"`
-	Server   ServerConfig   `mapstructure:"server"`
-	Sinks    []SinkConfig   `mapstructure:"sinks"`
-	NATS     NATSConfig     `mapstructure:"nats"`
+	Name     string          `mapstructure:"name" json:"name"`
+	LogMode  string          `mapstructure:"log_mode" json:"log_mode"` // "json" or "text"
+	Sources  []*SourceConfig `mapstructure:"sources" json:"sources"`
+	Pipeline PipelineConfig  `mapstructure:"pipeline" json:"pipeline"`
+	UI       UIConfig        `mapstructure:"ui" json:"ui"`
+	Server   ServerConfig    `mapstructure:"server" json:"server"`
+	Sinks    []*SinkConfig   `mapstructure:"sinks" json:"sinks"`
+	NATS     NATSConfig      `mapstructure:"nats" json:"nats"`
 }
 
 // SourceConfig holds the configuration for the CDC source.
@@ -31,61 +31,62 @@ type SourceConfig struct {
 	Port              int               `mapstructure:"port" json:"port"`
 	Username          string            `mapstructure:"username"`
 	Password          string            `mapstructure:"password"`
-	Database          string            `mapstructure:"database"`
-	Tables            []string          `mapstructure:"tables"`
-	SlotName          string            `mapstructure:"slot_name"`
-	PublicationName   string            `mapstructure:"publication_name"`
+	Database          string            `mapstructure:"database" json:"database"`
+	Tables            []string          `mapstructure:"tables" json:"tables"`
+	SlotName          string            `mapstructure:"slot_name" json:"slot_name"`
+	PublicationName   string            `mapstructure:"publication_name" json:"publication_name"`
 	SnapshotMode      string            `mapstructure:"snapshot_mode" json:"snapshot_mode,omitempty"`
 	URL               string            `mapstructure:"url" json:"url,omitempty"`
 	Headers           map[string]string `mapstructure:"headers" json:"headers,omitempty"`
 	PollingIntervalMs int               `mapstructure:"polling_interval_ms" json:"polling_interval_ms,omitempty"`
+	PartitionCount    int               `mapstructure:"partition_count" json:"partition_count,omitempty"`
 }
 
 // PipelineConfig holds the configuration for the CDC pipeline.
 type PipelineConfig struct {
-	ChannelBufferSize int      `mapstructure:"channel_buffer_size"`
-	WorkerCount       int      `mapstructure:"worker_count"`
-	BatchSize         int      `mapstructure:"batch_size"`
-	FlushIntervalMs   int      `mapstructure:"flush_interval_ms"`
-	SubjectFilter     []string `mapstructure:"subject_filter"`
+	ChannelBufferSize int      `mapstructure:"channel_buffer_size" json:"channel_buffer_size"`
+	WorkerCount       int      `mapstructure:"worker_count" json:"worker_count"`
+	BatchSize         int      `mapstructure:"batch_size" json:"batch_size"`
+	FlushIntervalMs   int      `mapstructure:"flush_interval_ms" json:"flush_interval_ms"`
+	SubjectFilter     []string `mapstructure:"subject_filter" json:"subject_filter"`
 }
 
 // UIConfig holds the configuration for the HTTP UI Server.
 type UIConfig struct {
-	Enabled bool `mapstructure:"enabled"`
-	Port    int  `mapstructure:"port"`
+	Enabled bool `mapstructure:"enabled" json:"enabled"`
+	Port    int  `mapstructure:"port" json:"port"`
 }
 
 // ServerConfig holds gRPC + REST gateway configuration.
 type ServerConfig struct {
-	GRPCPort int `mapstructure:"grpc_port"`
-	HTTPPort int `mapstructure:"http_port"`
+	GRPCPort int `mapstructure:"grpc_port" json:"grpc_port"`
+	HTTPPort int `mapstructure:"http_port" json:"http_port"`
 }
 
 // SinkConfig holds the configuration for the CDC sink.
 type SinkConfig struct {
 	InstanceID      string            `mapstructure:"instance_id" json:"instance_id,omitempty"`
 	Name            string            `mapstructure:"name" json:"name,omitempty"`
-	Type            string            `mapstructure:"type"`
-	Topic           string            `mapstructure:"topic"`
-	URL             []string          `mapstructure:"url"`
-	Host            string            `mapstructure:"host"`
-	Port            int               `mapstructure:"port"`
-	Database        string            `mapstructure:"database"`
-	Username        string            `mapstructure:"username"`
-	Password        string            `mapstructure:"password"`
-	APIKey          string            `mapstructure:"api_key"`
-	Headers         map[string]string `mapstructure:"headers"`
-	Index           string            `mapstructure:"index"`
-	IndexMapping    map[string]string `mapstructure:"index_mapping"`
+	Type            string            `mapstructure:"type" json:"type"`
+	Topic           string            `mapstructure:"topic" json:"topic"`
+	URL             []string          `mapstructure:"url" json:"url"`
+	Host            string            `mapstructure:"host" json:"host"`
+	Port            int               `mapstructure:"port" json:"port"`
+	Database        string            `mapstructure:"database" json:"database"`
+	Username        string            `mapstructure:"username" json:"username"`
+	Password        string            `mapstructure:"password" json:"password"`
+	APIKey          string            `mapstructure:"api_key" json:"api_key"`
+	Headers         map[string]string `mapstructure:"headers" json:"headers"`
+	Index           string            `mapstructure:"index" json:"index"`
+	IndexMapping    map[string]string `mapstructure:"index_mapping" json:"index_mapping"`
 	FieldMapping    map[string]string `mapstructure:"field_mapping" json:"field_mapping,omitempty"`
 	Transformations map[string]string `mapstructure:"transformations" json:"transformations,omitempty"`
 	PrimaryKeys     map[string]string `mapstructure:"primary_keys" json:"primary_keys,omitempty"`
-	IndexPrefix     string            `mapstructure:"index_prefix"`
-	BatchSize       int32             `mapstructure:"batch_size"`
-	FlushIntervalMs int32             `mapstructure:"flush_interval_ms"`
-	MaxRetries      int32             `mapstructure:"max_retries"`
-	RetryBaseMs     int32             `mapstructure:"retry_base_ms"`
+	IndexPrefix     string            `mapstructure:"index_prefix" json:"index_prefix"`
+	BatchSize       int32             `mapstructure:"batch_size" json:"batch_size"`
+	FlushIntervalMs int32             `mapstructure:"flush_interval_ms" json:"flush_interval_ms"`
+	MaxRetries      int32             `mapstructure:"max_retries" json:"max_retries"`
+	RetryBaseMs     int32             `mapstructure:"retry_base_ms" json:"retry_base_ms"`
 
 	// Internal compiled programs
 	programs     map[string]cel.Program
@@ -99,29 +100,31 @@ type SinkConfig struct {
 type RedisSettings struct {
 	Command     string   `mapstructure:"command"`      // set, hset, sadd, bf_add
 	KeyTemplate string   `mapstructure:"key_template"` // CEL template
-	ValueFields []string `mapstructure:"value_fields"`  // fields to use for non-hash commands
+	ValueFields []string `mapstructure:"value_fields"` // fields to use for non-hash commands
 	TTL         int      `mapstructure:"ttl"`          // seconds
 }
 
 // NATSConfig holds the configuration for NATS JetStream.
 type NATSConfig struct {
-	Enabled            bool   `mapstructure:"enabled"`
-	URL                string `mapstructure:"url"`
-	StreamName         string `mapstructure:"stream_name"`
-	RetentionDays      int32  `mapstructure:"retention_days"`
-	MaxReconnects      int    `mapstructure:"max_reconnects"`
-	ReconnectWaitMs    int    `mapstructure:"reconnect_wait_ms"`
-	ReconnectBufSizeMb int    `mapstructure:"reconnect_buffer_size_mb"`
+	Enabled               bool   `mapstructure:"enabled" json:"enabled"`
+	URL                   string `mapstructure:"url" json:"url"`
+	StreamName            string `mapstructure:"stream_name" json:"stream_name"`
+	RetentionDays         int32  `mapstructure:"retention_days" json:"retention_days"`
+	MaxReconnects         int    `mapstructure:"max_reconnects" json:"max_reconnects"`
+	ReconnectWaitMs       int    `mapstructure:"reconnect_wait_ms" json:"reconnect_wait_ms"`
+	ReconnectBufferSizeMb int    `mapstructure:"reconnect_buffer_size_mb" json:"reconnect_buffer_size_mb"`
 
-	MaxAckPending int `mapstructure:"max_ack_pending"`
-	AckWaitMs     int `mapstructure:"ack_wait_ms"`
-	MaxDeliver    int `mapstructure:"max_deliver"`
+	MaxAckPending int `mapstructure:"max_ack_pending" json:"max_ack_pending"`
+	AckWaitMs     int `mapstructure:"ack_wait_ms" json:"ack_wait_ms"`
+	MaxDeliver    int `mapstructure:"max_deliver" json:"max_deliver"`
 }
 
 // LoadConfig loads the configuration from the given path.
-func LoadConfig(path string) (*Config, error) {
-	v := viper.New()
-	v.SetConfigFile(path)
+func LoadConfig() (*Config, error) {
+	v := viper.NewWithOptions()
+	v.AddConfigPath(".")
+	v.SetConfigType("yaml")
+	v.SetConfigFile("pkg/config/config.yaml")
 	v.AutomaticEnv()
 
 	if err := v.ReadInConfig(); err != nil {
@@ -184,23 +187,32 @@ func (c *Config) applyDefaults() {
 	}
 
 	for i := range c.Sources {
-		s := &c.Sources[i]
+		s := c.Sources[i]
 		if s.InstanceID == "" {
-			s.InstanceID = fmt.Sprintf("source_%d", i)
+			// Generate a reasonably unique ID if missing
+			s.InstanceID = fmt.Sprintf("src-%s-%d", s.Type, i)
 		}
-		if s.SlotName == "" {
-			s.SlotName = "cdc_slot"
+
+		// Postgres specific automation
+		if s.Type == "postgres" {
+			if s.SlotName == "" {
+				s.SlotName = fmt.Sprintf("cdc_slot_%s", s.InstanceID)
+			}
+			if s.PublicationName == "" {
+				s.PublicationName = fmt.Sprintf("cdc_pub_%s", s.InstanceID)
+			}
 		}
-		if s.PublicationName == "" {
-			s.PublicationName = "cdc_pub"
-		}
+
 		if s.PollingIntervalMs <= 0 {
 			s.PollingIntervalMs = 5000
+		}
+		if s.PartitionCount <= 0 {
+			s.PartitionCount = c.Pipeline.WorkerCount
 		}
 	}
 
 	for i := range c.Sinks {
-		s := &c.Sinks[i]
+		s := c.Sinks[i]
 		if s.InstanceID == "" {
 			s.InstanceID = fmt.Sprintf("sink_%d", i)
 		}
@@ -221,7 +233,7 @@ func (c *Config) applyDefaults() {
 		}
 	}
 
-	if c.NATS.Enabled {
+	if c.NATS.URL != "" || c.NATS.Enabled {
 		if c.NATS.URL == "" {
 			c.NATS.URL = "nats://127.0.0.1:4222"
 		}
@@ -237,8 +249,8 @@ func (c *Config) applyDefaults() {
 		if c.NATS.ReconnectWaitMs <= 0 {
 			c.NATS.ReconnectWaitMs = 2000
 		}
-		if c.NATS.ReconnectBufSizeMb <= 0 {
-			c.NATS.ReconnectBufSizeMb = 64
+		if c.NATS.ReconnectBufferSizeMb <= 0 {
+			c.NATS.ReconnectBufferSizeMb = 64
 		}
 		if c.NATS.MaxAckPending <= 0 {
 			c.NATS.MaxAckPending = 256

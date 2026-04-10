@@ -132,17 +132,7 @@ func (s *RESTSource) processTask(pipeline chan<- *models.Event, t *restTask) {
 	}
 
 	subject := fmt.Sprintf("%s.%s.%s.%s", topic, s.cfg.InstanceID, "public", s.cfg.Name)
-	pipeline <- models.NewEvent(
-		topic,
-		subject,
-		s.cfg.InstanceID,
-		"public",
-		s.cfg.Name,
-		"c",
-		t.lsn,
-		fmt.Sprintf("%d", t.lsn),
-		data,
-	)
+	pipeline <- models.NewEvent(topic, subject, s.cfg.InstanceID, "public", s.cfg.Name, "c", t.lsn, fmt.Sprintf("%d", t.lsn), data, 0)
 }
 
 func (s *RESTSource) poll() ([]json.RawMessage, error) {

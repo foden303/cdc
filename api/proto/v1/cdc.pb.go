@@ -120,6 +120,246 @@ func (SortOrder) EnumDescriptor() ([]byte, []int) {
 	return file_cdc_proto_rawDescGZIP(), []int{1}
 }
 
+type GetPerformanceMetricsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetPerformanceMetricsRequest) Reset() {
+	*x = GetPerformanceMetricsRequest{}
+	mi := &file_cdc_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetPerformanceMetricsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetPerformanceMetricsRequest) ProtoMessage() {}
+
+func (x *GetPerformanceMetricsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_cdc_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetPerformanceMetricsRequest.ProtoReflect.Descriptor instead.
+func (*GetPerformanceMetricsRequest) Descriptor() ([]byte, []int) {
+	return file_cdc_proto_rawDescGZIP(), []int{0}
+}
+
+type GetPerformanceMetricsResponse struct {
+	state         protoimpl.MessageState        `protogen:"open.v1"`
+	Throughput    float64                       `protobuf:"fixed64,1,opt,name=throughput,proto3" json:"throughput,omitempty"`                   // Events per second
+	LatencyP99    float64                       `protobuf:"fixed64,2,opt,name=latency_p99,json=latencyP99,proto3" json:"latency_p99,omitempty"` // Milliseconds
+	ActiveWorkers uint32                        `protobuf:"varint,3,opt,name=active_workers,json=activeWorkers,proto3" json:"active_workers,omitempty"`
+	ErrorRate     float64                       `protobuf:"fixed64,4,opt,name=error_rate,json=errorRate,proto3" json:"error_rate,omitempty"` // Percentage
+	Sinks         map[string]*SinkPerformance   `protobuf:"bytes,5,rep,name=sinks,proto3" json:"sinks,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Sources       map[string]*SourcePerformance `protobuf:"bytes,6,rep,name=sources,proto3" json:"sources,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetPerformanceMetricsResponse) Reset() {
+	*x = GetPerformanceMetricsResponse{}
+	mi := &file_cdc_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetPerformanceMetricsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetPerformanceMetricsResponse) ProtoMessage() {}
+
+func (x *GetPerformanceMetricsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_cdc_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetPerformanceMetricsResponse.ProtoReflect.Descriptor instead.
+func (*GetPerformanceMetricsResponse) Descriptor() ([]byte, []int) {
+	return file_cdc_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *GetPerformanceMetricsResponse) GetThroughput() float64 {
+	if x != nil {
+		return x.Throughput
+	}
+	return 0
+}
+
+func (x *GetPerformanceMetricsResponse) GetLatencyP99() float64 {
+	if x != nil {
+		return x.LatencyP99
+	}
+	return 0
+}
+
+func (x *GetPerformanceMetricsResponse) GetActiveWorkers() uint32 {
+	if x != nil {
+		return x.ActiveWorkers
+	}
+	return 0
+}
+
+func (x *GetPerformanceMetricsResponse) GetErrorRate() float64 {
+	if x != nil {
+		return x.ErrorRate
+	}
+	return 0
+}
+
+func (x *GetPerformanceMetricsResponse) GetSinks() map[string]*SinkPerformance {
+	if x != nil {
+		return x.Sinks
+	}
+	return nil
+}
+
+func (x *GetPerformanceMetricsResponse) GetSources() map[string]*SourcePerformance {
+	if x != nil {
+		return x.Sources
+	}
+	return nil
+}
+
+type SourcePerformance struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SourceId      string                 `protobuf:"bytes,1,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`
+	Throughput    float64                `protobuf:"fixed64,2,opt,name=throughput,proto3" json:"throughput,omitempty"`
+	ErrorRate     float64                `protobuf:"fixed64,3,opt,name=error_rate,json=errorRate,proto3" json:"error_rate,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SourcePerformance) Reset() {
+	*x = SourcePerformance{}
+	mi := &file_cdc_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SourcePerformance) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SourcePerformance) ProtoMessage() {}
+
+func (x *SourcePerformance) ProtoReflect() protoreflect.Message {
+	mi := &file_cdc_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SourcePerformance.ProtoReflect.Descriptor instead.
+func (*SourcePerformance) Descriptor() ([]byte, []int) {
+	return file_cdc_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *SourcePerformance) GetSourceId() string {
+	if x != nil {
+		return x.SourceId
+	}
+	return ""
+}
+
+func (x *SourcePerformance) GetThroughput() float64 {
+	if x != nil {
+		return x.Throughput
+	}
+	return 0
+}
+
+func (x *SourcePerformance) GetErrorRate() float64 {
+	if x != nil {
+		return x.ErrorRate
+	}
+	return 0
+}
+
+type SinkPerformance struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SinkId        string                 `protobuf:"bytes,1,opt,name=sink_id,json=sinkId,proto3" json:"sink_id,omitempty"`
+	Throughput    float64                `protobuf:"fixed64,2,opt,name=throughput,proto3" json:"throughput,omitempty"`
+	AvgLatency    float64                `protobuf:"fixed64,3,opt,name=avg_latency,json=avgLatency,proto3" json:"avg_latency,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SinkPerformance) Reset() {
+	*x = SinkPerformance{}
+	mi := &file_cdc_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SinkPerformance) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SinkPerformance) ProtoMessage() {}
+
+func (x *SinkPerformance) ProtoReflect() protoreflect.Message {
+	mi := &file_cdc_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SinkPerformance.ProtoReflect.Descriptor instead.
+func (*SinkPerformance) Descriptor() ([]byte, []int) {
+	return file_cdc_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *SinkPerformance) GetSinkId() string {
+	if x != nil {
+		return x.SinkId
+	}
+	return ""
+}
+
+func (x *SinkPerformance) GetThroughput() float64 {
+	if x != nil {
+		return x.Throughput
+	}
+	return 0
+}
+
+func (x *SinkPerformance) GetAvgLatency() float64 {
+	if x != nil {
+		return x.AvgLatency
+	}
+	return 0
+}
+
 // ... messages ...
 type GetConfigRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -129,7 +369,7 @@ type GetConfigRequest struct {
 
 func (x *GetConfigRequest) Reset() {
 	*x = GetConfigRequest{}
-	mi := &file_cdc_proto_msgTypes[0]
+	mi := &file_cdc_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -141,7 +381,7 @@ func (x *GetConfigRequest) String() string {
 func (*GetConfigRequest) ProtoMessage() {}
 
 func (x *GetConfigRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_cdc_proto_msgTypes[0]
+	mi := &file_cdc_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -154,7 +394,7 @@ func (x *GetConfigRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetConfigRequest.ProtoReflect.Descriptor instead.
 func (*GetConfigRequest) Descriptor() ([]byte, []int) {
-	return file_cdc_proto_rawDescGZIP(), []int{0}
+	return file_cdc_proto_rawDescGZIP(), []int{4}
 }
 
 type GetConfigResponse struct {
@@ -168,7 +408,7 @@ type GetConfigResponse struct {
 
 func (x *GetConfigResponse) Reset() {
 	*x = GetConfigResponse{}
-	mi := &file_cdc_proto_msgTypes[1]
+	mi := &file_cdc_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -180,7 +420,7 @@ func (x *GetConfigResponse) String() string {
 func (*GetConfigResponse) ProtoMessage() {}
 
 func (x *GetConfigResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_cdc_proto_msgTypes[1]
+	mi := &file_cdc_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -193,7 +433,7 @@ func (x *GetConfigResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetConfigResponse.ProtoReflect.Descriptor instead.
 func (*GetConfigResponse) Descriptor() ([]byte, []int) {
-	return file_cdc_proto_rawDescGZIP(), []int{1}
+	return file_cdc_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *GetConfigResponse) GetConfig() *AppConfig {
@@ -223,13 +463,15 @@ type AppConfig struct {
 	LogMode       string                 `protobuf:"bytes,2,opt,name=log_mode,json=logMode,proto3" json:"log_mode,omitempty"`
 	Sources       []*SourceConfig        `protobuf:"bytes,3,rep,name=sources,proto3" json:"sources,omitempty"`
 	Sinks         []*SinkConfig          `protobuf:"bytes,4,rep,name=sinks,proto3" json:"sinks,omitempty"`
+	Pipeline      *PipelineConfig        `protobuf:"bytes,5,opt,name=pipeline,proto3" json:"pipeline,omitempty"`
+	Nats          *NATSConfig            `protobuf:"bytes,6,opt,name=nats,proto3" json:"nats,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *AppConfig) Reset() {
 	*x = AppConfig{}
-	mi := &file_cdc_proto_msgTypes[2]
+	mi := &file_cdc_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -241,7 +483,7 @@ func (x *AppConfig) String() string {
 func (*AppConfig) ProtoMessage() {}
 
 func (x *AppConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_cdc_proto_msgTypes[2]
+	mi := &file_cdc_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -254,7 +496,7 @@ func (x *AppConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AppConfig.ProtoReflect.Descriptor instead.
 func (*AppConfig) Descriptor() ([]byte, []int) {
-	return file_cdc_proto_rawDescGZIP(), []int{2}
+	return file_cdc_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *AppConfig) GetName() string {
@@ -285,6 +527,212 @@ func (x *AppConfig) GetSinks() []*SinkConfig {
 	return nil
 }
 
+func (x *AppConfig) GetPipeline() *PipelineConfig {
+	if x != nil {
+		return x.Pipeline
+	}
+	return nil
+}
+
+func (x *AppConfig) GetNats() *NATSConfig {
+	if x != nil {
+		return x.Nats
+	}
+	return nil
+}
+
+type PipelineConfig struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	ChannelBufferSize int32                  `protobuf:"varint,1,opt,name=channel_buffer_size,json=channelBufferSize,proto3" json:"channel_buffer_size,omitempty"`
+	WorkerCount       int32                  `protobuf:"varint,2,opt,name=worker_count,json=workerCount,proto3" json:"worker_count,omitempty"`
+	BatchSize         int32                  `protobuf:"varint,3,opt,name=batch_size,json=batchSize,proto3" json:"batch_size,omitempty"`
+	FlushIntervalMs   int32                  `protobuf:"varint,4,opt,name=flush_interval_ms,json=flushIntervalMs,proto3" json:"flush_interval_ms,omitempty"`
+	SubjectFilter     []string               `protobuf:"bytes,5,rep,name=subject_filter,json=subjectFilter,proto3" json:"subject_filter,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *PipelineConfig) Reset() {
+	*x = PipelineConfig{}
+	mi := &file_cdc_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PipelineConfig) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PipelineConfig) ProtoMessage() {}
+
+func (x *PipelineConfig) ProtoReflect() protoreflect.Message {
+	mi := &file_cdc_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PipelineConfig.ProtoReflect.Descriptor instead.
+func (*PipelineConfig) Descriptor() ([]byte, []int) {
+	return file_cdc_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *PipelineConfig) GetChannelBufferSize() int32 {
+	if x != nil {
+		return x.ChannelBufferSize
+	}
+	return 0
+}
+
+func (x *PipelineConfig) GetWorkerCount() int32 {
+	if x != nil {
+		return x.WorkerCount
+	}
+	return 0
+}
+
+func (x *PipelineConfig) GetBatchSize() int32 {
+	if x != nil {
+		return x.BatchSize
+	}
+	return 0
+}
+
+func (x *PipelineConfig) GetFlushIntervalMs() int32 {
+	if x != nil {
+		return x.FlushIntervalMs
+	}
+	return 0
+}
+
+func (x *PipelineConfig) GetSubjectFilter() []string {
+	if x != nil {
+		return x.SubjectFilter
+	}
+	return nil
+}
+
+type NATSConfig struct {
+	state                 protoimpl.MessageState `protogen:"open.v1"`
+	Enabled               bool                   `protobuf:"varint,1,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	Url                   string                 `protobuf:"bytes,2,opt,name=url,proto3" json:"url,omitempty"`
+	StreamName            string                 `protobuf:"bytes,3,opt,name=stream_name,json=streamName,proto3" json:"stream_name,omitempty"`
+	RetentionDays         int32                  `protobuf:"varint,4,opt,name=retention_days,json=retentionDays,proto3" json:"retention_days,omitempty"`
+	MaxReconnects         int32                  `protobuf:"varint,5,opt,name=max_reconnects,json=maxReconnects,proto3" json:"max_reconnects,omitempty"`
+	ReconnectWaitMs       int32                  `protobuf:"varint,6,opt,name=reconnect_wait_ms,json=reconnectWaitMs,proto3" json:"reconnect_wait_ms,omitempty"`
+	ReconnectBufferSizeMb int32                  `protobuf:"varint,7,opt,name=reconnect_buffer_size_mb,json=reconnectBufferSizeMb,proto3" json:"reconnect_buffer_size_mb,omitempty"`
+	MaxAckPending         int32                  `protobuf:"varint,8,opt,name=max_ack_pending,json=maxAckPending,proto3" json:"max_ack_pending,omitempty"`
+	AckWaitMs             int32                  `protobuf:"varint,9,opt,name=ack_wait_ms,json=ackWaitMs,proto3" json:"ack_wait_ms,omitempty"`
+	MaxDeliver            int32                  `protobuf:"varint,10,opt,name=max_deliver,json=maxDeliver,proto3" json:"max_deliver,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
+}
+
+func (x *NATSConfig) Reset() {
+	*x = NATSConfig{}
+	mi := &file_cdc_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *NATSConfig) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NATSConfig) ProtoMessage() {}
+
+func (x *NATSConfig) ProtoReflect() protoreflect.Message {
+	mi := &file_cdc_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NATSConfig.ProtoReflect.Descriptor instead.
+func (*NATSConfig) Descriptor() ([]byte, []int) {
+	return file_cdc_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *NATSConfig) GetEnabled() bool {
+	if x != nil {
+		return x.Enabled
+	}
+	return false
+}
+
+func (x *NATSConfig) GetUrl() string {
+	if x != nil {
+		return x.Url
+	}
+	return ""
+}
+
+func (x *NATSConfig) GetStreamName() string {
+	if x != nil {
+		return x.StreamName
+	}
+	return ""
+}
+
+func (x *NATSConfig) GetRetentionDays() int32 {
+	if x != nil {
+		return x.RetentionDays
+	}
+	return 0
+}
+
+func (x *NATSConfig) GetMaxReconnects() int32 {
+	if x != nil {
+		return x.MaxReconnects
+	}
+	return 0
+}
+
+func (x *NATSConfig) GetReconnectWaitMs() int32 {
+	if x != nil {
+		return x.ReconnectWaitMs
+	}
+	return 0
+}
+
+func (x *NATSConfig) GetReconnectBufferSizeMb() int32 {
+	if x != nil {
+		return x.ReconnectBufferSizeMb
+	}
+	return 0
+}
+
+func (x *NATSConfig) GetMaxAckPending() int32 {
+	if x != nil {
+		return x.MaxAckPending
+	}
+	return 0
+}
+
+func (x *NATSConfig) GetAckWaitMs() int32 {
+	if x != nil {
+		return x.AckWaitMs
+	}
+	return 0
+}
+
+func (x *NATSConfig) GetMaxDeliver() int32 {
+	if x != nil {
+		return x.MaxDeliver
+	}
+	return 0
+}
+
 type SourceConfig struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	Type            string                 `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`
@@ -296,7 +744,7 @@ type SourceConfig struct {
 	Tables          []string               `protobuf:"bytes,7,rep,name=tables,proto3" json:"tables,omitempty"`
 	SlotName        *string                `protobuf:"bytes,8,opt,name=slot_name,json=slotName,proto3,oneof" json:"slot_name,omitempty"`
 	PublicationName *string                `protobuf:"bytes,9,opt,name=publication_name,json=publicationName,proto3,oneof" json:"publication_name,omitempty"`
-	InstanceId      *string                `protobuf:"bytes,10,opt,name=instance_id,json=instanceId,proto3,oneof" json:"instance_id,omitempty"`
+	InstanceId      string                 `protobuf:"bytes,10,opt,name=instance_id,json=instanceId,proto3" json:"instance_id,omitempty"`
 	Name            *string                `protobuf:"bytes,11,opt,name=name,proto3,oneof" json:"name,omitempty"`   // Display name
 	Topic           *string                `protobuf:"bytes,12,opt,name=topic,proto3,oneof" json:"topic,omitempty"` // Routing topic
 	unknownFields   protoimpl.UnknownFields
@@ -305,7 +753,7 @@ type SourceConfig struct {
 
 func (x *SourceConfig) Reset() {
 	*x = SourceConfig{}
-	mi := &file_cdc_proto_msgTypes[3]
+	mi := &file_cdc_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -317,7 +765,7 @@ func (x *SourceConfig) String() string {
 func (*SourceConfig) ProtoMessage() {}
 
 func (x *SourceConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_cdc_proto_msgTypes[3]
+	mi := &file_cdc_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -330,7 +778,7 @@ func (x *SourceConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SourceConfig.ProtoReflect.Descriptor instead.
 func (*SourceConfig) Descriptor() ([]byte, []int) {
-	return file_cdc_proto_rawDescGZIP(), []int{3}
+	return file_cdc_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *SourceConfig) GetType() string {
@@ -397,8 +845,8 @@ func (x *SourceConfig) GetPublicationName() string {
 }
 
 func (x *SourceConfig) GetInstanceId() string {
-	if x != nil && x.InstanceId != nil {
-		return *x.InstanceId
+	if x != nil {
+		return x.InstanceId
 	}
 	return ""
 }
@@ -431,17 +879,18 @@ type SinkConfig struct {
 	MaxRetries      *int32                 `protobuf:"varint,10,opt,name=max_retries,json=maxRetries,proto3,oneof" json:"max_retries,omitempty"`
 	RetryBaseMs     *int32                 `protobuf:"varint,11,opt,name=retry_base_ms,json=retryBaseMs,proto3,oneof" json:"retry_base_ms,omitempty"`
 	ApiKey          *string                `protobuf:"bytes,12,opt,name=api_key,json=apiKey,proto3,oneof" json:"api_key,omitempty"`
-	InstanceId      *string                `protobuf:"bytes,13,opt,name=instance_id,json=instanceId,proto3,oneof" json:"instance_id,omitempty"` // Unique ID for sink
-	Name            *string                `protobuf:"bytes,14,opt,name=name,proto3,oneof" json:"name,omitempty"`                               // Display name
-	Topic           *string                `protobuf:"bytes,15,opt,name=topic,proto3,oneof" json:"topic,omitempty"`                             // Routing topic
+	InstanceId      string                 `protobuf:"bytes,13,opt,name=instance_id,json=instanceId,proto3" json:"instance_id,omitempty"` // Unique ID for sink
+	Name            *string                `protobuf:"bytes,14,opt,name=name,proto3,oneof" json:"name,omitempty"`                         // Display name
+	Topic           *string                `protobuf:"bytes,15,opt,name=topic,proto3,oneof" json:"topic,omitempty"`                       // Routing topic
 	FieldMapping    map[string]string      `protobuf:"bytes,16,rep,name=field_mapping,json=fieldMapping,proto3" json:"field_mapping,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Redis           *RedisSettings         `protobuf:"bytes,17,opt,name=redis,proto3" json:"redis,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
 
 func (x *SinkConfig) Reset() {
 	*x = SinkConfig{}
-	mi := &file_cdc_proto_msgTypes[4]
+	mi := &file_cdc_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -453,7 +902,7 @@ func (x *SinkConfig) String() string {
 func (*SinkConfig) ProtoMessage() {}
 
 func (x *SinkConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_cdc_proto_msgTypes[4]
+	mi := &file_cdc_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -466,7 +915,7 @@ func (x *SinkConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SinkConfig.ProtoReflect.Descriptor instead.
 func (*SinkConfig) Descriptor() ([]byte, []int) {
-	return file_cdc_proto_rawDescGZIP(), []int{4}
+	return file_cdc_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *SinkConfig) GetType() string {
@@ -554,8 +1003,8 @@ func (x *SinkConfig) GetApiKey() string {
 }
 
 func (x *SinkConfig) GetInstanceId() string {
-	if x != nil && x.InstanceId != nil {
-		return *x.InstanceId
+	if x != nil {
+		return x.InstanceId
 	}
 	return ""
 }
@@ -581,6 +1030,81 @@ func (x *SinkConfig) GetFieldMapping() map[string]string {
 	return nil
 }
 
+func (x *SinkConfig) GetRedis() *RedisSettings {
+	if x != nil {
+		return x.Redis
+	}
+	return nil
+}
+
+type RedisSettings struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Command       string                 `protobuf:"bytes,1,opt,name=command,proto3" json:"command,omitempty"`                            // set, hset, sadd, bf_add
+	KeyTemplate   string                 `protobuf:"bytes,2,opt,name=key_template,json=keyTemplate,proto3" json:"key_template,omitempty"` // CEL template
+	ValueFields   []string               `protobuf:"bytes,3,rep,name=value_fields,json=valueFields,proto3" json:"value_fields,omitempty"`
+	Ttl           int32                  `protobuf:"varint,4,opt,name=ttl,proto3" json:"ttl,omitempty"` // seconds
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RedisSettings) Reset() {
+	*x = RedisSettings{}
+	mi := &file_cdc_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RedisSettings) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RedisSettings) ProtoMessage() {}
+
+func (x *RedisSettings) ProtoReflect() protoreflect.Message {
+	mi := &file_cdc_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RedisSettings.ProtoReflect.Descriptor instead.
+func (*RedisSettings) Descriptor() ([]byte, []int) {
+	return file_cdc_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *RedisSettings) GetCommand() string {
+	if x != nil {
+		return x.Command
+	}
+	return ""
+}
+
+func (x *RedisSettings) GetKeyTemplate() string {
+	if x != nil {
+		return x.KeyTemplate
+	}
+	return ""
+}
+
+func (x *RedisSettings) GetValueFields() []string {
+	if x != nil {
+		return x.ValueFields
+	}
+	return nil
+}
+
+func (x *RedisSettings) GetTtl() int32 {
+	if x != nil {
+		return x.Ttl
+	}
+	return 0
+}
+
 // Dynamic Operations
 type AddSourceRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -591,7 +1115,7 @@ type AddSourceRequest struct {
 
 func (x *AddSourceRequest) Reset() {
 	*x = AddSourceRequest{}
-	mi := &file_cdc_proto_msgTypes[5]
+	mi := &file_cdc_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -603,7 +1127,7 @@ func (x *AddSourceRequest) String() string {
 func (*AddSourceRequest) ProtoMessage() {}
 
 func (x *AddSourceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_cdc_proto_msgTypes[5]
+	mi := &file_cdc_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -616,7 +1140,7 @@ func (x *AddSourceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddSourceRequest.ProtoReflect.Descriptor instead.
 func (*AddSourceRequest) Descriptor() ([]byte, []int) {
-	return file_cdc_proto_rawDescGZIP(), []int{5}
+	return file_cdc_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *AddSourceRequest) GetSource() *SourceConfig {
@@ -635,7 +1159,7 @@ type AddSourceResponse struct {
 
 func (x *AddSourceResponse) Reset() {
 	*x = AddSourceResponse{}
-	mi := &file_cdc_proto_msgTypes[6]
+	mi := &file_cdc_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -647,7 +1171,7 @@ func (x *AddSourceResponse) String() string {
 func (*AddSourceResponse) ProtoMessage() {}
 
 func (x *AddSourceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_cdc_proto_msgTypes[6]
+	mi := &file_cdc_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -660,7 +1184,7 @@ func (x *AddSourceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddSourceResponse.ProtoReflect.Descriptor instead.
 func (*AddSourceResponse) Descriptor() ([]byte, []int) {
-	return file_cdc_proto_rawDescGZIP(), []int{6}
+	return file_cdc_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *AddSourceResponse) GetInstanceId() string {
@@ -679,7 +1203,7 @@ type RemoveSourceRequest struct {
 
 func (x *RemoveSourceRequest) Reset() {
 	*x = RemoveSourceRequest{}
-	mi := &file_cdc_proto_msgTypes[7]
+	mi := &file_cdc_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -691,7 +1215,7 @@ func (x *RemoveSourceRequest) String() string {
 func (*RemoveSourceRequest) ProtoMessage() {}
 
 func (x *RemoveSourceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_cdc_proto_msgTypes[7]
+	mi := &file_cdc_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -704,7 +1228,7 @@ func (x *RemoveSourceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveSourceRequest.ProtoReflect.Descriptor instead.
 func (*RemoveSourceRequest) Descriptor() ([]byte, []int) {
-	return file_cdc_proto_rawDescGZIP(), []int{7}
+	return file_cdc_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *RemoveSourceRequest) GetInstanceId() string {
@@ -723,7 +1247,7 @@ type RemoveSourceResponse struct {
 
 func (x *RemoveSourceResponse) Reset() {
 	*x = RemoveSourceResponse{}
-	mi := &file_cdc_proto_msgTypes[8]
+	mi := &file_cdc_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -735,7 +1259,7 @@ func (x *RemoveSourceResponse) String() string {
 func (*RemoveSourceResponse) ProtoMessage() {}
 
 func (x *RemoveSourceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_cdc_proto_msgTypes[8]
+	mi := &file_cdc_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -748,7 +1272,7 @@ func (x *RemoveSourceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveSourceResponse.ProtoReflect.Descriptor instead.
 func (*RemoveSourceResponse) Descriptor() ([]byte, []int) {
-	return file_cdc_proto_rawDescGZIP(), []int{8}
+	return file_cdc_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *RemoveSourceResponse) GetSuccess() bool {
@@ -767,7 +1291,7 @@ type AddSinkRequest struct {
 
 func (x *AddSinkRequest) Reset() {
 	*x = AddSinkRequest{}
-	mi := &file_cdc_proto_msgTypes[9]
+	mi := &file_cdc_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -779,7 +1303,7 @@ func (x *AddSinkRequest) String() string {
 func (*AddSinkRequest) ProtoMessage() {}
 
 func (x *AddSinkRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_cdc_proto_msgTypes[9]
+	mi := &file_cdc_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -792,7 +1316,7 @@ func (x *AddSinkRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddSinkRequest.ProtoReflect.Descriptor instead.
 func (*AddSinkRequest) Descriptor() ([]byte, []int) {
-	return file_cdc_proto_rawDescGZIP(), []int{9}
+	return file_cdc_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *AddSinkRequest) GetSink() *SinkConfig {
@@ -811,7 +1335,7 @@ type AddSinkResponse struct {
 
 func (x *AddSinkResponse) Reset() {
 	*x = AddSinkResponse{}
-	mi := &file_cdc_proto_msgTypes[10]
+	mi := &file_cdc_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -823,7 +1347,7 @@ func (x *AddSinkResponse) String() string {
 func (*AddSinkResponse) ProtoMessage() {}
 
 func (x *AddSinkResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_cdc_proto_msgTypes[10]
+	mi := &file_cdc_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -836,7 +1360,7 @@ func (x *AddSinkResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddSinkResponse.ProtoReflect.Descriptor instead.
 func (*AddSinkResponse) Descriptor() ([]byte, []int) {
-	return file_cdc_proto_rawDescGZIP(), []int{10}
+	return file_cdc_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *AddSinkResponse) GetInstanceId() string {
@@ -855,7 +1379,7 @@ type RemoveSinkRequest struct {
 
 func (x *RemoveSinkRequest) Reset() {
 	*x = RemoveSinkRequest{}
-	mi := &file_cdc_proto_msgTypes[11]
+	mi := &file_cdc_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -867,7 +1391,7 @@ func (x *RemoveSinkRequest) String() string {
 func (*RemoveSinkRequest) ProtoMessage() {}
 
 func (x *RemoveSinkRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_cdc_proto_msgTypes[11]
+	mi := &file_cdc_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -880,7 +1404,7 @@ func (x *RemoveSinkRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveSinkRequest.ProtoReflect.Descriptor instead.
 func (*RemoveSinkRequest) Descriptor() ([]byte, []int) {
-	return file_cdc_proto_rawDescGZIP(), []int{11}
+	return file_cdc_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *RemoveSinkRequest) GetInstanceId() string {
@@ -899,7 +1423,7 @@ type RemoveSinkResponse struct {
 
 func (x *RemoveSinkResponse) Reset() {
 	*x = RemoveSinkResponse{}
-	mi := &file_cdc_proto_msgTypes[12]
+	mi := &file_cdc_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -911,7 +1435,7 @@ func (x *RemoveSinkResponse) String() string {
 func (*RemoveSinkResponse) ProtoMessage() {}
 
 func (x *RemoveSinkResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_cdc_proto_msgTypes[12]
+	mi := &file_cdc_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -924,10 +1448,186 @@ func (x *RemoveSinkResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveSinkResponse.ProtoReflect.Descriptor instead.
 func (*RemoveSinkResponse) Descriptor() ([]byte, []int) {
-	return file_cdc_proto_rawDescGZIP(), []int{12}
+	return file_cdc_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *RemoveSinkResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+type UpdateSourceRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Source        *SourceConfig          `protobuf:"bytes,1,opt,name=source,proto3" json:"source,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateSourceRequest) Reset() {
+	*x = UpdateSourceRequest{}
+	mi := &file_cdc_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateSourceRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateSourceRequest) ProtoMessage() {}
+
+func (x *UpdateSourceRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_cdc_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateSourceRequest.ProtoReflect.Descriptor instead.
+func (*UpdateSourceRequest) Descriptor() ([]byte, []int) {
+	return file_cdc_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *UpdateSourceRequest) GetSource() *SourceConfig {
+	if x != nil {
+		return x.Source
+	}
+	return nil
+}
+
+type UpdateSourceResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateSourceResponse) Reset() {
+	*x = UpdateSourceResponse{}
+	mi := &file_cdc_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateSourceResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateSourceResponse) ProtoMessage() {}
+
+func (x *UpdateSourceResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_cdc_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateSourceResponse.ProtoReflect.Descriptor instead.
+func (*UpdateSourceResponse) Descriptor() ([]byte, []int) {
+	return file_cdc_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *UpdateSourceResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+type UpdateSinkRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Sink          *SinkConfig            `protobuf:"bytes,1,opt,name=sink,proto3" json:"sink,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateSinkRequest) Reset() {
+	*x = UpdateSinkRequest{}
+	mi := &file_cdc_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateSinkRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateSinkRequest) ProtoMessage() {}
+
+func (x *UpdateSinkRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_cdc_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateSinkRequest.ProtoReflect.Descriptor instead.
+func (*UpdateSinkRequest) Descriptor() ([]byte, []int) {
+	return file_cdc_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *UpdateSinkRequest) GetSink() *SinkConfig {
+	if x != nil {
+		return x.Sink
+	}
+	return nil
+}
+
+type UpdateSinkResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateSinkResponse) Reset() {
+	*x = UpdateSinkResponse{}
+	mi := &file_cdc_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateSinkResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateSinkResponse) ProtoMessage() {}
+
+func (x *UpdateSinkResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_cdc_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateSinkResponse.ProtoReflect.Descriptor instead.
+func (*UpdateSinkResponse) Descriptor() ([]byte, []int) {
+	return file_cdc_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *UpdateSinkResponse) GetSuccess() bool {
 	if x != nil {
 		return x.Success
 	}
@@ -942,7 +1642,7 @@ type HealthCheckRequest struct {
 
 func (x *HealthCheckRequest) Reset() {
 	*x = HealthCheckRequest{}
-	mi := &file_cdc_proto_msgTypes[13]
+	mi := &file_cdc_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -954,7 +1654,7 @@ func (x *HealthCheckRequest) String() string {
 func (*HealthCheckRequest) ProtoMessage() {}
 
 func (x *HealthCheckRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_cdc_proto_msgTypes[13]
+	mi := &file_cdc_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -967,7 +1667,7 @@ func (x *HealthCheckRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HealthCheckRequest.ProtoReflect.Descriptor instead.
 func (*HealthCheckRequest) Descriptor() ([]byte, []int) {
-	return file_cdc_proto_rawDescGZIP(), []int{13}
+	return file_cdc_proto_rawDescGZIP(), []int{24}
 }
 
 type HealthCheckResponse struct {
@@ -981,7 +1681,7 @@ type HealthCheckResponse struct {
 
 func (x *HealthCheckResponse) Reset() {
 	*x = HealthCheckResponse{}
-	mi := &file_cdc_proto_msgTypes[14]
+	mi := &file_cdc_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -993,7 +1693,7 @@ func (x *HealthCheckResponse) String() string {
 func (*HealthCheckResponse) ProtoMessage() {}
 
 func (x *HealthCheckResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_cdc_proto_msgTypes[14]
+	mi := &file_cdc_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1006,7 +1706,7 @@ func (x *HealthCheckResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HealthCheckResponse.ProtoReflect.Descriptor instead.
 func (*HealthCheckResponse) Descriptor() ([]byte, []int) {
-	return file_cdc_proto_rawDescGZIP(), []int{14}
+	return file_cdc_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *HealthCheckResponse) GetStatus() string {
@@ -1038,7 +1738,7 @@ type GetStatsRequest struct {
 
 func (x *GetStatsRequest) Reset() {
 	*x = GetStatsRequest{}
-	mi := &file_cdc_proto_msgTypes[15]
+	mi := &file_cdc_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1050,7 +1750,7 @@ func (x *GetStatsRequest) String() string {
 func (*GetStatsRequest) ProtoMessage() {}
 
 func (x *GetStatsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_cdc_proto_msgTypes[15]
+	mi := &file_cdc_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1063,7 +1763,7 @@ func (x *GetStatsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetStatsRequest.ProtoReflect.Descriptor instead.
 func (*GetStatsRequest) Descriptor() ([]byte, []int) {
-	return file_cdc_proto_rawDescGZIP(), []int{15}
+	return file_cdc_proto_rawDescGZIP(), []int{26}
 }
 
 type GetStatsResponse struct {
@@ -1076,7 +1776,7 @@ type GetStatsResponse struct {
 
 func (x *GetStatsResponse) Reset() {
 	*x = GetStatsResponse{}
-	mi := &file_cdc_proto_msgTypes[16]
+	mi := &file_cdc_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1088,7 +1788,7 @@ func (x *GetStatsResponse) String() string {
 func (*GetStatsResponse) ProtoMessage() {}
 
 func (x *GetStatsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_cdc_proto_msgTypes[16]
+	mi := &file_cdc_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1101,7 +1801,7 @@ func (x *GetStatsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetStatsResponse.ProtoReflect.Descriptor instead.
 func (*GetStatsResponse) Descriptor() ([]byte, []int) {
-	return file_cdc_proto_rawDescGZIP(), []int{16}
+	return file_cdc_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *GetStatsResponse) GetSourceStats() map[string]*ComponentStats {
@@ -1129,7 +1829,7 @@ type ComponentStats struct {
 
 func (x *ComponentStats) Reset() {
 	*x = ComponentStats{}
-	mi := &file_cdc_proto_msgTypes[17]
+	mi := &file_cdc_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1141,7 +1841,7 @@ func (x *ComponentStats) String() string {
 func (*ComponentStats) ProtoMessage() {}
 
 func (x *ComponentStats) ProtoReflect() protoreflect.Message {
-	mi := &file_cdc_proto_msgTypes[17]
+	mi := &file_cdc_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1154,7 +1854,7 @@ func (x *ComponentStats) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ComponentStats.ProtoReflect.Descriptor instead.
 func (*ComponentStats) Descriptor() ([]byte, []int) {
-	return file_cdc_proto_rawDescGZIP(), []int{17}
+	return file_cdc_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *ComponentStats) GetSuccessCount() uint64 {
@@ -1192,7 +1892,7 @@ type ListMessagesRequest struct {
 
 func (x *ListMessagesRequest) Reset() {
 	*x = ListMessagesRequest{}
-	mi := &file_cdc_proto_msgTypes[18]
+	mi := &file_cdc_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1204,7 +1904,7 @@ func (x *ListMessagesRequest) String() string {
 func (*ListMessagesRequest) ProtoMessage() {}
 
 func (x *ListMessagesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_cdc_proto_msgTypes[18]
+	mi := &file_cdc_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1217,7 +1917,7 @@ func (x *ListMessagesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMessagesRequest.ProtoReflect.Descriptor instead.
 func (*ListMessagesRequest) Descriptor() ([]byte, []int) {
-	return file_cdc_proto_rawDescGZIP(), []int{18}
+	return file_cdc_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *ListMessagesRequest) GetStatus() MessageStatus {
@@ -1266,7 +1966,7 @@ type ListMessagesResponse struct {
 
 func (x *ListMessagesResponse) Reset() {
 	*x = ListMessagesResponse{}
-	mi := &file_cdc_proto_msgTypes[19]
+	mi := &file_cdc_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1278,7 +1978,7 @@ func (x *ListMessagesResponse) String() string {
 func (*ListMessagesResponse) ProtoMessage() {}
 
 func (x *ListMessagesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_cdc_proto_msgTypes[19]
+	mi := &file_cdc_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1291,7 +1991,7 @@ func (x *ListMessagesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMessagesResponse.ProtoReflect.Descriptor instead.
 func (*ListMessagesResponse) Descriptor() ([]byte, []int) {
-	return file_cdc_proto_rawDescGZIP(), []int{19}
+	return file_cdc_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *ListMessagesResponse) GetData() []*MessageItem {
@@ -1328,7 +2028,7 @@ type MessageItem struct {
 
 func (x *MessageItem) Reset() {
 	*x = MessageItem{}
-	mi := &file_cdc_proto_msgTypes[20]
+	mi := &file_cdc_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1340,7 +2040,7 @@ func (x *MessageItem) String() string {
 func (*MessageItem) ProtoMessage() {}
 
 func (x *MessageItem) ProtoReflect() protoreflect.Message {
-	mi := &file_cdc_proto_msgTypes[20]
+	mi := &file_cdc_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1353,7 +2053,7 @@ func (x *MessageItem) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MessageItem.ProtoReflect.Descriptor instead.
 func (*MessageItem) Descriptor() ([]byte, []int) {
-	return file_cdc_proto_rawDescGZIP(), []int{20}
+	return file_cdc_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *MessageItem) GetSequence() uint64 {
@@ -1400,7 +2100,7 @@ type GetConsumerInfoRequest struct {
 
 func (x *GetConsumerInfoRequest) Reset() {
 	*x = GetConsumerInfoRequest{}
-	mi := &file_cdc_proto_msgTypes[21]
+	mi := &file_cdc_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1412,7 +2112,7 @@ func (x *GetConsumerInfoRequest) String() string {
 func (*GetConsumerInfoRequest) ProtoMessage() {}
 
 func (x *GetConsumerInfoRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_cdc_proto_msgTypes[21]
+	mi := &file_cdc_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1425,7 +2125,7 @@ func (x *GetConsumerInfoRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetConsumerInfoRequest.ProtoReflect.Descriptor instead.
 func (*GetConsumerInfoRequest) Descriptor() ([]byte, []int) {
-	return file_cdc_proto_rawDescGZIP(), []int{21}
+	return file_cdc_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *GetConsumerInfoRequest) GetConsumerName() string {
@@ -1445,7 +2145,7 @@ type GetConsumerInfoResponse struct {
 
 func (x *GetConsumerInfoResponse) Reset() {
 	*x = GetConsumerInfoResponse{}
-	mi := &file_cdc_proto_msgTypes[22]
+	mi := &file_cdc_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1457,7 +2157,7 @@ func (x *GetConsumerInfoResponse) String() string {
 func (*GetConsumerInfoResponse) ProtoMessage() {}
 
 func (x *GetConsumerInfoResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_cdc_proto_msgTypes[22]
+	mi := &file_cdc_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1470,7 +2170,7 @@ func (x *GetConsumerInfoResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetConsumerInfoResponse.ProtoReflect.Descriptor instead.
 func (*GetConsumerInfoResponse) Descriptor() ([]byte, []int) {
-	return file_cdc_proto_rawDescGZIP(), []int{22}
+	return file_cdc_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *GetConsumerInfoResponse) GetAckFloor() uint64 {
@@ -1496,7 +2196,7 @@ type ListTopicsRequest struct {
 
 func (x *ListTopicsRequest) Reset() {
 	*x = ListTopicsRequest{}
-	mi := &file_cdc_proto_msgTypes[23]
+	mi := &file_cdc_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1508,7 +2208,7 @@ func (x *ListTopicsRequest) String() string {
 func (*ListTopicsRequest) ProtoMessage() {}
 
 func (x *ListTopicsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_cdc_proto_msgTypes[23]
+	mi := &file_cdc_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1521,7 +2221,7 @@ func (x *ListTopicsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListTopicsRequest.ProtoReflect.Descriptor instead.
 func (*ListTopicsRequest) Descriptor() ([]byte, []int) {
-	return file_cdc_proto_rawDescGZIP(), []int{23}
+	return file_cdc_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *ListTopicsRequest) GetPagination() *OffsetPaginationRequest {
@@ -1541,7 +2241,7 @@ type ListTopicsResponse struct {
 
 func (x *ListTopicsResponse) Reset() {
 	*x = ListTopicsResponse{}
-	mi := &file_cdc_proto_msgTypes[24]
+	mi := &file_cdc_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1553,7 +2253,7 @@ func (x *ListTopicsResponse) String() string {
 func (*ListTopicsResponse) ProtoMessage() {}
 
 func (x *ListTopicsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_cdc_proto_msgTypes[24]
+	mi := &file_cdc_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1566,7 +2266,7 @@ func (x *ListTopicsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListTopicsResponse.ProtoReflect.Descriptor instead.
 func (*ListTopicsResponse) Descriptor() ([]byte, []int) {
-	return file_cdc_proto_rawDescGZIP(), []int{24}
+	return file_cdc_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *ListTopicsResponse) GetData() []*TopicSummary {
@@ -1594,7 +2294,7 @@ type TopicSummary struct {
 
 func (x *TopicSummary) Reset() {
 	*x = TopicSummary{}
-	mi := &file_cdc_proto_msgTypes[25]
+	mi := &file_cdc_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1606,7 +2306,7 @@ func (x *TopicSummary) String() string {
 func (*TopicSummary) ProtoMessage() {}
 
 func (x *TopicSummary) ProtoReflect() protoreflect.Message {
-	mi := &file_cdc_proto_msgTypes[25]
+	mi := &file_cdc_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1619,7 +2319,7 @@ func (x *TopicSummary) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TopicSummary.ProtoReflect.Descriptor instead.
 func (*TopicSummary) Descriptor() ([]byte, []int) {
-	return file_cdc_proto_rawDescGZIP(), []int{25}
+	return file_cdc_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *TopicSummary) GetName() string {
@@ -1653,7 +2353,7 @@ type ListPartitionsRequest struct {
 
 func (x *ListPartitionsRequest) Reset() {
 	*x = ListPartitionsRequest{}
-	mi := &file_cdc_proto_msgTypes[26]
+	mi := &file_cdc_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1665,7 +2365,7 @@ func (x *ListPartitionsRequest) String() string {
 func (*ListPartitionsRequest) ProtoMessage() {}
 
 func (x *ListPartitionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_cdc_proto_msgTypes[26]
+	mi := &file_cdc_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1678,7 +2378,7 @@ func (x *ListPartitionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPartitionsRequest.ProtoReflect.Descriptor instead.
 func (*ListPartitionsRequest) Descriptor() ([]byte, []int) {
-	return file_cdc_proto_rawDescGZIP(), []int{26}
+	return file_cdc_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *ListPartitionsRequest) GetTopic() string {
@@ -1705,7 +2405,7 @@ type ListPartitionsResponse struct {
 
 func (x *ListPartitionsResponse) Reset() {
 	*x = ListPartitionsResponse{}
-	mi := &file_cdc_proto_msgTypes[27]
+	mi := &file_cdc_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1717,7 +2417,7 @@ func (x *ListPartitionsResponse) String() string {
 func (*ListPartitionsResponse) ProtoMessage() {}
 
 func (x *ListPartitionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_cdc_proto_msgTypes[27]
+	mi := &file_cdc_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1730,7 +2430,7 @@ func (x *ListPartitionsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPartitionsResponse.ProtoReflect.Descriptor instead.
 func (*ListPartitionsResponse) Descriptor() ([]byte, []int) {
-	return file_cdc_proto_rawDescGZIP(), []int{27}
+	return file_cdc_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *ListPartitionsResponse) GetData() []*PartitionSummary {
@@ -1758,7 +2458,7 @@ type PartitionSummary struct {
 
 func (x *PartitionSummary) Reset() {
 	*x = PartitionSummary{}
-	mi := &file_cdc_proto_msgTypes[28]
+	mi := &file_cdc_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1770,7 +2470,7 @@ func (x *PartitionSummary) String() string {
 func (*PartitionSummary) ProtoMessage() {}
 
 func (x *PartitionSummary) ProtoReflect() protoreflect.Message {
-	mi := &file_cdc_proto_msgTypes[28]
+	mi := &file_cdc_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1783,7 +2483,7 @@ func (x *PartitionSummary) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PartitionSummary.ProtoReflect.Descriptor instead.
 func (*PartitionSummary) Descriptor() ([]byte, []int) {
-	return file_cdc_proto_rawDescGZIP(), []int{28}
+	return file_cdc_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *PartitionSummary) GetId() string {
@@ -1818,7 +2518,7 @@ type OffsetPaginationRequest struct {
 
 func (x *OffsetPaginationRequest) Reset() {
 	*x = OffsetPaginationRequest{}
-	mi := &file_cdc_proto_msgTypes[29]
+	mi := &file_cdc_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1830,7 +2530,7 @@ func (x *OffsetPaginationRequest) String() string {
 func (*OffsetPaginationRequest) ProtoMessage() {}
 
 func (x *OffsetPaginationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_cdc_proto_msgTypes[29]
+	mi := &file_cdc_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1843,7 +2543,7 @@ func (x *OffsetPaginationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OffsetPaginationRequest.ProtoReflect.Descriptor instead.
 func (*OffsetPaginationRequest) Descriptor() ([]byte, []int) {
-	return file_cdc_proto_rawDescGZIP(), []int{29}
+	return file_cdc_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *OffsetPaginationRequest) GetLimit() uint32 {
@@ -1877,7 +2577,7 @@ type Sort struct {
 
 func (x *Sort) Reset() {
 	*x = Sort{}
-	mi := &file_cdc_proto_msgTypes[30]
+	mi := &file_cdc_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1889,7 +2589,7 @@ func (x *Sort) String() string {
 func (*Sort) ProtoMessage() {}
 
 func (x *Sort) ProtoReflect() protoreflect.Message {
-	mi := &file_cdc_proto_msgTypes[30]
+	mi := &file_cdc_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1902,7 +2602,7 @@ func (x *Sort) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Sort.ProtoReflect.Descriptor instead.
 func (*Sort) Descriptor() ([]byte, []int) {
-	return file_cdc_proto_rawDescGZIP(), []int{30}
+	return file_cdc_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *Sort) GetField() string {
@@ -1933,7 +2633,7 @@ type OffsetPaginationResponse struct {
 
 func (x *OffsetPaginationResponse) Reset() {
 	*x = OffsetPaginationResponse{}
-	mi := &file_cdc_proto_msgTypes[31]
+	mi := &file_cdc_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1945,7 +2645,7 @@ func (x *OffsetPaginationResponse) String() string {
 func (*OffsetPaginationResponse) ProtoMessage() {}
 
 func (x *OffsetPaginationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_cdc_proto_msgTypes[31]
+	mi := &file_cdc_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1958,7 +2658,7 @@ func (x *OffsetPaginationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OffsetPaginationResponse.ProtoReflect.Descriptor instead.
 func (*OffsetPaginationResponse) Descriptor() ([]byte, []int) {
-	return file_cdc_proto_rawDescGZIP(), []int{31}
+	return file_cdc_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *OffsetPaginationResponse) GetTotalRows() uint64 {
@@ -2011,7 +2711,7 @@ type ReprocessDLQRequest struct {
 
 func (x *ReprocessDLQRequest) Reset() {
 	*x = ReprocessDLQRequest{}
-	mi := &file_cdc_proto_msgTypes[32]
+	mi := &file_cdc_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2023,7 +2723,7 @@ func (x *ReprocessDLQRequest) String() string {
 func (*ReprocessDLQRequest) ProtoMessage() {}
 
 func (x *ReprocessDLQRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_cdc_proto_msgTypes[32]
+	mi := &file_cdc_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2036,7 +2736,7 @@ func (x *ReprocessDLQRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReprocessDLQRequest.ProtoReflect.Descriptor instead.
 func (*ReprocessDLQRequest) Descriptor() ([]byte, []int) {
-	return file_cdc_proto_rawDescGZIP(), []int{32}
+	return file_cdc_proto_rawDescGZIP(), []int{43}
 }
 
 type ReprocessDLQResponse struct {
@@ -2048,7 +2748,7 @@ type ReprocessDLQResponse struct {
 
 func (x *ReprocessDLQResponse) Reset() {
 	*x = ReprocessDLQResponse{}
-	mi := &file_cdc_proto_msgTypes[33]
+	mi := &file_cdc_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2060,7 +2760,7 @@ func (x *ReprocessDLQResponse) String() string {
 func (*ReprocessDLQResponse) ProtoMessage() {}
 
 func (x *ReprocessDLQResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_cdc_proto_msgTypes[33]
+	mi := &file_cdc_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2073,7 +2773,7 @@ func (x *ReprocessDLQResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReprocessDLQResponse.ProtoReflect.Descriptor instead.
 func (*ReprocessDLQResponse) Descriptor() ([]byte, []int) {
-	return file_cdc_proto_rawDescGZIP(), []int{33}
+	return file_cdc_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *ReprocessDLQResponse) GetCount() int32 {
@@ -2087,17 +2787,74 @@ var File_cdc_proto protoreflect.FileDescriptor
 
 const file_cdc_proto_rawDesc = "" +
 	"\n" +
-	"\tcdc.proto\x12\x06cdc.v1\x1a\x1cgoogle/api/annotations.proto\"\x12\n" +
+	"\tcdc.proto\x12\x06cdc.v1\x1a\x1cgoogle/api/annotations.proto\"\x1e\n" +
+	"\x1cGetPerformanceMetricsRequest\"\xe6\x03\n" +
+	"\x1dGetPerformanceMetricsResponse\x12\x1e\n" +
+	"\n" +
+	"throughput\x18\x01 \x01(\x01R\n" +
+	"throughput\x12\x1f\n" +
+	"\vlatency_p99\x18\x02 \x01(\x01R\n" +
+	"latencyP99\x12%\n" +
+	"\x0eactive_workers\x18\x03 \x01(\rR\ractiveWorkers\x12\x1d\n" +
+	"\n" +
+	"error_rate\x18\x04 \x01(\x01R\terrorRate\x12F\n" +
+	"\x05sinks\x18\x05 \x03(\v20.cdc.v1.GetPerformanceMetricsResponse.SinksEntryR\x05sinks\x12L\n" +
+	"\asources\x18\x06 \x03(\v22.cdc.v1.GetPerformanceMetricsResponse.SourcesEntryR\asources\x1aQ\n" +
+	"\n" +
+	"SinksEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12-\n" +
+	"\x05value\x18\x02 \x01(\v2\x17.cdc.v1.SinkPerformanceR\x05value:\x028\x01\x1aU\n" +
+	"\fSourcesEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12/\n" +
+	"\x05value\x18\x02 \x01(\v2\x19.cdc.v1.SourcePerformanceR\x05value:\x028\x01\"o\n" +
+	"\x11SourcePerformance\x12\x1b\n" +
+	"\tsource_id\x18\x01 \x01(\tR\bsourceId\x12\x1e\n" +
+	"\n" +
+	"throughput\x18\x02 \x01(\x01R\n" +
+	"throughput\x12\x1d\n" +
+	"\n" +
+	"error_rate\x18\x03 \x01(\x01R\terrorRate\"k\n" +
+	"\x0fSinkPerformance\x12\x17\n" +
+	"\asink_id\x18\x01 \x01(\tR\x06sinkId\x12\x1e\n" +
+	"\n" +
+	"throughput\x18\x02 \x01(\x01R\n" +
+	"throughput\x12\x1f\n" +
+	"\vavg_latency\x18\x03 \x01(\x01R\n" +
+	"avgLatency\"\x12\n" +
 	"\x10GetConfigRequest\"\x94\x01\n" +
 	"\x11GetConfigResponse\x12)\n" +
 	"\x06config\x18\x01 \x01(\v2\x11.cdc.v1.AppConfigR\x06config\x12+\n" +
 	"\x11available_sources\x18\x02 \x03(\tR\x10availableSources\x12'\n" +
-	"\x0favailable_sinks\x18\x03 \x03(\tR\x0eavailableSinks\"\x94\x01\n" +
+	"\x0favailable_sinks\x18\x03 \x03(\tR\x0eavailableSinks\"\xf0\x01\n" +
 	"\tAppConfig\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x19\n" +
 	"\blog_mode\x18\x02 \x01(\tR\alogMode\x12.\n" +
 	"\asources\x18\x03 \x03(\v2\x14.cdc.v1.SourceConfigR\asources\x12(\n" +
-	"\x05sinks\x18\x04 \x03(\v2\x12.cdc.v1.SinkConfigR\x05sinks\"\xcc\x03\n" +
+	"\x05sinks\x18\x04 \x03(\v2\x12.cdc.v1.SinkConfigR\x05sinks\x122\n" +
+	"\bpipeline\x18\x05 \x01(\v2\x16.cdc.v1.PipelineConfigR\bpipeline\x12&\n" +
+	"\x04nats\x18\x06 \x01(\v2\x12.cdc.v1.NATSConfigR\x04nats\"\xd5\x01\n" +
+	"\x0ePipelineConfig\x12.\n" +
+	"\x13channel_buffer_size\x18\x01 \x01(\x05R\x11channelBufferSize\x12!\n" +
+	"\fworker_count\x18\x02 \x01(\x05R\vworkerCount\x12\x1d\n" +
+	"\n" +
+	"batch_size\x18\x03 \x01(\x05R\tbatchSize\x12*\n" +
+	"\x11flush_interval_ms\x18\x04 \x01(\x05R\x0fflushIntervalMs\x12%\n" +
+	"\x0esubject_filter\x18\x05 \x03(\tR\rsubjectFilter\"\xf5\x02\n" +
+	"\n" +
+	"NATSConfig\x12\x18\n" +
+	"\aenabled\x18\x01 \x01(\bR\aenabled\x12\x10\n" +
+	"\x03url\x18\x02 \x01(\tR\x03url\x12\x1f\n" +
+	"\vstream_name\x18\x03 \x01(\tR\n" +
+	"streamName\x12%\n" +
+	"\x0eretention_days\x18\x04 \x01(\x05R\rretentionDays\x12%\n" +
+	"\x0emax_reconnects\x18\x05 \x01(\x05R\rmaxReconnects\x12*\n" +
+	"\x11reconnect_wait_ms\x18\x06 \x01(\x05R\x0freconnectWaitMs\x127\n" +
+	"\x18reconnect_buffer_size_mb\x18\a \x01(\x05R\x15reconnectBufferSizeMb\x12&\n" +
+	"\x0fmax_ack_pending\x18\b \x01(\x05R\rmaxAckPending\x12\x1e\n" +
+	"\vack_wait_ms\x18\t \x01(\x05R\tackWaitMs\x12\x1f\n" +
+	"\vmax_deliver\x18\n" +
+	" \x01(\x05R\n" +
+	"maxDeliver\"\xb7\x03\n" +
 	"\fSourceConfig\x12\x12\n" +
 	"\x04type\x18\x01 \x01(\tR\x04type\x12\x12\n" +
 	"\x04host\x18\x02 \x01(\tR\x04host\x12\x12\n" +
@@ -2107,20 +2864,19 @@ const file_cdc_proto_rawDesc = "" +
 	"\bdatabase\x18\x06 \x01(\tR\bdatabase\x12\x16\n" +
 	"\x06tables\x18\a \x03(\tR\x06tables\x12 \n" +
 	"\tslot_name\x18\b \x01(\tH\x02R\bslotName\x88\x01\x01\x12.\n" +
-	"\x10publication_name\x18\t \x01(\tH\x03R\x0fpublicationName\x88\x01\x01\x12$\n" +
+	"\x10publication_name\x18\t \x01(\tH\x03R\x0fpublicationName\x88\x01\x01\x12\x1f\n" +
 	"\vinstance_id\x18\n" +
-	" \x01(\tH\x04R\n" +
-	"instanceId\x88\x01\x01\x12\x17\n" +
-	"\x04name\x18\v \x01(\tH\x05R\x04name\x88\x01\x01\x12\x19\n" +
-	"\x05topic\x18\f \x01(\tH\x06R\x05topic\x88\x01\x01B\v\n" +
+	" \x01(\tR\n" +
+	"instanceId\x12\x17\n" +
+	"\x04name\x18\v \x01(\tH\x04R\x04name\x88\x01\x01\x12\x19\n" +
+	"\x05topic\x18\f \x01(\tH\x05R\x05topic\x88\x01\x01B\v\n" +
 	"\t_usernameB\v\n" +
 	"\t_passwordB\f\n" +
 	"\n" +
 	"_slot_nameB\x13\n" +
-	"\x11_publication_nameB\x0e\n" +
-	"\f_instance_idB\a\n" +
+	"\x11_publication_nameB\a\n" +
 	"\x05_nameB\b\n" +
-	"\x06_topic\"\x96\a\n" +
+	"\x06_topic\"\xae\a\n" +
 	"\n" +
 	"SinkConfig\x12\x12\n" +
 	"\x04type\x18\x01 \x01(\tR\x04type\x12\x10\n" +
@@ -2137,13 +2893,14 @@ const file_cdc_proto_rawDesc = "" +
 	" \x01(\x05H\x06R\n" +
 	"maxRetries\x88\x01\x01\x12'\n" +
 	"\rretry_base_ms\x18\v \x01(\x05H\aR\vretryBaseMs\x88\x01\x01\x12\x1c\n" +
-	"\aapi_key\x18\f \x01(\tH\bR\x06apiKey\x88\x01\x01\x12$\n" +
-	"\vinstance_id\x18\r \x01(\tH\tR\n" +
-	"instanceId\x88\x01\x01\x12\x17\n" +
-	"\x04name\x18\x0e \x01(\tH\n" +
-	"R\x04name\x88\x01\x01\x12\x19\n" +
-	"\x05topic\x18\x0f \x01(\tH\vR\x05topic\x88\x01\x01\x12I\n" +
-	"\rfield_mapping\x18\x10 \x03(\v2$.cdc.v1.SinkConfig.FieldMappingEntryR\ffieldMapping\x1a?\n" +
+	"\aapi_key\x18\f \x01(\tH\bR\x06apiKey\x88\x01\x01\x12\x1f\n" +
+	"\vinstance_id\x18\r \x01(\tR\n" +
+	"instanceId\x12\x17\n" +
+	"\x04name\x18\x0e \x01(\tH\tR\x04name\x88\x01\x01\x12\x19\n" +
+	"\x05topic\x18\x0f \x01(\tH\n" +
+	"R\x05topic\x88\x01\x01\x12I\n" +
+	"\rfield_mapping\x18\x10 \x03(\v2$.cdc.v1.SinkConfig.FieldMappingEntryR\ffieldMapping\x12+\n" +
+	"\x05redis\x18\x11 \x01(\v2\x15.cdc.v1.RedisSettingsR\x05redis\x1a?\n" +
 	"\x11IndexMappingEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a?\n" +
@@ -2159,10 +2916,14 @@ const file_cdc_proto_rawDesc = "" +
 	"\f_max_retriesB\x10\n" +
 	"\x0e_retry_base_msB\n" +
 	"\n" +
-	"\b_api_keyB\x0e\n" +
-	"\f_instance_idB\a\n" +
+	"\b_api_keyB\a\n" +
 	"\x05_nameB\b\n" +
-	"\x06_topic\"@\n" +
+	"\x06_topic\"\x81\x01\n" +
+	"\rRedisSettings\x12\x18\n" +
+	"\acommand\x18\x01 \x01(\tR\acommand\x12!\n" +
+	"\fkey_template\x18\x02 \x01(\tR\vkeyTemplate\x12!\n" +
+	"\fvalue_fields\x18\x03 \x03(\tR\vvalueFields\x12\x10\n" +
+	"\x03ttl\x18\x04 \x01(\x05R\x03ttl\"@\n" +
 	"\x10AddSourceRequest\x12,\n" +
 	"\x06source\x18\x01 \x01(\v2\x14.cdc.v1.SourceConfigR\x06source\"4\n" +
 	"\x11AddSourceResponse\x12\x1f\n" +
@@ -2182,6 +2943,14 @@ const file_cdc_proto_rawDesc = "" +
 	"\vinstance_id\x18\x01 \x01(\tR\n" +
 	"instanceId\".\n" +
 	"\x12RemoveSinkResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\"C\n" +
+	"\x13UpdateSourceRequest\x12,\n" +
+	"\x06source\x18\x01 \x01(\v2\x14.cdc.v1.SourceConfigR\x06source\"0\n" +
+	"\x14UpdateSourceResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\";\n" +
+	"\x11UpdateSinkRequest\x12&\n" +
+	"\x04sink\x18\x01 \x01(\v2\x12.cdc.v1.SinkConfigR\x04sink\".\n" +
+	"\x12UpdateSinkResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\"\x14\n" +
 	"\x12HealthCheckRequest\"_\n" +
 	"\x13HealthCheckResponse\x12\x16\n" +
@@ -2290,7 +3059,7 @@ const file_cdc_proto_rawDesc = "" +
 	"\tSortOrder\x12\x1a\n" +
 	"\x16SORT_ORDER_UNSPECIFIED\x10\x00\x12\x12\n" +
 	"\x0eSORT_ORDER_ASC\x10\x01\x12\x13\n" +
-	"\x0fSORT_ORDER_DESC\x10\x022\xb3\t\n" +
+	"\x0fSORT_ORDER_DESC\x10\x022\xad\f\n" +
 	"\n" +
 	"CDCService\x12^\n" +
 	"\vHealthCheck\x12\x1a.cdc.v1.HealthCheckRequest\x1a\x1b.cdc.v1.HealthCheckResponse\"\x16\x82\xd3\xe4\x93\x02\x10\x12\x0e/api/v1/health\x12X\n" +
@@ -2299,14 +3068,18 @@ const file_cdc_proto_rawDesc = "" +
 	"\fRemoveSource\x12\x1b.cdc.v1.RemoveSourceRequest\x1a\x1c.cdc.v1.RemoveSourceResponse\"%\x82\xd3\xe4\x93\x02\x1f*\x1d/api/v1/sources/{instance_id}\x12T\n" +
 	"\aAddSink\x12\x16.cdc.v1.AddSinkRequest\x1a\x17.cdc.v1.AddSinkResponse\"\x18\x82\xd3\xe4\x93\x02\x12:\x01*\"\r/api/v1/sinks\x12h\n" +
 	"\n" +
-	"RemoveSink\x12\x19.cdc.v1.RemoveSinkRequest\x1a\x1a.cdc.v1.RemoveSinkResponse\"#\x82\xd3\xe4\x93\x02\x1d*\x1b/api/v1/sinks/{instance_id}\x12T\n" +
+	"RemoveSink\x12\x19.cdc.v1.RemoveSinkRequest\x1a\x1a.cdc.v1.RemoveSinkResponse\"#\x82\xd3\xe4\x93\x02\x1d*\x1b/api/v1/sinks/{instance_id}\x12z\n" +
+	"\fUpdateSource\x12\x1b.cdc.v1.UpdateSourceRequest\x1a\x1c.cdc.v1.UpdateSourceResponse\"/\x82\xd3\xe4\x93\x02):\x01*\x1a$/api/v1/sources/{source.instance_id}\x12p\n" +
+	"\n" +
+	"UpdateSink\x12\x19.cdc.v1.UpdateSinkRequest\x1a\x1a.cdc.v1.UpdateSinkResponse\"+\x82\xd3\xe4\x93\x02%:\x01*\x1a /api/v1/sinks/{sink.instance_id}\x12T\n" +
 	"\bGetStats\x12\x17.cdc.v1.GetStatsRequest\x1a\x18.cdc.v1.GetStatsResponse\"\x15\x82\xd3\xe4\x93\x02\x0f\x12\r/api/v1/stats\x12c\n" +
 	"\fListMessages\x12\x1b.cdc.v1.ListMessagesRequest\x1a\x1c.cdc.v1.ListMessagesResponse\"\x18\x82\xd3\xe4\x93\x02\x12\x12\x10/api/v1/messages\x12l\n" +
 	"\x0fGetConsumerInfo\x12\x1e.cdc.v1.GetConsumerInfoRequest\x1a\x1f.cdc.v1.GetConsumerInfoResponse\"\x18\x82\xd3\xe4\x93\x02\x12\x12\x10/api/v1/consumer\x12[\n" +
 	"\n" +
 	"ListTopics\x12\x19.cdc.v1.ListTopicsRequest\x1a\x1a.cdc.v1.ListTopicsResponse\"\x16\x82\xd3\xe4\x93\x02\x10\x12\x0e/api/v1/topics\x12k\n" +
 	"\x0eListPartitions\x12\x1d.cdc.v1.ListPartitionsRequest\x1a\x1e.cdc.v1.ListPartitionsResponse\"\x1a\x82\xd3\xe4\x93\x02\x14\x12\x12/api/v1/partitions\x12h\n" +
-	"\fReprocessDLQ\x12\x1b.cdc.v1.ReprocessDLQRequest\x1a\x1c.cdc.v1.ReprocessDLQResponse\"\x1d\x82\xd3\xe4\x93\x02\x17\"\x15/api/v1/dlq/reprocessB)Z'github.com/foden/cdc/api/proto/v1;cdcpbb\x06proto3"
+	"\fReprocessDLQ\x12\x1b.cdc.v1.ReprocessDLQRequest\x1a\x1c.cdc.v1.ReprocessDLQResponse\"\x1d\x82\xd3\xe4\x93\x02\x17\"\x15/api/v1/dlq/reprocess\x12\x89\x01\n" +
+	"\x15GetPerformanceMetrics\x12$.cdc.v1.GetPerformanceMetricsRequest\x1a%.cdc.v1.GetPerformanceMetricsResponse\"#\x82\xd3\xe4\x93\x02\x1d\x12\x1b/api/v1/metrics/performanceB)Z'github.com/foden/cdc/api/proto/v1;cdcpbb\x06proto3"
 
 var (
 	file_cdc_proto_rawDescOnce sync.Once
@@ -2321,105 +3094,133 @@ func file_cdc_proto_rawDescGZIP() []byte {
 }
 
 var file_cdc_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_cdc_proto_msgTypes = make([]protoimpl.MessageInfo, 39)
+var file_cdc_proto_msgTypes = make([]protoimpl.MessageInfo, 52)
 var file_cdc_proto_goTypes = []any{
-	(MessageStatus)(0),               // 0: cdc.v1.MessageStatus
-	(SortOrder)(0),                   // 1: cdc.v1.SortOrder
-	(*GetConfigRequest)(nil),         // 2: cdc.v1.GetConfigRequest
-	(*GetConfigResponse)(nil),        // 3: cdc.v1.GetConfigResponse
-	(*AppConfig)(nil),                // 4: cdc.v1.AppConfig
-	(*SourceConfig)(nil),             // 5: cdc.v1.SourceConfig
-	(*SinkConfig)(nil),               // 6: cdc.v1.SinkConfig
-	(*AddSourceRequest)(nil),         // 7: cdc.v1.AddSourceRequest
-	(*AddSourceResponse)(nil),        // 8: cdc.v1.AddSourceResponse
-	(*RemoveSourceRequest)(nil),      // 9: cdc.v1.RemoveSourceRequest
-	(*RemoveSourceResponse)(nil),     // 10: cdc.v1.RemoveSourceResponse
-	(*AddSinkRequest)(nil),           // 11: cdc.v1.AddSinkRequest
-	(*AddSinkResponse)(nil),          // 12: cdc.v1.AddSinkResponse
-	(*RemoveSinkRequest)(nil),        // 13: cdc.v1.RemoveSinkRequest
-	(*RemoveSinkResponse)(nil),       // 14: cdc.v1.RemoveSinkResponse
-	(*HealthCheckRequest)(nil),       // 15: cdc.v1.HealthCheckRequest
-	(*HealthCheckResponse)(nil),      // 16: cdc.v1.HealthCheckResponse
-	(*GetStatsRequest)(nil),          // 17: cdc.v1.GetStatsRequest
-	(*GetStatsResponse)(nil),         // 18: cdc.v1.GetStatsResponse
-	(*ComponentStats)(nil),           // 19: cdc.v1.ComponentStats
-	(*ListMessagesRequest)(nil),      // 20: cdc.v1.ListMessagesRequest
-	(*ListMessagesResponse)(nil),     // 21: cdc.v1.ListMessagesResponse
-	(*MessageItem)(nil),              // 22: cdc.v1.MessageItem
-	(*GetConsumerInfoRequest)(nil),   // 23: cdc.v1.GetConsumerInfoRequest
-	(*GetConsumerInfoResponse)(nil),  // 24: cdc.v1.GetConsumerInfoResponse
-	(*ListTopicsRequest)(nil),        // 25: cdc.v1.ListTopicsRequest
-	(*ListTopicsResponse)(nil),       // 26: cdc.v1.ListTopicsResponse
-	(*TopicSummary)(nil),             // 27: cdc.v1.TopicSummary
-	(*ListPartitionsRequest)(nil),    // 28: cdc.v1.ListPartitionsRequest
-	(*ListPartitionsResponse)(nil),   // 29: cdc.v1.ListPartitionsResponse
-	(*PartitionSummary)(nil),         // 30: cdc.v1.PartitionSummary
-	(*OffsetPaginationRequest)(nil),  // 31: cdc.v1.OffsetPaginationRequest
-	(*Sort)(nil),                     // 32: cdc.v1.Sort
-	(*OffsetPaginationResponse)(nil), // 33: cdc.v1.OffsetPaginationResponse
-	(*ReprocessDLQRequest)(nil),      // 34: cdc.v1.ReprocessDLQRequest
-	(*ReprocessDLQResponse)(nil),     // 35: cdc.v1.ReprocessDLQResponse
-	nil,                              // 36: cdc.v1.SinkConfig.IndexMappingEntry
-	nil,                              // 37: cdc.v1.SinkConfig.FieldMappingEntry
-	nil,                              // 38: cdc.v1.GetStatsResponse.SourceStatsEntry
-	nil,                              // 39: cdc.v1.GetStatsResponse.SinkStatsEntry
-	nil,                              // 40: cdc.v1.MessageItem.HeadersEntry
+	(MessageStatus)(0),                    // 0: cdc.v1.MessageStatus
+	(SortOrder)(0),                        // 1: cdc.v1.SortOrder
+	(*GetPerformanceMetricsRequest)(nil),  // 2: cdc.v1.GetPerformanceMetricsRequest
+	(*GetPerformanceMetricsResponse)(nil), // 3: cdc.v1.GetPerformanceMetricsResponse
+	(*SourcePerformance)(nil),             // 4: cdc.v1.SourcePerformance
+	(*SinkPerformance)(nil),               // 5: cdc.v1.SinkPerformance
+	(*GetConfigRequest)(nil),              // 6: cdc.v1.GetConfigRequest
+	(*GetConfigResponse)(nil),             // 7: cdc.v1.GetConfigResponse
+	(*AppConfig)(nil),                     // 8: cdc.v1.AppConfig
+	(*PipelineConfig)(nil),                // 9: cdc.v1.PipelineConfig
+	(*NATSConfig)(nil),                    // 10: cdc.v1.NATSConfig
+	(*SourceConfig)(nil),                  // 11: cdc.v1.SourceConfig
+	(*SinkConfig)(nil),                    // 12: cdc.v1.SinkConfig
+	(*RedisSettings)(nil),                 // 13: cdc.v1.RedisSettings
+	(*AddSourceRequest)(nil),              // 14: cdc.v1.AddSourceRequest
+	(*AddSourceResponse)(nil),             // 15: cdc.v1.AddSourceResponse
+	(*RemoveSourceRequest)(nil),           // 16: cdc.v1.RemoveSourceRequest
+	(*RemoveSourceResponse)(nil),          // 17: cdc.v1.RemoveSourceResponse
+	(*AddSinkRequest)(nil),                // 18: cdc.v1.AddSinkRequest
+	(*AddSinkResponse)(nil),               // 19: cdc.v1.AddSinkResponse
+	(*RemoveSinkRequest)(nil),             // 20: cdc.v1.RemoveSinkRequest
+	(*RemoveSinkResponse)(nil),            // 21: cdc.v1.RemoveSinkResponse
+	(*UpdateSourceRequest)(nil),           // 22: cdc.v1.UpdateSourceRequest
+	(*UpdateSourceResponse)(nil),          // 23: cdc.v1.UpdateSourceResponse
+	(*UpdateSinkRequest)(nil),             // 24: cdc.v1.UpdateSinkRequest
+	(*UpdateSinkResponse)(nil),            // 25: cdc.v1.UpdateSinkResponse
+	(*HealthCheckRequest)(nil),            // 26: cdc.v1.HealthCheckRequest
+	(*HealthCheckResponse)(nil),           // 27: cdc.v1.HealthCheckResponse
+	(*GetStatsRequest)(nil),               // 28: cdc.v1.GetStatsRequest
+	(*GetStatsResponse)(nil),              // 29: cdc.v1.GetStatsResponse
+	(*ComponentStats)(nil),                // 30: cdc.v1.ComponentStats
+	(*ListMessagesRequest)(nil),           // 31: cdc.v1.ListMessagesRequest
+	(*ListMessagesResponse)(nil),          // 32: cdc.v1.ListMessagesResponse
+	(*MessageItem)(nil),                   // 33: cdc.v1.MessageItem
+	(*GetConsumerInfoRequest)(nil),        // 34: cdc.v1.GetConsumerInfoRequest
+	(*GetConsumerInfoResponse)(nil),       // 35: cdc.v1.GetConsumerInfoResponse
+	(*ListTopicsRequest)(nil),             // 36: cdc.v1.ListTopicsRequest
+	(*ListTopicsResponse)(nil),            // 37: cdc.v1.ListTopicsResponse
+	(*TopicSummary)(nil),                  // 38: cdc.v1.TopicSummary
+	(*ListPartitionsRequest)(nil),         // 39: cdc.v1.ListPartitionsRequest
+	(*ListPartitionsResponse)(nil),        // 40: cdc.v1.ListPartitionsResponse
+	(*PartitionSummary)(nil),              // 41: cdc.v1.PartitionSummary
+	(*OffsetPaginationRequest)(nil),       // 42: cdc.v1.OffsetPaginationRequest
+	(*Sort)(nil),                          // 43: cdc.v1.Sort
+	(*OffsetPaginationResponse)(nil),      // 44: cdc.v1.OffsetPaginationResponse
+	(*ReprocessDLQRequest)(nil),           // 45: cdc.v1.ReprocessDLQRequest
+	(*ReprocessDLQResponse)(nil),          // 46: cdc.v1.ReprocessDLQResponse
+	nil,                                   // 47: cdc.v1.GetPerformanceMetricsResponse.SinksEntry
+	nil,                                   // 48: cdc.v1.GetPerformanceMetricsResponse.SourcesEntry
+	nil,                                   // 49: cdc.v1.SinkConfig.IndexMappingEntry
+	nil,                                   // 50: cdc.v1.SinkConfig.FieldMappingEntry
+	nil,                                   // 51: cdc.v1.GetStatsResponse.SourceStatsEntry
+	nil,                                   // 52: cdc.v1.GetStatsResponse.SinkStatsEntry
+	nil,                                   // 53: cdc.v1.MessageItem.HeadersEntry
 }
 var file_cdc_proto_depIdxs = []int32{
-	4,  // 0: cdc.v1.GetConfigResponse.config:type_name -> cdc.v1.AppConfig
-	5,  // 1: cdc.v1.AppConfig.sources:type_name -> cdc.v1.SourceConfig
-	6,  // 2: cdc.v1.AppConfig.sinks:type_name -> cdc.v1.SinkConfig
-	36, // 3: cdc.v1.SinkConfig.index_mapping:type_name -> cdc.v1.SinkConfig.IndexMappingEntry
-	37, // 4: cdc.v1.SinkConfig.field_mapping:type_name -> cdc.v1.SinkConfig.FieldMappingEntry
-	5,  // 5: cdc.v1.AddSourceRequest.source:type_name -> cdc.v1.SourceConfig
-	6,  // 6: cdc.v1.AddSinkRequest.sink:type_name -> cdc.v1.SinkConfig
-	38, // 7: cdc.v1.GetStatsResponse.source_stats:type_name -> cdc.v1.GetStatsResponse.SourceStatsEntry
-	39, // 8: cdc.v1.GetStatsResponse.sink_stats:type_name -> cdc.v1.GetStatsResponse.SinkStatsEntry
-	0,  // 9: cdc.v1.ListMessagesRequest.status:type_name -> cdc.v1.MessageStatus
-	31, // 10: cdc.v1.ListMessagesRequest.pagination:type_name -> cdc.v1.OffsetPaginationRequest
-	22, // 11: cdc.v1.ListMessagesResponse.data:type_name -> cdc.v1.MessageItem
-	33, // 12: cdc.v1.ListMessagesResponse.pagination:type_name -> cdc.v1.OffsetPaginationResponse
-	40, // 13: cdc.v1.MessageItem.headers:type_name -> cdc.v1.MessageItem.HeadersEntry
-	31, // 14: cdc.v1.ListTopicsRequest.pagination:type_name -> cdc.v1.OffsetPaginationRequest
-	27, // 15: cdc.v1.ListTopicsResponse.data:type_name -> cdc.v1.TopicSummary
-	33, // 16: cdc.v1.ListTopicsResponse.pagination:type_name -> cdc.v1.OffsetPaginationResponse
-	31, // 17: cdc.v1.ListPartitionsRequest.pagination:type_name -> cdc.v1.OffsetPaginationRequest
-	30, // 18: cdc.v1.ListPartitionsResponse.data:type_name -> cdc.v1.PartitionSummary
-	33, // 19: cdc.v1.ListPartitionsResponse.pagination:type_name -> cdc.v1.OffsetPaginationResponse
-	32, // 20: cdc.v1.OffsetPaginationRequest.sort:type_name -> cdc.v1.Sort
-	1,  // 21: cdc.v1.Sort.order:type_name -> cdc.v1.SortOrder
-	32, // 22: cdc.v1.OffsetPaginationResponse.sort:type_name -> cdc.v1.Sort
-	19, // 23: cdc.v1.GetStatsResponse.SourceStatsEntry.value:type_name -> cdc.v1.ComponentStats
-	19, // 24: cdc.v1.GetStatsResponse.SinkStatsEntry.value:type_name -> cdc.v1.ComponentStats
-	15, // 25: cdc.v1.CDCService.HealthCheck:input_type -> cdc.v1.HealthCheckRequest
-	2,  // 26: cdc.v1.CDCService.GetConfig:input_type -> cdc.v1.GetConfigRequest
-	7,  // 27: cdc.v1.CDCService.AddSource:input_type -> cdc.v1.AddSourceRequest
-	9,  // 28: cdc.v1.CDCService.RemoveSource:input_type -> cdc.v1.RemoveSourceRequest
-	11, // 29: cdc.v1.CDCService.AddSink:input_type -> cdc.v1.AddSinkRequest
-	13, // 30: cdc.v1.CDCService.RemoveSink:input_type -> cdc.v1.RemoveSinkRequest
-	17, // 31: cdc.v1.CDCService.GetStats:input_type -> cdc.v1.GetStatsRequest
-	20, // 32: cdc.v1.CDCService.ListMessages:input_type -> cdc.v1.ListMessagesRequest
-	23, // 33: cdc.v1.CDCService.GetConsumerInfo:input_type -> cdc.v1.GetConsumerInfoRequest
-	25, // 34: cdc.v1.CDCService.ListTopics:input_type -> cdc.v1.ListTopicsRequest
-	28, // 35: cdc.v1.CDCService.ListPartitions:input_type -> cdc.v1.ListPartitionsRequest
-	34, // 36: cdc.v1.CDCService.ReprocessDLQ:input_type -> cdc.v1.ReprocessDLQRequest
-	16, // 37: cdc.v1.CDCService.HealthCheck:output_type -> cdc.v1.HealthCheckResponse
-	3,  // 38: cdc.v1.CDCService.GetConfig:output_type -> cdc.v1.GetConfigResponse
-	8,  // 39: cdc.v1.CDCService.AddSource:output_type -> cdc.v1.AddSourceResponse
-	10, // 40: cdc.v1.CDCService.RemoveSource:output_type -> cdc.v1.RemoveSourceResponse
-	12, // 41: cdc.v1.CDCService.AddSink:output_type -> cdc.v1.AddSinkResponse
-	14, // 42: cdc.v1.CDCService.RemoveSink:output_type -> cdc.v1.RemoveSinkResponse
-	18, // 43: cdc.v1.CDCService.GetStats:output_type -> cdc.v1.GetStatsResponse
-	21, // 44: cdc.v1.CDCService.ListMessages:output_type -> cdc.v1.ListMessagesResponse
-	24, // 45: cdc.v1.CDCService.GetConsumerInfo:output_type -> cdc.v1.GetConsumerInfoResponse
-	26, // 46: cdc.v1.CDCService.ListTopics:output_type -> cdc.v1.ListTopicsResponse
-	29, // 47: cdc.v1.CDCService.ListPartitions:output_type -> cdc.v1.ListPartitionsResponse
-	35, // 48: cdc.v1.CDCService.ReprocessDLQ:output_type -> cdc.v1.ReprocessDLQResponse
-	37, // [37:49] is the sub-list for method output_type
-	25, // [25:37] is the sub-list for method input_type
-	25, // [25:25] is the sub-list for extension type_name
-	25, // [25:25] is the sub-list for extension extendee
-	0,  // [0:25] is the sub-list for field type_name
+	47, // 0: cdc.v1.GetPerformanceMetricsResponse.sinks:type_name -> cdc.v1.GetPerformanceMetricsResponse.SinksEntry
+	48, // 1: cdc.v1.GetPerformanceMetricsResponse.sources:type_name -> cdc.v1.GetPerformanceMetricsResponse.SourcesEntry
+	8,  // 2: cdc.v1.GetConfigResponse.config:type_name -> cdc.v1.AppConfig
+	11, // 3: cdc.v1.AppConfig.sources:type_name -> cdc.v1.SourceConfig
+	12, // 4: cdc.v1.AppConfig.sinks:type_name -> cdc.v1.SinkConfig
+	9,  // 5: cdc.v1.AppConfig.pipeline:type_name -> cdc.v1.PipelineConfig
+	10, // 6: cdc.v1.AppConfig.nats:type_name -> cdc.v1.NATSConfig
+	49, // 7: cdc.v1.SinkConfig.index_mapping:type_name -> cdc.v1.SinkConfig.IndexMappingEntry
+	50, // 8: cdc.v1.SinkConfig.field_mapping:type_name -> cdc.v1.SinkConfig.FieldMappingEntry
+	13, // 9: cdc.v1.SinkConfig.redis:type_name -> cdc.v1.RedisSettings
+	11, // 10: cdc.v1.AddSourceRequest.source:type_name -> cdc.v1.SourceConfig
+	12, // 11: cdc.v1.AddSinkRequest.sink:type_name -> cdc.v1.SinkConfig
+	11, // 12: cdc.v1.UpdateSourceRequest.source:type_name -> cdc.v1.SourceConfig
+	12, // 13: cdc.v1.UpdateSinkRequest.sink:type_name -> cdc.v1.SinkConfig
+	51, // 14: cdc.v1.GetStatsResponse.source_stats:type_name -> cdc.v1.GetStatsResponse.SourceStatsEntry
+	52, // 15: cdc.v1.GetStatsResponse.sink_stats:type_name -> cdc.v1.GetStatsResponse.SinkStatsEntry
+	0,  // 16: cdc.v1.ListMessagesRequest.status:type_name -> cdc.v1.MessageStatus
+	42, // 17: cdc.v1.ListMessagesRequest.pagination:type_name -> cdc.v1.OffsetPaginationRequest
+	33, // 18: cdc.v1.ListMessagesResponse.data:type_name -> cdc.v1.MessageItem
+	44, // 19: cdc.v1.ListMessagesResponse.pagination:type_name -> cdc.v1.OffsetPaginationResponse
+	53, // 20: cdc.v1.MessageItem.headers:type_name -> cdc.v1.MessageItem.HeadersEntry
+	42, // 21: cdc.v1.ListTopicsRequest.pagination:type_name -> cdc.v1.OffsetPaginationRequest
+	38, // 22: cdc.v1.ListTopicsResponse.data:type_name -> cdc.v1.TopicSummary
+	44, // 23: cdc.v1.ListTopicsResponse.pagination:type_name -> cdc.v1.OffsetPaginationResponse
+	42, // 24: cdc.v1.ListPartitionsRequest.pagination:type_name -> cdc.v1.OffsetPaginationRequest
+	41, // 25: cdc.v1.ListPartitionsResponse.data:type_name -> cdc.v1.PartitionSummary
+	44, // 26: cdc.v1.ListPartitionsResponse.pagination:type_name -> cdc.v1.OffsetPaginationResponse
+	43, // 27: cdc.v1.OffsetPaginationRequest.sort:type_name -> cdc.v1.Sort
+	1,  // 28: cdc.v1.Sort.order:type_name -> cdc.v1.SortOrder
+	43, // 29: cdc.v1.OffsetPaginationResponse.sort:type_name -> cdc.v1.Sort
+	5,  // 30: cdc.v1.GetPerformanceMetricsResponse.SinksEntry.value:type_name -> cdc.v1.SinkPerformance
+	4,  // 31: cdc.v1.GetPerformanceMetricsResponse.SourcesEntry.value:type_name -> cdc.v1.SourcePerformance
+	30, // 32: cdc.v1.GetStatsResponse.SourceStatsEntry.value:type_name -> cdc.v1.ComponentStats
+	30, // 33: cdc.v1.GetStatsResponse.SinkStatsEntry.value:type_name -> cdc.v1.ComponentStats
+	26, // 34: cdc.v1.CDCService.HealthCheck:input_type -> cdc.v1.HealthCheckRequest
+	6,  // 35: cdc.v1.CDCService.GetConfig:input_type -> cdc.v1.GetConfigRequest
+	14, // 36: cdc.v1.CDCService.AddSource:input_type -> cdc.v1.AddSourceRequest
+	16, // 37: cdc.v1.CDCService.RemoveSource:input_type -> cdc.v1.RemoveSourceRequest
+	18, // 38: cdc.v1.CDCService.AddSink:input_type -> cdc.v1.AddSinkRequest
+	20, // 39: cdc.v1.CDCService.RemoveSink:input_type -> cdc.v1.RemoveSinkRequest
+	22, // 40: cdc.v1.CDCService.UpdateSource:input_type -> cdc.v1.UpdateSourceRequest
+	24, // 41: cdc.v1.CDCService.UpdateSink:input_type -> cdc.v1.UpdateSinkRequest
+	28, // 42: cdc.v1.CDCService.GetStats:input_type -> cdc.v1.GetStatsRequest
+	31, // 43: cdc.v1.CDCService.ListMessages:input_type -> cdc.v1.ListMessagesRequest
+	34, // 44: cdc.v1.CDCService.GetConsumerInfo:input_type -> cdc.v1.GetConsumerInfoRequest
+	36, // 45: cdc.v1.CDCService.ListTopics:input_type -> cdc.v1.ListTopicsRequest
+	39, // 46: cdc.v1.CDCService.ListPartitions:input_type -> cdc.v1.ListPartitionsRequest
+	45, // 47: cdc.v1.CDCService.ReprocessDLQ:input_type -> cdc.v1.ReprocessDLQRequest
+	2,  // 48: cdc.v1.CDCService.GetPerformanceMetrics:input_type -> cdc.v1.GetPerformanceMetricsRequest
+	27, // 49: cdc.v1.CDCService.HealthCheck:output_type -> cdc.v1.HealthCheckResponse
+	7,  // 50: cdc.v1.CDCService.GetConfig:output_type -> cdc.v1.GetConfigResponse
+	15, // 51: cdc.v1.CDCService.AddSource:output_type -> cdc.v1.AddSourceResponse
+	17, // 52: cdc.v1.CDCService.RemoveSource:output_type -> cdc.v1.RemoveSourceResponse
+	19, // 53: cdc.v1.CDCService.AddSink:output_type -> cdc.v1.AddSinkResponse
+	21, // 54: cdc.v1.CDCService.RemoveSink:output_type -> cdc.v1.RemoveSinkResponse
+	23, // 55: cdc.v1.CDCService.UpdateSource:output_type -> cdc.v1.UpdateSourceResponse
+	25, // 56: cdc.v1.CDCService.UpdateSink:output_type -> cdc.v1.UpdateSinkResponse
+	29, // 57: cdc.v1.CDCService.GetStats:output_type -> cdc.v1.GetStatsResponse
+	32, // 58: cdc.v1.CDCService.ListMessages:output_type -> cdc.v1.ListMessagesResponse
+	35, // 59: cdc.v1.CDCService.GetConsumerInfo:output_type -> cdc.v1.GetConsumerInfoResponse
+	37, // 60: cdc.v1.CDCService.ListTopics:output_type -> cdc.v1.ListTopicsResponse
+	40, // 61: cdc.v1.CDCService.ListPartitions:output_type -> cdc.v1.ListPartitionsResponse
+	46, // 62: cdc.v1.CDCService.ReprocessDLQ:output_type -> cdc.v1.ReprocessDLQResponse
+	3,  // 63: cdc.v1.CDCService.GetPerformanceMetrics:output_type -> cdc.v1.GetPerformanceMetricsResponse
+	49, // [49:64] is the sub-list for method output_type
+	34, // [34:49] is the sub-list for method input_type
+	34, // [34:34] is the sub-list for extension type_name
+	34, // [34:34] is the sub-list for extension extendee
+	0,  // [0:34] is the sub-list for field type_name
 }
 
 func init() { file_cdc_proto_init() }
@@ -2427,16 +3228,16 @@ func file_cdc_proto_init() {
 	if File_cdc_proto != nil {
 		return
 	}
-	file_cdc_proto_msgTypes[3].OneofWrappers = []any{}
-	file_cdc_proto_msgTypes[4].OneofWrappers = []any{}
-	file_cdc_proto_msgTypes[18].OneofWrappers = []any{}
+	file_cdc_proto_msgTypes[9].OneofWrappers = []any{}
+	file_cdc_proto_msgTypes[10].OneofWrappers = []any{}
+	file_cdc_proto_msgTypes[29].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_cdc_proto_rawDesc), len(file_cdc_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   39,
+			NumMessages:   52,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

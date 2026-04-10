@@ -11,7 +11,6 @@ services:
     networks:
       - cdc-network
 
-  # --- CDC Application (Backend + UI) ---
   # cdc-app:
   #   build:
   #     context: .
@@ -20,13 +19,22 @@ services:
   #   ports:
   #     - "9090:9090"   # gRPC API
   #     - "9091:9091"   # REST API
-  #     - "9092:9092"   # UI
   #   volumes:
-  #     - ./config.yaml:/app/config.yaml
+  #     - ./deploy/app/config.yaml:/app/config.yaml
   #   depends_on:
   #     - nats-1
   #   networks:
   #     - cdc-network
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9095:9090"
+    volumes:
+      - ./deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - cdc-network
 
 networks:
   cdc-network:

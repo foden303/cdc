@@ -2,10 +2,11 @@ package server
 
 import (
 	"errors"
+	"fmt"
 
 	cdcpb "github.com/foden/cdc/api/proto/v1"
 	"github.com/foden/cdc/pkg/config"
-	"github.com/foden/cdc/pkg/constant"
+	"github.com/foden/cdc/pkg/utils"
 )
 
 var (
@@ -49,17 +50,21 @@ func toSourceConfig(p *cdcpb.SourceConfig) (*config.SourceConfig, error) {
 		Password:        p.GetPassword(),
 		SlotName:        p.GetSlotName(),
 		PublicationName: p.GetPublicationName(),
-		InstanceID:      p.GetInstanceId(),
+		InstanceID:      p.InstanceId,
 		Name:            p.GetName(),
 	}
 
-	// Apply defaults
-	if c.Type == string(constant.SourceTypePostgres) {
+	// Apply Dynamic Defaults
+	if c.InstanceID == "" {
+		c.InstanceID = fmt.Sprintf("src-%s-%s", c.Type, utils.RandomString(4))
+	}
+
+	if c.Type == "postgres" {
 		if c.SlotName == "" {
-			c.SlotName = "cdc_slot"
+			c.SlotName = fmt.Sprintf("cdc_slot_%s", c.InstanceID)
 		}
 		if c.PublicationName == "" {
-			c.PublicationName = "cdc_pub"
+			c.PublicationName = fmt.Sprintf("cdc_pub_%s", c.InstanceID)
 		}
 	}
 
@@ -94,6 +99,17 @@ func toSinkConfig(p *cdcpb.SinkConfig) (*config.SinkConfig, error) {
 		FlushIntervalMs: p.GetFlushIntervalMs(),
 		MaxRetries:      p.GetMaxRetries(),
 		RetryBaseMs:     p.GetRetryBaseMs(),
+		InstanceID:      p.InstanceId,
+		FieldMapping:    p.FieldMapping,
+	}
+
+	if p.Redis != nil {
+		c.Redis = config.RedisSettings{
+			Command:     p.Redis.Command,
+			KeyTemplate: p.Redis.KeyTemplate,
+			ValueFields: p.Redis.ValueFields,
+			TTL:         int(p.Redis.Ttl),
+		}
 	}
 
 	// Apply defaults
@@ -117,7 +133,7 @@ func toSinkConfig(p *cdcpb.SinkConfig) (*config.SinkConfig, error) {
 }
 
 // toSourceProto converts internal SourceConfig to proto SourceConfig.
-func toSourceProto(c config.SourceConfig) *cdcpb.SourceConfig {
+func toSourceProto(c *config.SourceConfig) *cdcpb.SourceConfig {
 	return &cdcpb.SourceConfig{
 		Type:            c.Type,
 		Host:            c.Host,
@@ -129,13 +145,13 @@ func toSourceProto(c config.SourceConfig) *cdcpb.SourceConfig {
 		Topic:           &c.Topic,
 		SlotName:        &c.SlotName,
 		PublicationName: &c.PublicationName,
-		InstanceId:      &c.InstanceID,
+		InstanceId:      c.InstanceID,
 		Name:            &c.Name,
 	}
 }
 
 // toSinkProto converts internal SinkConfig to proto SinkConfig.
-func toSinkProto(c config.SinkConfig) *cdcpb.SinkConfig {
+func toSinkProto(c *config.SinkConfig) *cdcpb.SinkConfig {
 	return &cdcpb.SinkConfig{
 		Type:            c.Type,
 		Url:             c.URL,
@@ -150,7 +166,71 @@ func toSinkProto(c config.SinkConfig) *cdcpb.SinkConfig {
 		RetryBaseMs:     &c.RetryBaseMs,
 		ApiKey:          &c.APIKey,
 		Topic:           &c.Topic,
+		InstanceId:      c.InstanceID,
 		Name:            &c.Name,
+		FieldMapping:    c.FieldMapping,
+		Redis: &cdcpb.RedisSettings{
+			Command:     c.Redis.Command,
+			KeyTemplate: c.Redis.KeyTemplate,
+			ValueFields: c.Redis.ValueFields,
+			Ttl:         int32(c.Redis.TTL),
+		},
+	}
+}
+
+func fromPipelineConfig(p *cdcpb.PipelineConfig) config.PipelineConfig {
+	if p == nil {
+		return config.PipelineConfig{}
+	}
+	return config.PipelineConfig{
+		ChannelBufferSize: int(p.ChannelBufferSize),
+		WorkerCount:       int(p.WorkerCount),
+		BatchSize:         int(p.BatchSize),
+		FlushIntervalMs:   int(p.FlushIntervalMs),
+		SubjectFilter:     p.SubjectFilter,
+	}
+}
+
+func toPipelineProto(c config.PipelineConfig) *cdcpb.PipelineConfig {
+	return &cdcpb.PipelineConfig{
+		ChannelBufferSize: int32(c.ChannelBufferSize),
+		WorkerCount:       int32(c.WorkerCount),
+		BatchSize:         int32(c.BatchSize),
+		FlushIntervalMs:   int32(c.FlushIntervalMs),
+		SubjectFilter:     c.SubjectFilter,
+	}
+}
+
+func fromNATSConfig(p *cdcpb.NATSConfig) config.NATSConfig {
+	if p == nil {
+		return config.NATSConfig{}
+	}
+	return config.NATSConfig{
+		Enabled:            p.Enabled,
+		URL:                p.Url,
+		StreamName:         p.StreamName,
+		RetentionDays:      p.RetentionDays,
+		MaxReconnects:      int(p.MaxReconnects),
+		ReconnectWaitMs:    int(p.ReconnectWaitMs),
+		ReconnectBufferSizeMb: int(p.ReconnectBufferSizeMb),
+		MaxAckPending:      int(p.MaxAckPending),
+		AckWaitMs:          int(p.AckWaitMs),
+		MaxDeliver:         int(p.MaxDeliver),
+	}
+}
+
+func toNATSProto(c config.NATSConfig) *cdcpb.NATSConfig {
+	return &cdcpb.NATSConfig{
+		Enabled:            c.Enabled,
+		Url:                c.URL,
+		StreamName:         c.StreamName,
+		RetentionDays:      c.RetentionDays,
+		MaxReconnects:      int32(c.MaxReconnects),
+		ReconnectWaitMs:    int32(c.ReconnectWaitMs),
+		ReconnectBufferSizeMb: int32(c.ReconnectBufferSizeMb),
+		MaxAckPending:      int32(c.MaxAckPending),
+		AckWaitMs:          int32(c.AckWaitMs),
+		MaxDeliver:         int32(c.MaxDeliver),
 	}
 }
 

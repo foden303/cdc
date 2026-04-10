@@ -46,9 +46,9 @@ type Engine struct {
 
 	stopCh         chan struct{}
 	stopped        atomic.Bool
-	batchSize      int
-	flushInterval  time.Duration
-	partitionCount int
+	batchSize      atomic.Int32
+	flushInterval  atomic.Int64 // nanoseconds
+	partitionCount atomic.Int32
 	wg             sync.WaitGroup
 
 	// Pipeline hooks
@@ -67,21 +67,22 @@ type Engine struct {
 
 // NewEngine creates a pipeline engine with configurable settings.
 func NewEngine(cfg *config.Config, sources []interfaces.Source, sinks []interfaces.Sink, natsClient *nats.Client) *Engine {
-	return &Engine{
-		sources:        sources,
-		sinks:          sinks,
-		natsClient:     natsClient,
-		sourceAckChs:   make(map[string]chan uint64),
-		eventCh:        make(chan *models.Event, cfg.Pipeline.ChannelBufferSize),
-		stopCh:         make(chan struct{}),
-		partitionCount: cfg.Pipeline.WorkerCount,
-		batchSize:      cfg.Pipeline.BatchSize,
-		flushInterval:  time.Duration(cfg.Pipeline.FlushIntervalMs) * time.Millisecond,
-		sourceStats:    make(map[string]*models.ComponentStats),
-		sinkStats:      make(map[string]*models.ComponentStats),
-		sinkCancels:    make(map[string]context.CancelFunc),
-		sinkWgs:        make(map[string]*sync.WaitGroup),
+	e := &Engine{
+		sources:      sources,
+		sinks:        sinks,
+		natsClient:   natsClient,
+		sourceAckChs: make(map[string]chan uint64),
+		eventCh:      make(chan *models.Event, cfg.Pipeline.ChannelBufferSize),
+		stopCh:       make(chan struct{}),
+		sourceStats:  make(map[string]*models.ComponentStats),
+		sinkStats:    make(map[string]*models.ComponentStats),
+		sinkCancels:  make(map[string]context.CancelFunc),
+		sinkWgs:      make(map[string]*sync.WaitGroup),
 	}
+	e.batchSize.Store(int32(cfg.Pipeline.BatchSize))
+	e.flushInterval.Store(int64(time.Duration(cfg.Pipeline.FlushIntervalMs) * time.Millisecond))
+	e.partitionCount.Store(int32(cfg.Pipeline.WorkerCount))
+	return e
 }
 
 // AddFilter adds a filter function that drops events returning false.
@@ -96,7 +97,7 @@ func (e *Engine) AddTransformer(t EventTransformer) {
 
 // Start launches the producer and worker pool, then starts all sources.
 func (e *Engine) Start() error {
-	slog.Info("starting pipeline engine", "sources", len(e.sources), "partitions", e.partitionCount, _nameBufferSize, cap(e.eventCh))
+	slog.Info("starting pipeline engine", "sources", len(e.sources), "partitions", e.partitionCount.Load(), _nameBufferSize, cap(e.eventCh))
 
 	// 1. Pipeline Producer (Reads from eventCh, writes to NATS)
 	e.wg.Add(1)
@@ -148,10 +149,12 @@ func (e *Engine) startSourceInternal(ctx context.Context, src interfaces.Source)
 func (e *Engine) producer() {
 	defer e.wg.Done()
 	slog.Debug("pipeline producer started")
-	// Pre-allocate batch
-	batch := make([]*models.Event, 0, e.batchSize)
-	flushTicker := time.NewTicker(e.flushInterval)
-	// Backpressure monitoring ticker
+
+	getBatchSize := func() int { return int(e.batchSize.Load()) }
+	getFlushInterval := func() time.Duration { return time.Duration(e.flushInterval.Load()) }
+
+	batch := make([]*models.Event, 0, getBatchSize())
+	flushTicker := time.NewTicker(getFlushInterval())
 	backpressureTicker := time.NewTicker(5 * time.Second)
 
 	defer func() {
@@ -164,11 +167,12 @@ func (e *Engine) producer() {
 		if topic == "" {
 			topic = "cdc"
 		}
-		return fmt.Sprintf("%s.%s.%s.%s",
+		return fmt.Sprintf("%s.%s.%s.%s.%d",
 			topic,
 			ev.InstanceID,
 			strings.ReplaceAll(ev.Schema, ".", "_"),
-			strings.ReplaceAll(ev.Table, ".", "_"))
+			strings.ReplaceAll(ev.Table, ".", "_"),
+			ev.Partition)
 	}
 
 	for {
@@ -183,16 +187,17 @@ func (e *Engine) producer() {
 				return
 			}
 
-			// Pipeline logic: Filter & Transform
 			if processedEv := e.applyMiddleware(ev); processedEv != nil {
 				batch = append(batch, processedEv)
 			}
-			if len(batch) >= e.batchSize {
+			if len(batch) >= getBatchSize() {
 				e.publishBatchWithRetry(subjectFunc, batch)
-				batch = batch[:0] // Reset slice hold capacity
+				batch = batch[:0]
 			}
 
 		case <-flushTicker.C:
+			// Reset ticker to handle dynamic interval changes
+			flushTicker.Reset(getFlushInterval())
 			if len(batch) > 0 {
 				e.publishBatchWithRetry(subjectFunc, batch)
 				batch = batch[:0]
@@ -273,7 +278,8 @@ func (e *Engine) startSinkWorkersUnlocked(sink interfaces.Sink) {
 	}
 	e.sinkWgs[sink.InstanceID()] = wg
 
-	for i := 0; i < e.partitionCount; i++ {
+	partitionCount := int(e.partitionCount.Load())
+	for i := 0; i < partitionCount; i++ {
 		e.wg.Add(1)
 		wg.Add(1)
 		partID := i
@@ -293,16 +299,21 @@ func (e *Engine) worker(ctx context.Context, sink interfaces.Sink, partID int) {
 
 	// Use a shared consumer group name unique to this sink to allow multiple sink workers
 	// to share load, while different sinks consume independently.
-	consumerName := fmt.Sprintf("pipeline-worker-%s", sink.InstanceID())
-	fmt.Println("sink.Topic()", sink.Topic())
-	consumer, err := e.natsClient.CreateOrUpdateConsumer(ctx, consumerName, []string{sink.Topic()})
+	// STRICT PARTITIONING: Each worker has its own durable consumer and only filters for its partition ID.
+	// Filter subject pattern: cdc.*.*.*.<partition>
+	consumerName := fmt.Sprintf("pipeline-%s-p%d", sink.InstanceID(), partID)
+	filterSubject := fmt.Sprintf("%s.*.*.*.%d", strings.Split(sink.Topic(), ".")[0], partID)
+	
+	consumer, err := e.natsClient.CreateOrUpdateConsumer(ctx, consumerName, []string{filterSubject})
 	if err != nil {
 		slog.Error("failed to create NATS consumer", "worker_id", partID, "sink", sink.InstanceID(), _nameErr, err)
 		return
 	}
+	getBatchSize := func() int { return int(e.batchSize.Load()) }
+
 	// Pre-allocate memory
-	pendingMsgs := make([]jetstream.Msg, 0, e.batchSize)
-	pendingEvents := make([]*models.Event, 0, e.batchSize)
+	pendingMsgs := make([]jetstream.Msg, 0, getBatchSize())
+	pendingEvents := make([]*models.Event, 0, getBatchSize())
 
 	for {
 		// Check for shutdown
@@ -322,15 +333,15 @@ func (e *Engine) worker(ctx context.Context, sink interfaces.Sink, partID int) {
 		}
 
 		// Fetch a batch of messages with a timeout.
-		// This is the fix for the iter.Next()-in-default deadlock:
-		// Fetch returns after fetchTimeout even if no messages are available,
-		// giving us a natural point to flush partial batches.
-		fetchSize := e.batchSize - len(pendingMsgs)
+		getBatchSize := func() int { return int(e.batchSize.Load()) }
+		getFlushInterval := func() time.Duration { return time.Duration(e.flushInterval.Load()) }
+
+		fetchSize := getBatchSize() - len(pendingMsgs)
 		if fetchSize <= 0 {
-			fetchSize = e.batchSize
+			fetchSize = getBatchSize()
 		}
 
-		msgBatch, err := consumer.Fetch(fetchSize, jetstream.FetchMaxWait(e.flushInterval))
+		msgBatch, err := consumer.Fetch(fetchSize, jetstream.FetchMaxWait(getFlushInterval()))
 		if err != nil && ctx.Err() == nil {
 			slog.Error("failed to fetch messages", "worker_id", partID, "sink", sink.InstanceID(), _nameErr, err)
 			time.Sleep(500 * time.Millisecond)
@@ -387,6 +398,7 @@ func (e *Engine) flushAndAck(sink interfaces.Sink, msgs []jetstream.Msg, events 
 			Schema:     ev.Schema,
 			Table:      ev.Table,
 			Op:         ev.Op,
+			Partition:  ev.Partition,
 		}
 		if ev.Data != nil {
 			clonedEvents[i].Data = make([]byte, len(ev.Data))
@@ -615,6 +627,39 @@ func (e *Engine) RemoveSink(instanceID string) error {
 		}
 	}
 	return fmt.Errorf("sink %s not found", instanceID)
+}
+
+// UpdatePipelineConfig hot-reloads the global pipeline settings.
+func (e *Engine) UpdatePipelineConfig(cfg config.PipelineConfig) {
+	oldPartitionCount := e.partitionCount.Swap(int32(cfg.WorkerCount))
+	e.batchSize.Store(int32(cfg.BatchSize))
+	e.flushInterval.Store(int64(time.Duration(cfg.FlushIntervalMs) * time.Millisecond))
+
+	slog.Info("pipeline settings updated",
+		"batch_size", cfg.BatchSize,
+		"flush_interval", cfg.FlushIntervalMs,
+		"workers", cfg.WorkerCount)
+
+	// If worker count changed, we need to restart all sink workers
+	if oldPartitionCount != int32(cfg.WorkerCount) {
+		slog.Info("worker count changed, restarting all sink workers",
+			"old", oldPartitionCount,
+			"new", cfg.WorkerCount)
+
+		e.mu.Lock()
+		defer e.mu.Unlock()
+
+		for _, sink := range e.sinks {
+			id := sink.InstanceID()
+			if cancel, ok := e.sinkCancels[id]; ok {
+				cancel()
+			}
+			if wg, ok := e.sinkWgs[id]; ok {
+				wg.Wait()
+			}
+			e.startSinkWorkersUnlocked(sink)
+		}
+	}
 }
 
 // GetStats returns the current success/failure metrics.

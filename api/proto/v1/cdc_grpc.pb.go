@@ -19,18 +19,21 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	CDCService_HealthCheck_FullMethodName     = "/cdc.v1.CDCService/HealthCheck"
-	CDCService_GetConfig_FullMethodName       = "/cdc.v1.CDCService/GetConfig"
-	CDCService_AddSource_FullMethodName       = "/cdc.v1.CDCService/AddSource"
-	CDCService_RemoveSource_FullMethodName    = "/cdc.v1.CDCService/RemoveSource"
-	CDCService_AddSink_FullMethodName         = "/cdc.v1.CDCService/AddSink"
-	CDCService_RemoveSink_FullMethodName      = "/cdc.v1.CDCService/RemoveSink"
-	CDCService_GetStats_FullMethodName        = "/cdc.v1.CDCService/GetStats"
-	CDCService_ListMessages_FullMethodName    = "/cdc.v1.CDCService/ListMessages"
-	CDCService_GetConsumerInfo_FullMethodName = "/cdc.v1.CDCService/GetConsumerInfo"
-	CDCService_ListTopics_FullMethodName      = "/cdc.v1.CDCService/ListTopics"
-	CDCService_ListPartitions_FullMethodName  = "/cdc.v1.CDCService/ListPartitions"
-	CDCService_ReprocessDLQ_FullMethodName    = "/cdc.v1.CDCService/ReprocessDLQ"
+	CDCService_HealthCheck_FullMethodName           = "/cdc.v1.CDCService/HealthCheck"
+	CDCService_GetConfig_FullMethodName             = "/cdc.v1.CDCService/GetConfig"
+	CDCService_AddSource_FullMethodName             = "/cdc.v1.CDCService/AddSource"
+	CDCService_RemoveSource_FullMethodName          = "/cdc.v1.CDCService/RemoveSource"
+	CDCService_AddSink_FullMethodName               = "/cdc.v1.CDCService/AddSink"
+	CDCService_RemoveSink_FullMethodName            = "/cdc.v1.CDCService/RemoveSink"
+	CDCService_UpdateSource_FullMethodName          = "/cdc.v1.CDCService/UpdateSource"
+	CDCService_UpdateSink_FullMethodName            = "/cdc.v1.CDCService/UpdateSink"
+	CDCService_GetStats_FullMethodName              = "/cdc.v1.CDCService/GetStats"
+	CDCService_ListMessages_FullMethodName          = "/cdc.v1.CDCService/ListMessages"
+	CDCService_GetConsumerInfo_FullMethodName       = "/cdc.v1.CDCService/GetConsumerInfo"
+	CDCService_ListTopics_FullMethodName            = "/cdc.v1.CDCService/ListTopics"
+	CDCService_ListPartitions_FullMethodName        = "/cdc.v1.CDCService/ListPartitions"
+	CDCService_ReprocessDLQ_FullMethodName          = "/cdc.v1.CDCService/ReprocessDLQ"
+	CDCService_GetPerformanceMetrics_FullMethodName = "/cdc.v1.CDCService/GetPerformanceMetrics"
 )
 
 // CDCServiceClient is the client API for CDCService service.
@@ -47,6 +50,8 @@ type CDCServiceClient interface {
 	// Dynamic Sinks
 	AddSink(ctx context.Context, in *AddSinkRequest, opts ...grpc.CallOption) (*AddSinkResponse, error)
 	RemoveSink(ctx context.Context, in *RemoveSinkRequest, opts ...grpc.CallOption) (*RemoveSinkResponse, error)
+	UpdateSource(ctx context.Context, in *UpdateSourceRequest, opts ...grpc.CallOption) (*UpdateSourceResponse, error)
+	UpdateSink(ctx context.Context, in *UpdateSinkRequest, opts ...grpc.CallOption) (*UpdateSinkResponse, error)
 	GetStats(ctx context.Context, in *GetStatsRequest, opts ...grpc.CallOption) (*GetStatsResponse, error)
 	// Explorer API
 	ListMessages(ctx context.Context, in *ListMessagesRequest, opts ...grpc.CallOption) (*ListMessagesResponse, error)
@@ -54,6 +59,7 @@ type CDCServiceClient interface {
 	ListTopics(ctx context.Context, in *ListTopicsRequest, opts ...grpc.CallOption) (*ListTopicsResponse, error)
 	ListPartitions(ctx context.Context, in *ListPartitionsRequest, opts ...grpc.CallOption) (*ListPartitionsResponse, error)
 	ReprocessDLQ(ctx context.Context, in *ReprocessDLQRequest, opts ...grpc.CallOption) (*ReprocessDLQResponse, error)
+	GetPerformanceMetrics(ctx context.Context, in *GetPerformanceMetricsRequest, opts ...grpc.CallOption) (*GetPerformanceMetricsResponse, error)
 }
 
 type cDCServiceClient struct {
@@ -124,6 +130,26 @@ func (c *cDCServiceClient) RemoveSink(ctx context.Context, in *RemoveSinkRequest
 	return out, nil
 }
 
+func (c *cDCServiceClient) UpdateSource(ctx context.Context, in *UpdateSourceRequest, opts ...grpc.CallOption) (*UpdateSourceResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateSourceResponse)
+	err := c.cc.Invoke(ctx, CDCService_UpdateSource_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *cDCServiceClient) UpdateSink(ctx context.Context, in *UpdateSinkRequest, opts ...grpc.CallOption) (*UpdateSinkResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateSinkResponse)
+	err := c.cc.Invoke(ctx, CDCService_UpdateSink_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *cDCServiceClient) GetStats(ctx context.Context, in *GetStatsRequest, opts ...grpc.CallOption) (*GetStatsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetStatsResponse)
@@ -184,6 +210,16 @@ func (c *cDCServiceClient) ReprocessDLQ(ctx context.Context, in *ReprocessDLQReq
 	return out, nil
 }
 
+func (c *cDCServiceClient) GetPerformanceMetrics(ctx context.Context, in *GetPerformanceMetricsRequest, opts ...grpc.CallOption) (*GetPerformanceMetricsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetPerformanceMetricsResponse)
+	err := c.cc.Invoke(ctx, CDCService_GetPerformanceMetrics_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CDCServiceServer is the server API for CDCService service.
 // All implementations should embed UnimplementedCDCServiceServer
 // for forward compatibility.
@@ -198,6 +234,8 @@ type CDCServiceServer interface {
 	// Dynamic Sinks
 	AddSink(context.Context, *AddSinkRequest) (*AddSinkResponse, error)
 	RemoveSink(context.Context, *RemoveSinkRequest) (*RemoveSinkResponse, error)
+	UpdateSource(context.Context, *UpdateSourceRequest) (*UpdateSourceResponse, error)
+	UpdateSink(context.Context, *UpdateSinkRequest) (*UpdateSinkResponse, error)
 	GetStats(context.Context, *GetStatsRequest) (*GetStatsResponse, error)
 	// Explorer API
 	ListMessages(context.Context, *ListMessagesRequest) (*ListMessagesResponse, error)
@@ -205,6 +243,7 @@ type CDCServiceServer interface {
 	ListTopics(context.Context, *ListTopicsRequest) (*ListTopicsResponse, error)
 	ListPartitions(context.Context, *ListPartitionsRequest) (*ListPartitionsResponse, error)
 	ReprocessDLQ(context.Context, *ReprocessDLQRequest) (*ReprocessDLQResponse, error)
+	GetPerformanceMetrics(context.Context, *GetPerformanceMetricsRequest) (*GetPerformanceMetricsResponse, error)
 }
 
 // UnimplementedCDCServiceServer should be embedded to have
@@ -232,6 +271,12 @@ func (UnimplementedCDCServiceServer) AddSink(context.Context, *AddSinkRequest) (
 func (UnimplementedCDCServiceServer) RemoveSink(context.Context, *RemoveSinkRequest) (*RemoveSinkResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RemoveSink not implemented")
 }
+func (UnimplementedCDCServiceServer) UpdateSource(context.Context, *UpdateSourceRequest) (*UpdateSourceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateSource not implemented")
+}
+func (UnimplementedCDCServiceServer) UpdateSink(context.Context, *UpdateSinkRequest) (*UpdateSinkResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateSink not implemented")
+}
 func (UnimplementedCDCServiceServer) GetStats(context.Context, *GetStatsRequest) (*GetStatsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetStats not implemented")
 }
@@ -249,6 +294,9 @@ func (UnimplementedCDCServiceServer) ListPartitions(context.Context, *ListPartit
 }
 func (UnimplementedCDCServiceServer) ReprocessDLQ(context.Context, *ReprocessDLQRequest) (*ReprocessDLQResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ReprocessDLQ not implemented")
+}
+func (UnimplementedCDCServiceServer) GetPerformanceMetrics(context.Context, *GetPerformanceMetricsRequest) (*GetPerformanceMetricsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPerformanceMetrics not implemented")
 }
 func (UnimplementedCDCServiceServer) testEmbeddedByValue() {}
 
@@ -378,6 +426,42 @@ func _CDCService_RemoveSink_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CDCService_UpdateSource_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateSourceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CDCServiceServer).UpdateSource(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CDCService_UpdateSource_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CDCServiceServer).UpdateSource(ctx, req.(*UpdateSourceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CDCService_UpdateSink_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateSinkRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CDCServiceServer).UpdateSink(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CDCService_UpdateSink_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CDCServiceServer).UpdateSink(ctx, req.(*UpdateSinkRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _CDCService_GetStats_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetStatsRequest)
 	if err := dec(in); err != nil {
@@ -486,6 +570,24 @@ func _CDCService_ReprocessDLQ_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CDCService_GetPerformanceMetrics_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetPerformanceMetricsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CDCServiceServer).GetPerformanceMetrics(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CDCService_GetPerformanceMetrics_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CDCServiceServer).GetPerformanceMetrics(ctx, req.(*GetPerformanceMetricsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // CDCService_ServiceDesc is the grpc.ServiceDesc for CDCService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -518,6 +620,14 @@ var CDCService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _CDCService_RemoveSink_Handler,
 		},
 		{
+			MethodName: "UpdateSource",
+			Handler:    _CDCService_UpdateSource_Handler,
+		},
+		{
+			MethodName: "UpdateSink",
+			Handler:    _CDCService_UpdateSink_Handler,
+		},
+		{
 			MethodName: "GetStats",
 			Handler:    _CDCService_GetStats_Handler,
 		},
@@ -540,6 +650,10 @@ var CDCService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ReprocessDLQ",
 			Handler:    _CDCService_ReprocessDLQ_Handler,
+		},
+		{
+			MethodName: "GetPerformanceMetrics",
+			Handler:    _CDCService_GetPerformanceMetrics_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

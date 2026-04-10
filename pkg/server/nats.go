@@ -82,17 +82,14 @@ func (s *GRPCService) ListTopics(ctx context.Context, req *cdcpb.ListTopicsReque
 		return nil, err
 	}
 
-	summaries := make([]*cdcpb.TopicSummary, len(topics))
-	for i, t := range topics {
-		summaries[i] = &cdcpb.TopicSummary{
-			Name:           t,
-			MessageCount:   0,
-			PartitionCount: 0,
-		}
-	}
-
 	return &cdcpb.ListTopicsResponse{
-		Data:       summaries,
+		Data: utils.Map(topics, func(t string, _ int) *cdcpb.TopicSummary {
+			return &cdcpb.TopicSummary{
+				Name:           t,
+				MessageCount:   0,
+				PartitionCount: 0,
+			}
+		}),
 		Pagination: s.getPaginationResponse(total, limit, page, sort),
 	}, nil
 }
@@ -120,7 +117,6 @@ func (s *GRPCService) ReprocessDLQ(ctx context.Context, _ *cdcpb.ReprocessDLQReq
 		Count: int32(count),
 	}, nil
 }
-
 
 func (s *GRPCService) getPaginationParams(req *cdcpb.OffsetPaginationRequest) (uint32, uint32, []*cdcpb.Sort) {
 	limit := uint32(20)

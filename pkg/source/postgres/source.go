@@ -170,8 +170,51 @@ func (p *PostgresSource) processTask(t *walTask) {
 		topic = "cdc"
 	}
 
-	subject := fmt.Sprintf("%s.%s.%s.%s", topic, p.cfg.InstanceID, namespace, table)
-	p.pipeline <- models.NewEvent(topic, subject, p.cfg.InstanceID, namespace, table, t.op, t.lsn, strconv.FormatUint(t.lsn, 10), data)
+	// 4. Calculate Partition ID based on Primary Key
+	partitionID := p.calculatePartition(t)
+
+	// 5. Build Hierarchical Subject (5 levels)
+	subject := fmt.Sprintf("%s.%s.%s.%s.%d", topic, p.cfg.InstanceID, namespace, table, partitionID)
+
+	p.pipeline <- models.NewEvent(topic, subject, p.cfg.InstanceID, namespace, table, t.op, t.lsn, strconv.FormatUint(t.lsn, 10), data, partitionID)
+}
+
+// calculatePartition hashes the Primary Key of the row to determine the destination partition.
+func (p *PostgresSource) calculatePartition(t *walTask) int {
+	// Snapshot rows use a map, WAL tasks use pglogrepl.TupleDataColumn
+	var pkValues []string
+
+	if t.op == "r" {
+		// For snapshot, we don't have schema info here easily to identify PKs
+		// Best effort: use first column or entire row hash if no key identified
+		// In a real system, we'd fetch the PK list during setup.
+		return 0 // Default to 0 for snapshot for now to keep it simple, or hash the table name
+	}
+
+	// For WAL tasks, check RelationMessage for identity columns
+	for i, col := range t.rel.Columns {
+		// Key columns have Flag bit 0 set (1)
+		if col.Flags&1 != 0 {
+			var val string
+			// Use the new data for Insert/Update, or old data for Delete
+			targetCols := t.new
+			if t.op == "d" {
+				targetCols = t.old
+			}
+
+			if i < len(targetCols) && targetCols[i].DataType == 't' {
+				val = string(targetCols[i].Data)
+				pkValues = append(pkValues, val)
+			}
+		}
+	}
+
+	if len(pkValues) == 0 {
+		return 0 // No PK found, fallback to partition 0
+	}
+
+	// Hash the combined PK values using the configured partition count
+	return utils.GeneratePartition(utils.CombineKeys(pkValues...), p.cfg.PartitionCount)
 }
 
 // decodeToJSONRaw converts raw WAL bytes to a format that json.Marshal understands

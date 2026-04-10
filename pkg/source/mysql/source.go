@@ -20,6 +20,7 @@ import (
 	"github.com/foden/cdc/pkg/interfaces"
 	"github.com/foden/cdc/pkg/models"
 	"github.com/foden/cdc/pkg/registry"
+	"github.com/foden/cdc/pkg/utils"
 )
 
 const (
@@ -312,7 +313,12 @@ func (s *MySQLSource) processTask(t *mysqlTask) {
 		topic = "cdc"
 	}
 
-	subject := fmt.Sprintf("%s.%s.%s.%s", topic, s.cfg.InstanceID, t.db, t.table.Name)
+	// 4. Calculate Partition ID based on Primary Key
+	partitionID := s.calculatePartition(t)
+
+	// 5. Build Hierarchical Subject (5 levels)
+	subject := fmt.Sprintf("%s.%s.%s.%s.%d", topic, s.cfg.InstanceID, t.db, t.table.Name, partitionID)
+
 	s.pipeline <- models.NewEvent(
 		topic,
 		subject,
@@ -323,7 +329,42 @@ func (s *MySQLSource) processTask(t *mysqlTask) {
 		t.lsn,
 		t.offset,
 		data,
+		partitionID,
 	)
+}
+
+// calculatePartition hashes the Primary Key of the row to determine the destination partition.
+func (s *MySQLSource) calculatePartition(t *mysqlTask) int {
+	var pkValues []string
+
+	if t.table == nil || len(t.table.PKColumns) == 0 {
+		return 0 // No PK defined, fallback to partition 0
+	}
+
+	// Extract values for PK columns
+	// t.after is the row state after the change
+	targetRow := t.after
+	if t.op == "d" {
+		targetRow = t.before
+	}
+
+	if targetRow == nil {
+		return 0
+	}
+
+	for _, pkIdx := range t.table.PKColumns {
+		if pkIdx < len(targetRow) {
+			val := fmt.Sprintf("%v", targetRow[pkIdx])
+			pkValues = append(pkValues, val)
+		}
+	}
+
+	if len(pkValues) == 0 {
+		return 0
+	}
+
+	// Use the configured partition count
+	return utils.GeneratePartition(utils.CombineKeys(pkValues...), s.cfg.PartitionCount)
 }
 
 func (s *MySQLSource) rowToMap(table *schema.Table, row []interface{}) map[string]interface{} {

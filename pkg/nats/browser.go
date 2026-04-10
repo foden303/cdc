@@ -29,7 +29,13 @@ func (c *Client) ListMessages(ctx context.Context, status models.MessageStatus, 
 	if partition != "" {
 		filter = partition
 	} else if topic != "" {
-		filter = fmt.Sprintf("cdc.%s.>", topic)
+		// If topic already contains dots and seems like a full subject, use it.
+		// Otherwise, wrap it for backward compatibility.
+		if strings.HasPrefix(topic, "cdc.") {
+			filter = topic
+		} else {
+			filter = fmt.Sprintf("cdc.%s.>", topic)
+		}
 	}
 
 	// 2. Determine the starting sequence (Offset)
@@ -114,18 +120,24 @@ func (c *Client) ListTopics(ctx context.Context, limit int, page int) ([]string,
 	if err != nil {
 		return nil, 0, err
 	}
-
-	// Use a map to identify unique topics
-	topicMap := make(map[string]struct{})
-	for _, subj := range info.Config.Subjects {
-		if t := c.extractTopic(subj); t != "" {
-			topicMap[t] = struct{}{}
+	// Group subjects by the first 4 segments (cdc.inst.schema.table) to avoid partition redundancy in UI
+	uniqueTopics := make(map[string]bool)
+	var topics []string
+	for _, s := range info.Config.Subjects {
+		parts := strings.Split(s, ".")
+		if len(parts) >= 4 {
+			topic := strings.Join(parts[:4], ".")
+			if !uniqueTopics[topic] {
+				uniqueTopics[topic] = true
+				topics = append(topics, topic)
+			}
+		} else {
+			// Fallback for non-partitioned subjects
+			if !uniqueTopics[s] {
+				uniqueTopics[s] = true
+				topics = append(topics, s)
+			}
 		}
-	}
-
-	topics := make([]string, 0, len(topicMap))
-	for t := range topicMap {
-		topics = append(topics, t)
 	}
 
 	return paginate(topics, limit, page), uint64(len(topics)), nil
@@ -140,7 +152,14 @@ func (c *Client) ListPartitions(ctx context.Context, topic string, limit int, pa
 
 	prefix := "cdc."
 	if topic != "" {
-		prefix = fmt.Sprintf("cdc.%s.", topic)
+		if strings.HasPrefix(topic, "cdc.") {
+			prefix = topic
+			if !strings.HasSuffix(prefix, ".") {
+				prefix += "."
+			}
+		} else {
+			prefix = fmt.Sprintf("cdc.%s.", topic)
+		}
 	}
 
 	var partitions []string

@@ -17,12 +17,14 @@ func (s *GRPCService) GetConfig(_ context.Context, _ *cdcpb.GetConfigRequest) (*
 		Config: &cdcpb.AppConfig{
 			Name:    s.appCfg.Name,
 			LogMode: s.appCfg.LogMode,
-			Sources: utils.Map(s.appCfg.Sources, func(src config.SourceConfig, _ int) *cdcpb.SourceConfig {
+			Sources: utils.Map(s.appCfg.Sources, func(src *config.SourceConfig, _ int) *cdcpb.SourceConfig {
 				return toSourceProto(src)
 			}),
-			Sinks: utils.Map(s.appCfg.Sinks, func(sc config.SinkConfig, _ int) *cdcpb.SinkConfig {
+			Sinks: utils.Map(s.appCfg.Sinks, func(sc *config.SinkConfig, _ int) *cdcpb.SinkConfig {
 				return toSinkProto(sc)
 			}),
+			Pipeline: toPipelineProto(s.appCfg.Pipeline),
+			Nats:     toNATSProto(s.appCfg.NATS),
 		},
 	}
 	return resp, nil

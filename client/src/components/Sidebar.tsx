@@ -10,7 +10,8 @@ import {
   Zap,
   Activity,
   BarChart3,
-  Box
+  Box,
+  Search
 } from "lucide-react";
 
 interface NavItem {
@@ -22,7 +23,9 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard },
   { label: "Topics", href: "/topics", icon: Layers },
-  { label: "Performance", href: "/metrics", icon: BarChart3 },
+  { label: "Performance", href: "/metrics", icon: Activity },
+  { label: "Manager", href: "/manager", icon: Settings },
+  { label: "Explorer", href: "/explorer", icon: Search },
   { label: "Partitions", href: "/partitions", icon: Grid2X2 },
   { label: "Messages", href: "/messages", icon: MessageSquare },
   { label: "System Config", href: "/config", icon: Settings },

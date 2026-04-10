@@ -25,15 +25,15 @@ func (s *GRPCService) AddSink(ctx context.Context, req *cdcpb.AddSinkRequest) (*
 
 	// Persist updated configuration
 	updated := false
-	for i, sc := range s.appCfg.Sinks {
-		if sc.InstanceID == sCfg.InstanceID {
-			s.appCfg.Sinks[i] = *sCfg
+	for i := range s.appCfg.Sinks {
+		if s.appCfg.Sinks[i].InstanceID == sCfg.InstanceID {
+			s.appCfg.Sinks[i] = sCfg
 			updated = true
 			break
 		}
 	}
 	if !updated {
-		s.appCfg.Sinks = append(s.appCfg.Sinks, *sCfg)
+		s.appCfg.Sinks = append(s.appCfg.Sinks, sCfg)
 	}
 
 	if err := s.natsClient.SaveConfig(ctx, s.appCfg); err != nil {
@@ -49,10 +49,10 @@ func (s *GRPCService) RemoveSink(ctx context.Context, req *cdcpb.RemoveSinkReque
 	}
 
 	// Persist updated configuration
-	var newSinks []config.SinkConfig
-	for _, sc := range s.appCfg.Sinks {
-		if sc.InstanceID != req.InstanceId {
-			newSinks = append(newSinks, sc)
+	var newSinks []*config.SinkConfig
+	for i := range s.appCfg.Sinks {
+		if s.appCfg.Sinks[i].InstanceID != req.InstanceId {
+			newSinks = append(newSinks, s.appCfg.Sinks[i])
 		}
 	}
 	s.appCfg.Sinks = newSinks
@@ -61,4 +61,42 @@ func (s *GRPCService) RemoveSink(ctx context.Context, req *cdcpb.RemoveSinkReque
 	}
 
 	return &cdcpb.RemoveSinkResponse{Success: true}, nil
+}
+func (s *GRPCService) UpdateSink(ctx context.Context, req *cdcpb.UpdateSinkRequest) (*cdcpb.UpdateSinkResponse, error) {
+	if req.Sink.InstanceId == "" {
+		return nil, fmt.Errorf("instance_id is required for update")
+	}
+
+	// 1. Convert to internal config
+	sCfg, err := toSinkConfig(req.Sink)
+	if err != nil {
+		return nil, fmt.Errorf("invalid sink config: %w", err)
+	}
+
+	// 2. Remove old instance from engine
+	if err := s.engine.RemoveSink(req.Sink.InstanceId); err != nil {
+		return nil, fmt.Errorf("failed to stop old sink: %w", err)
+	}
+
+	// 3. Create and add new instance
+	sink, err := registry.CreateSink(sCfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create new sink version: %w", err)
+	}
+
+	s.engine.AddSink(sink)
+
+	// 4. Update and persist config
+	for i := range s.appCfg.Sinks {
+		if s.appCfg.Sinks[i].InstanceID == req.Sink.InstanceId {
+			s.appCfg.Sinks[i] = sCfg
+			break
+		}
+	}
+
+	if err := s.natsClient.SaveConfig(ctx, s.appCfg); err != nil {
+		slog.Error("failed to persist updated sink config", "err", err)
+	}
+
+	return &cdcpb.UpdateSinkResponse{Success: true}, nil
 }

@@ -1,6 +1,6 @@
 APP_NAME := cdc
 BIN_DIR := bin
-CONFIG_FILE := config.yaml
+CONFIG_FILE := deploy/app/config.yaml
 
 .PHONY: all build run test tidy up down fix-perms clean gen-proto
 
@@ -20,10 +20,10 @@ tidy:
 	go mod tidy
 
 up:
-	docker-compose up -d
+	docker compose up -d
 
 down:
-	docker-compose down
+	docker compose down
 
 fix-perms:
 	@echo "Fixing nats-data permissions..."
