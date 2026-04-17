@@ -8,32 +8,6 @@ import (
 	"github.com/foden/cdc/pkg/utils"
 )
 
-func (s *GRPCService) GetStats(_ context.Context, _ *cdcpb.GetStatsRequest) (*cdcpb.GetStatsResponse, error) {
-	srcStats, snkStats := s.engine.GetStats()
-
-	resp := &cdcpb.GetStatsResponse{
-		SourceStats: make(map[string]*cdcpb.ComponentStats),
-		SinkStats:   make(map[string]*cdcpb.ComponentStats),
-	}
-
-	for k, v := range srcStats {
-		resp.SourceStats[k] = &cdcpb.ComponentStats{
-			SuccessCount: v.SuccessCount,
-			FailureCount: v.FailureCount,
-			LastError:    v.LastError,
-		}
-	}
-
-	for k, v := range snkStats {
-		resp.SinkStats[k] = &cdcpb.ComponentStats{
-			SuccessCount: v.SuccessCount,
-			FailureCount: v.FailureCount,
-			LastError:    v.LastError,
-		}
-	}
-
-	return resp, nil
-}
 func (s *GRPCService) ListMessages(ctx context.Context, req *cdcpb.ListMessagesRequest) (*cdcpb.ListMessagesResponse, error) {
 	limit, page, sort := s.getPaginationParams(req.Pagination)
 	messages, totalCount, err := s.engine.ListMessages(ctx, req.Status, int(limit), int(page), req.GetTopic(), req.GetPartition())
@@ -60,10 +34,7 @@ func (s *GRPCService) ListMessages(ctx context.Context, req *cdcpb.ListMessagesR
 }
 
 func (s *GRPCService) GetConsumerInfo(ctx context.Context, req *cdcpb.GetConsumerInfoRequest) (*cdcpb.GetConsumerInfoResponse, error) {
-	consumerName := req.GetConsumerName()
-	if consumerName == "" {
-		consumerName = "pipeline-worker"
-	}
+	consumerName := normalizedConsumerName(req.GetConsumerName())
 	ackFloor, pendingCount, err := s.engine.GetConsumerInfo(ctx, consumerName)
 	if err != nil {
 		return nil, err

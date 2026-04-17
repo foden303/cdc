@@ -2,32 +2,28 @@
 
 import { useSearchParams } from "next/navigation";
 import MessageBrowser from "@/components/MessageBrowser";
-import { 
-  Terminal
-} from "lucide-react";
+import { useApp } from "@/lib/AppContext";
+import { Terminal } from "lucide-react";
 
 export default function MessagesPage() {
+  const { t } = useApp();
   const searchParams = useSearchParams();
   const topicFilter = searchParams.get("topic") || "";
   const partitionFilter = searchParams.get("partition") || "";
 
   return (
-    <div className="p-8 space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div>
-          <h1 className="text-4xl font-bold tracking-tight text-white flex items-center gap-3">
-             <Terminal className="w-10 h-10 text-blue-500" />
-             Event Explorer
-          </h1>
-          <p className="text-slate-400 mt-2 text-sm font-medium">
-            Real-time browse through all captured events across the pipeline.
-          </p>
+    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500 pb-10">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-0.5">
+          <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary/10 border border-primary/10 text-primary overline-label overline-label-solid">
+            <Terminal className="w-3 h-3" /> Raw Stream
+          </div>
+          <h1 className="text-xl md:text-2xl font-black text-foreground">{t("explorer")}</h1>
+          <p className="text-muted-foreground text-base-compact font-medium">Real-time browse through captured events across the pipeline.</p>
         </div>
       </div>
 
-      {/* Main Browser */}
-      <div className="bg-white/[0.01] border border-white/5 rounded-[2.5rem] p-8 shadow-2xl">
+      <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
          <MessageBrowser 
            topic={topicFilter} 
            partition={partitionFilter} 

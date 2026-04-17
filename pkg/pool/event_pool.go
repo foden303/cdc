@@ -22,6 +22,6 @@ func PutEvent(ev *models.Event) {
 	if ev == nil {
 		return
 	}
-	*ev = models.Event{}
+	ev.Reset() // Explicitly clear fields
 	eventPool.Put(ev)
 }

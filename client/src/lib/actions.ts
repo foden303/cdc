@@ -84,3 +84,7 @@ export async function removeSinkAction(instanceId: string) {
 export async function updateSinkAction(sink: grpc.SinkConfig) {
   return serialize(await grpc.updateSink(sink));
 }
+
+export async function reprocessDLQAction() {
+  return serialize(await grpc.reprocessDLQ());
+}

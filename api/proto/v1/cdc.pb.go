@@ -734,21 +734,25 @@ func (x *NATSConfig) GetMaxDeliver() int32 {
 }
 
 type SourceConfig struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	Type            string                 `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`
-	Host            string                 `protobuf:"bytes,2,opt,name=host,proto3" json:"host,omitempty"`
-	Port            int32                  `protobuf:"varint,3,opt,name=port,proto3" json:"port,omitempty"`
-	Username        *string                `protobuf:"bytes,4,opt,name=username,proto3,oneof" json:"username,omitempty"`
-	Password        *string                `protobuf:"bytes,5,opt,name=password,proto3,oneof" json:"password,omitempty"`
-	Database        string                 `protobuf:"bytes,6,opt,name=database,proto3" json:"database,omitempty"`
-	Tables          []string               `protobuf:"bytes,7,rep,name=tables,proto3" json:"tables,omitempty"`
-	SlotName        *string                `protobuf:"bytes,8,opt,name=slot_name,json=slotName,proto3,oneof" json:"slot_name,omitempty"`
-	PublicationName *string                `protobuf:"bytes,9,opt,name=publication_name,json=publicationName,proto3,oneof" json:"publication_name,omitempty"`
-	InstanceId      string                 `protobuf:"bytes,10,opt,name=instance_id,json=instanceId,proto3" json:"instance_id,omitempty"`
-	Name            *string                `protobuf:"bytes,11,opt,name=name,proto3,oneof" json:"name,omitempty"`   // Display name
-	Topic           *string                `protobuf:"bytes,12,opt,name=topic,proto3,oneof" json:"topic,omitempty"` // Routing topic
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Type              string                 `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`
+	Host              string                 `protobuf:"bytes,2,opt,name=host,proto3" json:"host,omitempty"`
+	Port              int32                  `protobuf:"varint,3,opt,name=port,proto3" json:"port,omitempty"`
+	Username          *string                `protobuf:"bytes,4,opt,name=username,proto3,oneof" json:"username,omitempty"`
+	Password          *string                `protobuf:"bytes,5,opt,name=password,proto3,oneof" json:"password,omitempty"`
+	Database          string                 `protobuf:"bytes,6,opt,name=database,proto3" json:"database,omitempty"`
+	Tables            []string               `protobuf:"bytes,7,rep,name=tables,proto3" json:"tables,omitempty"`
+	SlotName          *string                `protobuf:"bytes,8,opt,name=slot_name,json=slotName,proto3,oneof" json:"slot_name,omitempty"`
+	PublicationName   *string                `protobuf:"bytes,9,opt,name=publication_name,json=publicationName,proto3,oneof" json:"publication_name,omitempty"`
+	InstanceId        string                 `protobuf:"bytes,10,opt,name=instance_id,json=instanceId,proto3" json:"instance_id,omitempty"` // Unique ID for source
+	Name              *string                `protobuf:"bytes,11,opt,name=name,proto3,oneof" json:"name,omitempty"`                         // Display name
+	Topic             *string                `protobuf:"bytes,12,opt,name=topic,proto3,oneof" json:"topic,omitempty"`                       // Routing topic
+	Url               *string                `protobuf:"bytes,13,opt,name=url,proto3,oneof" json:"url,omitempty"`
+	Headers           map[string]string      `protobuf:"bytes,14,rep,name=headers,proto3" json:"headers,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	PollingIntervalMs *int32                 `protobuf:"varint,15,opt,name=polling_interval_ms,json=pollingIntervalMs,proto3,oneof" json:"polling_interval_ms,omitempty"`
+	SnapshotMode      *string                `protobuf:"bytes,16,opt,name=snapshot_mode,json=snapshotMode,proto3,oneof" json:"snapshot_mode,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *SourceConfig) Reset() {
@@ -861,6 +865,34 @@ func (x *SourceConfig) GetName() string {
 func (x *SourceConfig) GetTopic() string {
 	if x != nil && x.Topic != nil {
 		return *x.Topic
+	}
+	return ""
+}
+
+func (x *SourceConfig) GetUrl() string {
+	if x != nil && x.Url != nil {
+		return *x.Url
+	}
+	return ""
+}
+
+func (x *SourceConfig) GetHeaders() map[string]string {
+	if x != nil {
+		return x.Headers
+	}
+	return nil
+}
+
+func (x *SourceConfig) GetPollingIntervalMs() int32 {
+	if x != nil && x.PollingIntervalMs != nil {
+		return *x.PollingIntervalMs
+	}
+	return 0
+}
+
+func (x *SourceConfig) GetSnapshotMode() string {
+	if x != nil && x.SnapshotMode != nil {
+		return *x.SnapshotMode
 	}
 	return ""
 }
@@ -1823,6 +1855,7 @@ type ComponentStats struct {
 	SuccessCount  uint64                 `protobuf:"varint,1,opt,name=success_count,json=successCount,proto3" json:"success_count,omitempty"`
 	FailureCount  uint64                 `protobuf:"varint,2,opt,name=failure_count,json=failureCount,proto3" json:"failure_count,omitempty"`
 	LastError     string                 `protobuf:"bytes,3,opt,name=last_error,json=lastError,proto3" json:"last_error,omitempty"`
+	PartitionLag  map[int32]uint64       `protobuf:"bytes,4,rep,name=partition_lag,json=partitionLag,proto3" json:"partition_lag,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1876,6 +1909,13 @@ func (x *ComponentStats) GetLastError() string {
 		return x.LastError
 	}
 	return ""
+}
+
+func (x *ComponentStats) GetPartitionLag() map[int32]uint64 {
+	if x != nil {
+		return x.PartitionLag
+	}
+	return nil
 }
 
 // Advanced Explorer
@@ -2854,7 +2894,7 @@ const file_cdc_proto_rawDesc = "" +
 	"\vack_wait_ms\x18\t \x01(\x05R\tackWaitMs\x12\x1f\n" +
 	"\vmax_deliver\x18\n" +
 	" \x01(\x05R\n" +
-	"maxDeliver\"\xb7\x03\n" +
+	"maxDeliver\"\xd8\x05\n" +
 	"\fSourceConfig\x12\x12\n" +
 	"\x04type\x18\x01 \x01(\tR\x04type\x12\x12\n" +
 	"\x04host\x18\x02 \x01(\tR\x04host\x12\x12\n" +
@@ -2869,14 +2909,24 @@ const file_cdc_proto_rawDesc = "" +
 	" \x01(\tR\n" +
 	"instanceId\x12\x17\n" +
 	"\x04name\x18\v \x01(\tH\x04R\x04name\x88\x01\x01\x12\x19\n" +
-	"\x05topic\x18\f \x01(\tH\x05R\x05topic\x88\x01\x01B\v\n" +
+	"\x05topic\x18\f \x01(\tH\x05R\x05topic\x88\x01\x01\x12\x15\n" +
+	"\x03url\x18\r \x01(\tH\x06R\x03url\x88\x01\x01\x12;\n" +
+	"\aheaders\x18\x0e \x03(\v2!.cdc.v1.SourceConfig.HeadersEntryR\aheaders\x123\n" +
+	"\x13polling_interval_ms\x18\x0f \x01(\x05H\aR\x11pollingIntervalMs\x88\x01\x01\x12(\n" +
+	"\rsnapshot_mode\x18\x10 \x01(\tH\bR\fsnapshotMode\x88\x01\x01\x1a:\n" +
+	"\fHeadersEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\v\n" +
 	"\t_usernameB\v\n" +
 	"\t_passwordB\f\n" +
 	"\n" +
 	"_slot_nameB\x13\n" +
 	"\x11_publication_nameB\a\n" +
 	"\x05_nameB\b\n" +
-	"\x06_topic\"\xae\a\n" +
+	"\x06_topicB\x06\n" +
+	"\x04_urlB\x16\n" +
+	"\x14_polling_interval_msB\x10\n" +
+	"\x0e_snapshot_mode\"\xae\a\n" +
 	"\n" +
 	"SinkConfig\x12\x12\n" +
 	"\x04type\x18\x01 \x01(\tR\x04type\x12\x10\n" +
@@ -2967,12 +3017,16 @@ const file_cdc_proto_rawDesc = "" +
 	"\x05value\x18\x02 \x01(\v2\x16.cdc.v1.ComponentStatsR\x05value:\x028\x01\x1aT\n" +
 	"\x0eSinkStatsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12,\n" +
-	"\x05value\x18\x02 \x01(\v2\x16.cdc.v1.ComponentStatsR\x05value:\x028\x01\"y\n" +
+	"\x05value\x18\x02 \x01(\v2\x16.cdc.v1.ComponentStatsR\x05value:\x028\x01\"\x89\x02\n" +
 	"\x0eComponentStats\x12#\n" +
 	"\rsuccess_count\x18\x01 \x01(\x04R\fsuccessCount\x12#\n" +
 	"\rfailure_count\x18\x02 \x01(\x04R\ffailureCount\x12\x1d\n" +
 	"\n" +
-	"last_error\x18\x03 \x01(\tR\tlastError\"\x8b\x02\n" +
+	"last_error\x18\x03 \x01(\tR\tlastError\x12M\n" +
+	"\rpartition_lag\x18\x04 \x03(\v2(.cdc.v1.ComponentStats.PartitionLagEntryR\fpartitionLag\x1a?\n" +
+	"\x11PartitionLagEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\x05R\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x04R\x05value:\x028\x01\"\x8b\x02\n" +
 	"\x13ListMessagesRequest\x12-\n" +
 	"\x06status\x18\x01 \x01(\x0e2\x15.cdc.v1.MessageStatusR\x06status\x12 \n" +
 	"\tsource_id\x18\x02 \x01(\tH\x00R\bsourceId\x88\x01\x01\x12\x19\n" +
@@ -3094,7 +3148,7 @@ func file_cdc_proto_rawDescGZIP() []byte {
 }
 
 var file_cdc_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_cdc_proto_msgTypes = make([]protoimpl.MessageInfo, 52)
+var file_cdc_proto_msgTypes = make([]protoimpl.MessageInfo, 54)
 var file_cdc_proto_goTypes = []any{
 	(MessageStatus)(0),                    // 0: cdc.v1.MessageStatus
 	(SortOrder)(0),                        // 1: cdc.v1.SortOrder
@@ -3145,11 +3199,13 @@ var file_cdc_proto_goTypes = []any{
 	(*ReprocessDLQResponse)(nil),          // 46: cdc.v1.ReprocessDLQResponse
 	nil,                                   // 47: cdc.v1.GetPerformanceMetricsResponse.SinksEntry
 	nil,                                   // 48: cdc.v1.GetPerformanceMetricsResponse.SourcesEntry
-	nil,                                   // 49: cdc.v1.SinkConfig.IndexMappingEntry
-	nil,                                   // 50: cdc.v1.SinkConfig.FieldMappingEntry
-	nil,                                   // 51: cdc.v1.GetStatsResponse.SourceStatsEntry
-	nil,                                   // 52: cdc.v1.GetStatsResponse.SinkStatsEntry
-	nil,                                   // 53: cdc.v1.MessageItem.HeadersEntry
+	nil,                                   // 49: cdc.v1.SourceConfig.HeadersEntry
+	nil,                                   // 50: cdc.v1.SinkConfig.IndexMappingEntry
+	nil,                                   // 51: cdc.v1.SinkConfig.FieldMappingEntry
+	nil,                                   // 52: cdc.v1.GetStatsResponse.SourceStatsEntry
+	nil,                                   // 53: cdc.v1.GetStatsResponse.SinkStatsEntry
+	nil,                                   // 54: cdc.v1.ComponentStats.PartitionLagEntry
+	nil,                                   // 55: cdc.v1.MessageItem.HeadersEntry
 }
 var file_cdc_proto_depIdxs = []int32{
 	47, // 0: cdc.v1.GetPerformanceMetricsResponse.sinks:type_name -> cdc.v1.GetPerformanceMetricsResponse.SinksEntry
@@ -3159,68 +3215,70 @@ var file_cdc_proto_depIdxs = []int32{
 	12, // 4: cdc.v1.AppConfig.sinks:type_name -> cdc.v1.SinkConfig
 	9,  // 5: cdc.v1.AppConfig.pipeline:type_name -> cdc.v1.PipelineConfig
 	10, // 6: cdc.v1.AppConfig.nats:type_name -> cdc.v1.NATSConfig
-	49, // 7: cdc.v1.SinkConfig.index_mapping:type_name -> cdc.v1.SinkConfig.IndexMappingEntry
-	50, // 8: cdc.v1.SinkConfig.field_mapping:type_name -> cdc.v1.SinkConfig.FieldMappingEntry
-	13, // 9: cdc.v1.SinkConfig.redis:type_name -> cdc.v1.RedisSettings
-	11, // 10: cdc.v1.AddSourceRequest.source:type_name -> cdc.v1.SourceConfig
-	12, // 11: cdc.v1.AddSinkRequest.sink:type_name -> cdc.v1.SinkConfig
-	11, // 12: cdc.v1.UpdateSourceRequest.source:type_name -> cdc.v1.SourceConfig
-	12, // 13: cdc.v1.UpdateSinkRequest.sink:type_name -> cdc.v1.SinkConfig
-	51, // 14: cdc.v1.GetStatsResponse.source_stats:type_name -> cdc.v1.GetStatsResponse.SourceStatsEntry
-	52, // 15: cdc.v1.GetStatsResponse.sink_stats:type_name -> cdc.v1.GetStatsResponse.SinkStatsEntry
-	0,  // 16: cdc.v1.ListMessagesRequest.status:type_name -> cdc.v1.MessageStatus
-	42, // 17: cdc.v1.ListMessagesRequest.pagination:type_name -> cdc.v1.OffsetPaginationRequest
-	33, // 18: cdc.v1.ListMessagesResponse.data:type_name -> cdc.v1.MessageItem
-	44, // 19: cdc.v1.ListMessagesResponse.pagination:type_name -> cdc.v1.OffsetPaginationResponse
-	53, // 20: cdc.v1.MessageItem.headers:type_name -> cdc.v1.MessageItem.HeadersEntry
-	42, // 21: cdc.v1.ListTopicsRequest.pagination:type_name -> cdc.v1.OffsetPaginationRequest
-	38, // 22: cdc.v1.ListTopicsResponse.data:type_name -> cdc.v1.TopicSummary
-	44, // 23: cdc.v1.ListTopicsResponse.pagination:type_name -> cdc.v1.OffsetPaginationResponse
-	42, // 24: cdc.v1.ListPartitionsRequest.pagination:type_name -> cdc.v1.OffsetPaginationRequest
-	41, // 25: cdc.v1.ListPartitionsResponse.data:type_name -> cdc.v1.PartitionSummary
-	44, // 26: cdc.v1.ListPartitionsResponse.pagination:type_name -> cdc.v1.OffsetPaginationResponse
-	43, // 27: cdc.v1.OffsetPaginationRequest.sort:type_name -> cdc.v1.Sort
-	1,  // 28: cdc.v1.Sort.order:type_name -> cdc.v1.SortOrder
-	43, // 29: cdc.v1.OffsetPaginationResponse.sort:type_name -> cdc.v1.Sort
-	5,  // 30: cdc.v1.GetPerformanceMetricsResponse.SinksEntry.value:type_name -> cdc.v1.SinkPerformance
-	4,  // 31: cdc.v1.GetPerformanceMetricsResponse.SourcesEntry.value:type_name -> cdc.v1.SourcePerformance
-	30, // 32: cdc.v1.GetStatsResponse.SourceStatsEntry.value:type_name -> cdc.v1.ComponentStats
-	30, // 33: cdc.v1.GetStatsResponse.SinkStatsEntry.value:type_name -> cdc.v1.ComponentStats
-	26, // 34: cdc.v1.CDCService.HealthCheck:input_type -> cdc.v1.HealthCheckRequest
-	6,  // 35: cdc.v1.CDCService.GetConfig:input_type -> cdc.v1.GetConfigRequest
-	14, // 36: cdc.v1.CDCService.AddSource:input_type -> cdc.v1.AddSourceRequest
-	16, // 37: cdc.v1.CDCService.RemoveSource:input_type -> cdc.v1.RemoveSourceRequest
-	18, // 38: cdc.v1.CDCService.AddSink:input_type -> cdc.v1.AddSinkRequest
-	20, // 39: cdc.v1.CDCService.RemoveSink:input_type -> cdc.v1.RemoveSinkRequest
-	22, // 40: cdc.v1.CDCService.UpdateSource:input_type -> cdc.v1.UpdateSourceRequest
-	24, // 41: cdc.v1.CDCService.UpdateSink:input_type -> cdc.v1.UpdateSinkRequest
-	28, // 42: cdc.v1.CDCService.GetStats:input_type -> cdc.v1.GetStatsRequest
-	31, // 43: cdc.v1.CDCService.ListMessages:input_type -> cdc.v1.ListMessagesRequest
-	34, // 44: cdc.v1.CDCService.GetConsumerInfo:input_type -> cdc.v1.GetConsumerInfoRequest
-	36, // 45: cdc.v1.CDCService.ListTopics:input_type -> cdc.v1.ListTopicsRequest
-	39, // 46: cdc.v1.CDCService.ListPartitions:input_type -> cdc.v1.ListPartitionsRequest
-	45, // 47: cdc.v1.CDCService.ReprocessDLQ:input_type -> cdc.v1.ReprocessDLQRequest
-	2,  // 48: cdc.v1.CDCService.GetPerformanceMetrics:input_type -> cdc.v1.GetPerformanceMetricsRequest
-	27, // 49: cdc.v1.CDCService.HealthCheck:output_type -> cdc.v1.HealthCheckResponse
-	7,  // 50: cdc.v1.CDCService.GetConfig:output_type -> cdc.v1.GetConfigResponse
-	15, // 51: cdc.v1.CDCService.AddSource:output_type -> cdc.v1.AddSourceResponse
-	17, // 52: cdc.v1.CDCService.RemoveSource:output_type -> cdc.v1.RemoveSourceResponse
-	19, // 53: cdc.v1.CDCService.AddSink:output_type -> cdc.v1.AddSinkResponse
-	21, // 54: cdc.v1.CDCService.RemoveSink:output_type -> cdc.v1.RemoveSinkResponse
-	23, // 55: cdc.v1.CDCService.UpdateSource:output_type -> cdc.v1.UpdateSourceResponse
-	25, // 56: cdc.v1.CDCService.UpdateSink:output_type -> cdc.v1.UpdateSinkResponse
-	29, // 57: cdc.v1.CDCService.GetStats:output_type -> cdc.v1.GetStatsResponse
-	32, // 58: cdc.v1.CDCService.ListMessages:output_type -> cdc.v1.ListMessagesResponse
-	35, // 59: cdc.v1.CDCService.GetConsumerInfo:output_type -> cdc.v1.GetConsumerInfoResponse
-	37, // 60: cdc.v1.CDCService.ListTopics:output_type -> cdc.v1.ListTopicsResponse
-	40, // 61: cdc.v1.CDCService.ListPartitions:output_type -> cdc.v1.ListPartitionsResponse
-	46, // 62: cdc.v1.CDCService.ReprocessDLQ:output_type -> cdc.v1.ReprocessDLQResponse
-	3,  // 63: cdc.v1.CDCService.GetPerformanceMetrics:output_type -> cdc.v1.GetPerformanceMetricsResponse
-	49, // [49:64] is the sub-list for method output_type
-	34, // [34:49] is the sub-list for method input_type
-	34, // [34:34] is the sub-list for extension type_name
-	34, // [34:34] is the sub-list for extension extendee
-	0,  // [0:34] is the sub-list for field type_name
+	49, // 7: cdc.v1.SourceConfig.headers:type_name -> cdc.v1.SourceConfig.HeadersEntry
+	50, // 8: cdc.v1.SinkConfig.index_mapping:type_name -> cdc.v1.SinkConfig.IndexMappingEntry
+	51, // 9: cdc.v1.SinkConfig.field_mapping:type_name -> cdc.v1.SinkConfig.FieldMappingEntry
+	13, // 10: cdc.v1.SinkConfig.redis:type_name -> cdc.v1.RedisSettings
+	11, // 11: cdc.v1.AddSourceRequest.source:type_name -> cdc.v1.SourceConfig
+	12, // 12: cdc.v1.AddSinkRequest.sink:type_name -> cdc.v1.SinkConfig
+	11, // 13: cdc.v1.UpdateSourceRequest.source:type_name -> cdc.v1.SourceConfig
+	12, // 14: cdc.v1.UpdateSinkRequest.sink:type_name -> cdc.v1.SinkConfig
+	52, // 15: cdc.v1.GetStatsResponse.source_stats:type_name -> cdc.v1.GetStatsResponse.SourceStatsEntry
+	53, // 16: cdc.v1.GetStatsResponse.sink_stats:type_name -> cdc.v1.GetStatsResponse.SinkStatsEntry
+	54, // 17: cdc.v1.ComponentStats.partition_lag:type_name -> cdc.v1.ComponentStats.PartitionLagEntry
+	0,  // 18: cdc.v1.ListMessagesRequest.status:type_name -> cdc.v1.MessageStatus
+	42, // 19: cdc.v1.ListMessagesRequest.pagination:type_name -> cdc.v1.OffsetPaginationRequest
+	33, // 20: cdc.v1.ListMessagesResponse.data:type_name -> cdc.v1.MessageItem
+	44, // 21: cdc.v1.ListMessagesResponse.pagination:type_name -> cdc.v1.OffsetPaginationResponse
+	55, // 22: cdc.v1.MessageItem.headers:type_name -> cdc.v1.MessageItem.HeadersEntry
+	42, // 23: cdc.v1.ListTopicsRequest.pagination:type_name -> cdc.v1.OffsetPaginationRequest
+	38, // 24: cdc.v1.ListTopicsResponse.data:type_name -> cdc.v1.TopicSummary
+	44, // 25: cdc.v1.ListTopicsResponse.pagination:type_name -> cdc.v1.OffsetPaginationResponse
+	42, // 26: cdc.v1.ListPartitionsRequest.pagination:type_name -> cdc.v1.OffsetPaginationRequest
+	41, // 27: cdc.v1.ListPartitionsResponse.data:type_name -> cdc.v1.PartitionSummary
+	44, // 28: cdc.v1.ListPartitionsResponse.pagination:type_name -> cdc.v1.OffsetPaginationResponse
+	43, // 29: cdc.v1.OffsetPaginationRequest.sort:type_name -> cdc.v1.Sort
+	1,  // 30: cdc.v1.Sort.order:type_name -> cdc.v1.SortOrder
+	43, // 31: cdc.v1.OffsetPaginationResponse.sort:type_name -> cdc.v1.Sort
+	5,  // 32: cdc.v1.GetPerformanceMetricsResponse.SinksEntry.value:type_name -> cdc.v1.SinkPerformance
+	4,  // 33: cdc.v1.GetPerformanceMetricsResponse.SourcesEntry.value:type_name -> cdc.v1.SourcePerformance
+	30, // 34: cdc.v1.GetStatsResponse.SourceStatsEntry.value:type_name -> cdc.v1.ComponentStats
+	30, // 35: cdc.v1.GetStatsResponse.SinkStatsEntry.value:type_name -> cdc.v1.ComponentStats
+	26, // 36: cdc.v1.CDCService.HealthCheck:input_type -> cdc.v1.HealthCheckRequest
+	6,  // 37: cdc.v1.CDCService.GetConfig:input_type -> cdc.v1.GetConfigRequest
+	14, // 38: cdc.v1.CDCService.AddSource:input_type -> cdc.v1.AddSourceRequest
+	16, // 39: cdc.v1.CDCService.RemoveSource:input_type -> cdc.v1.RemoveSourceRequest
+	18, // 40: cdc.v1.CDCService.AddSink:input_type -> cdc.v1.AddSinkRequest
+	20, // 41: cdc.v1.CDCService.RemoveSink:input_type -> cdc.v1.RemoveSinkRequest
+	22, // 42: cdc.v1.CDCService.UpdateSource:input_type -> cdc.v1.UpdateSourceRequest
+	24, // 43: cdc.v1.CDCService.UpdateSink:input_type -> cdc.v1.UpdateSinkRequest
+	28, // 44: cdc.v1.CDCService.GetStats:input_type -> cdc.v1.GetStatsRequest
+	31, // 45: cdc.v1.CDCService.ListMessages:input_type -> cdc.v1.ListMessagesRequest
+	34, // 46: cdc.v1.CDCService.GetConsumerInfo:input_type -> cdc.v1.GetConsumerInfoRequest
+	36, // 47: cdc.v1.CDCService.ListTopics:input_type -> cdc.v1.ListTopicsRequest
+	39, // 48: cdc.v1.CDCService.ListPartitions:input_type -> cdc.v1.ListPartitionsRequest
+	45, // 49: cdc.v1.CDCService.ReprocessDLQ:input_type -> cdc.v1.ReprocessDLQRequest
+	2,  // 50: cdc.v1.CDCService.GetPerformanceMetrics:input_type -> cdc.v1.GetPerformanceMetricsRequest
+	27, // 51: cdc.v1.CDCService.HealthCheck:output_type -> cdc.v1.HealthCheckResponse
+	7,  // 52: cdc.v1.CDCService.GetConfig:output_type -> cdc.v1.GetConfigResponse
+	15, // 53: cdc.v1.CDCService.AddSource:output_type -> cdc.v1.AddSourceResponse
+	17, // 54: cdc.v1.CDCService.RemoveSource:output_type -> cdc.v1.RemoveSourceResponse
+	19, // 55: cdc.v1.CDCService.AddSink:output_type -> cdc.v1.AddSinkResponse
+	21, // 56: cdc.v1.CDCService.RemoveSink:output_type -> cdc.v1.RemoveSinkResponse
+	23, // 57: cdc.v1.CDCService.UpdateSource:output_type -> cdc.v1.UpdateSourceResponse
+	25, // 58: cdc.v1.CDCService.UpdateSink:output_type -> cdc.v1.UpdateSinkResponse
+	29, // 59: cdc.v1.CDCService.GetStats:output_type -> cdc.v1.GetStatsResponse
+	32, // 60: cdc.v1.CDCService.ListMessages:output_type -> cdc.v1.ListMessagesResponse
+	35, // 61: cdc.v1.CDCService.GetConsumerInfo:output_type -> cdc.v1.GetConsumerInfoResponse
+	37, // 62: cdc.v1.CDCService.ListTopics:output_type -> cdc.v1.ListTopicsResponse
+	40, // 63: cdc.v1.CDCService.ListPartitions:output_type -> cdc.v1.ListPartitionsResponse
+	46, // 64: cdc.v1.CDCService.ReprocessDLQ:output_type -> cdc.v1.ReprocessDLQResponse
+	3,  // 65: cdc.v1.CDCService.GetPerformanceMetrics:output_type -> cdc.v1.GetPerformanceMetricsResponse
+	51, // [51:66] is the sub-list for method output_type
+	36, // [36:51] is the sub-list for method input_type
+	36, // [36:36] is the sub-list for extension type_name
+	36, // [36:36] is the sub-list for extension extendee
+	0,  // [0:36] is the sub-list for field type_name
 }
 
 func init() { file_cdc_proto_init() }
@@ -3237,7 +3295,7 @@ func file_cdc_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_cdc_proto_rawDesc), len(file_cdc_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   52,
+			NumMessages:   54,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

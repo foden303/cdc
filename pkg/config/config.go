@@ -40,6 +40,7 @@ type SourceConfig struct {
 	Headers           map[string]string `mapstructure:"headers" json:"headers,omitempty"`
 	PollingIntervalMs int               `mapstructure:"polling_interval_ms" json:"polling_interval_ms,omitempty"`
 	PartitionCount    int               `mapstructure:"partition_count" json:"partition_count,omitempty"`
+	InitialOffset     string            `mapstructure:"initial_offset" json:"initial_offset,omitempty"`
 }
 
 // PipelineConfig holds the configuration for the CDC pipeline.

@@ -3,18 +3,14 @@
 import { useEffect, useState, useCallback, Fragment } from "react";
 import { listMessagesAction } from "@/lib/actions";
 import type { MessageItem, PaginationResponse } from "@/lib/grpc";
+import { useApp } from "@/lib/AppContext";
 import { 
   ChevronDown, 
   ChevronUp, 
   ChevronLeft, 
   ChevronRight, 
   RefreshCcw, 
-  FileJson, 
-  Copy, 
-  Terminal,
-  Fingerprint,
-  Search,
-  Box
+  Copy
 } from "lucide-react";
 
 interface MessageBrowserProps {
@@ -30,6 +26,7 @@ export default function MessageBrowser({
   limit: initialLimit = 25,
   compact = false
 }: MessageBrowserProps) {
+  const { t } = useApp();
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [pagination, setPagination] = useState<PaginationResponse | null>(null);
   const [page, setPage] = useState(1);
@@ -78,50 +75,35 @@ export default function MessageBrowser({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Mini Control Bar */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/[0.03] border border-white/5 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-            <span className="text-blue-400">{pagination?.total_rows ?? 0}</span> Events Captured
-          </div>
+        <div className="flex items-center gap-2 px-2 py-1 rounded-xl bg-white/[0.03] border border-white/5 text-mini-compact font-black text-slate-500 uppercase tracking-widest">
+          <span className="text-primary">{pagination?.total_rows ?? 0}</span> {t("processedEvents")}
         </div>
-        <button 
-          onClick={fetchMessages}
-          className="p-2 rounded-xl border border-white/5 bg-white/[0.03] hover:bg-white/[0.08] transition-all"
-        >
-          <RefreshCcw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-blue-400" : "text-slate-400"}`} />
+        <button onClick={fetchMessages} className="p-1.5 rounded-lg border border-white/5 bg-white/[0.03] hover:bg-white/[0.08] transition-all">
+          <RefreshCcw className={`w-3 h-3 ${loading ? "animate-spin text-primary" : "text-slate-500"}`} />
         </button>
       </div>
 
       {/* Messages Table */}
-      <div className="rounded-2xl border border-white/5 bg-white/[0.01] overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+      <div className="rounded-xl border border-white/5 bg-white/[0.01] overflow-hidden shadow-sm">
+        <div className="overflow-x-auto custom-scrollbar">
+          <table className="w-full text-base-compact">
             <thead>
-              <tr className="border-b border-white/5 text-[10px] text-slate-500 uppercase font-bold tracking-wider">
-                <th className="px-6 py-4 text-center w-12">#</th>
-                <th className="px-6 py-4 text-left">Sequence</th>
-                {!compact && <th className="px-6 py-4 text-left">Subject</th>}
-                <th className="px-6 py-4 text-left">Timestamp</th>
-                <th className="px-6 py-4 text-center w-16">Action</th>
+              <tr className="border-b border-white/5 text-mini-compact text-slate-500 uppercase font-black tracking-widest bg-white/[0.01]">
+                <th className="px-3 py-2 text-center w-10">#</th>
+                <th className="px-3 py-2 text-left">Seq</th>
+                {!compact && <th className="px-3 py-2 text-left">Subject</th>}
+                <th className="px-3 py-2 text-left">Time</th>
+                <th className="px-3 py-2 text-center w-12">CMD</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/[0.01]">
-              {loading && messages.length === 0 ? (
-                [...Array(5)].map((_, i) => (
-                  <tr key={i} className="animate-pulse">
-                    {[...Array(compact ? 4 : 5)].map((__, j) => (
-                      <td key={j} className="px-6 py-5">
-                        <div className="h-4 rounded bg-white/[0.05]" />
-                      </td>
-                    ))}
-                  </tr>
-                ))
-              ) : messages.length === 0 ? (
+              {messages.length === 0 ? (
                 <tr>
-                  <td colSpan={compact ? 4 : 5} className="px-6 py-16 text-center text-slate-600">
-                    <p className="text-xs font-medium">No messages captured under these filters.</p>
+                  <td colSpan={compact ? 4 : 5} className="px-4 py-10 text-center text-slate-500 text-compact font-medium">
+                    No events discovered.
                   </td>
                 </tr>
               ) : (
@@ -135,36 +117,28 @@ export default function MessageBrowser({
 
                   return (
                     <Fragment key={m.sequence}>
-                      <tr 
-                        onClick={() => toggleExpand(m.sequence)}
-                        className={`group cursor-pointer transition-colors ${isExpanded ? "bg-blue-500/[0.06]" : "hover:bg-white/[0.01]"}`}
-                      >
-                        <td className="px-6 py-4 text-center">
-                          {isExpanded ? <ChevronUp className="w-3.5 h-3.5 text-blue-400 m-auto" /> : <ChevronDown className="w-3.5 h-3.5 text-slate-700 m-auto" />}
+                      <tr onClick={() => toggleExpand(m.sequence)}
+                        className={`group cursor-pointer transition-colors ${isExpanded ? "bg-primary/[0.06]" : "hover:bg-white/[0.01]"}`}>
+                        <td className="px-3 py-1.5 text-center">
+                          {isExpanded ? <ChevronUp className="w-3 h-3 text-primary m-auto" /> : <ChevronDown className="w-3 h-3 text-slate-700 m-auto" />}
                         </td>
-                        <td className="px-6 py-4 font-mono text-xs font-bold text-white">{m.sequence}</td>
-                        {!compact && <td className="px-6 py-4 font-mono text-xs text-slate-400">{m.subject}</td>}
-                        <td className="px-6 py-4 text-slate-500 font-mono text-xs">
-                          {new Date(parseInt(m.timestamp)).toLocaleString('en-US', { hour12: false })}
+                        <td className="px-3 py-1.5 font-mono font-bold text-foreground">{m.sequence}</td>
+                        {!compact && <td className="px-3 py-1.5 font-mono text-slate-500 truncate max-w-[150px]">{m.subject}</td>}
+                        <td className="px-3 py-1.5 text-slate-500 font-mono">
+                          {new Date(parseInt(m.timestamp)).toLocaleString('en-US', { hour12: false, month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric' })}
                         </td>
-                        <td className="px-6 py-4 text-center">
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); copyToClipboard(rawPayload); }}
-                            className="p-1.5 rounded-lg border border-white/5 bg-white/[0.02] hover:bg-white/[0.1] text-slate-500 transition-all"
-                          >
-                            <Copy className="w-3.5 h-3.5" />
+                        <td className="px-3 py-1.5 text-center flex items-center justify-center gap-2">
+                          <button onClick={(e) => { e.stopPropagation(); copyToClipboard(rawPayload); }}
+                            className="p-1 rounded-md border border-white/5 bg-white/[0.02] hover:bg-white/[0.1] text-slate-500">
+                            <Copy className="w-3 h-3" />
                           </button>
                         </td>
                       </tr>
                       {isExpanded && (
-                        <tr className="bg-blue-500/[0.02]">
-                          <td colSpan={compact ? 4 : 5} className="px-10 py-6">
-                            <div className="space-y-4">
-                              <div className="flex items-center justify-between">
-                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Payload Preview</span>
-                                <button onClick={() => copyToClipboard(rawPayload)} className="text-[10px] font-bold text-blue-400 hover:text-blue-300">Copy JSON</button>
-                              </div>
-                              <pre className="p-4 rounded-xl bg-black/40 border border-white/5 font-mono text-[11px] leading-relaxed text-blue-100/90 overflow-x-auto max-h-[400px]">
+                        <tr className="bg-primary/[0.02]">
+                          <td colSpan={compact ? 4 : 5} className="px-6 py-4">
+                            <div className="space-y-2">
+                              <pre className="p-3 rounded-xl bg-black/40 border border-white/5 font-mono text-compact leading-relaxed text-primary/90 overflow-x-auto max-h-[300px]">
                                 {formattedPayload}
                               </pre>
                             </div>
@@ -180,25 +154,14 @@ export default function MessageBrowser({
         </div>
       </div>
 
-      {/* Pagination */}
       {pagination && totalPages > 1 && (
-        <div className="flex items-center justify-center gap-4 py-2">
-          <button
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={!pagination.has_prev}
-            className="p-2 rounded-xl border border-white/5 bg-white/[0.03] disabled:opacity-20 transition-all"
-          >
-            <ChevronLeft className="w-4 h-4 text-slate-300" />
+        <div className="flex items-center justify-center gap-3 pt-1">
+          <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={!pagination.has_prev} className="p-1 px-3 rounded-lg border border-white/5 bg-white/[0.03] ui-disabled-faint text-compact font-black uppercase">
+            <ChevronLeft className="w-3.5 h-3.5" />
           </button>
-          <span className="text-xs font-mono font-bold text-slate-500">
-            <span className="text-blue-400">{page}</span> / {totalPages}
-          </span>
-          <button
-            onClick={() => setPage((p) => p + 1)}
-            disabled={!pagination.has_next}
-            className="p-2 rounded-xl border border-white/5 bg-white/[0.03] disabled:opacity-20 transition-all"
-          >
-            <ChevronRight className="w-4 h-4 text-slate-300" />
+          <span className="text-compact font-black text-slate-500">{page} / {totalPages}</span>
+          <button onClick={() => setPage((p) => p + 1)} disabled={!pagination.has_next} className="p-1 px-3 rounded-lg border border-white/5 bg-white/[0.03] ui-disabled-faint text-compact font-black uppercase">
+            <ChevronRight className="w-3.5 h-3.5" />
           </button>
         </div>
       )}

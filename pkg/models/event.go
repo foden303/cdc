@@ -6,7 +6,7 @@ import (
 
 // Event represents a CDC event envelope for routing and transport.
 type Event struct {
-	// --- Metadata for routing and management ---
+	// Metadata for routing and management
 	Topic      string `json:"-"`
 	Subject    string `json:"-"`
 	InstanceID string `json:"instance_id"`
@@ -15,10 +15,10 @@ type Event struct {
 	Op         string `json:"op"`
 	Offset     string `json:"offset"`
 	LSN        uint64 `json:"lsn"`
-	// --- Raw Debezium Payload ---
+	// Raw Debezium Payload
 	Data []byte `json:"-"`
-	// --- Meta for partitioning ---
-	Partition  int    `json:"partition"`
+	// Meta for partitioning
+	Partition int `json:"partition"`
 }
 
 // DebeziumPayload represents the industry-standard CDC format.
@@ -60,11 +60,26 @@ func NewEvent(topic, subject, instanceID, schema, table, op string, lsn uint64, 
 	}
 }
 
+// Reset clears the event fields for reuse.
+func (e *Event) Reset() {
+	e.Topic = ""
+	e.Subject = ""
+	e.InstanceID = ""
+	e.Schema = ""
+	e.Table = ""
+	e.Op = ""
+	e.Offset = ""
+	e.LSN = 0
+	e.Data = nil
+	e.Partition = 0
+}
+
 // ComponentStats represents success/failure metrics for a source or sink.
 type ComponentStats struct {
-	SuccessCount uint64 `json:"success_count"`
-	FailureCount uint64 `json:"failure_count"`
-	LastError    string `json:"last_error"`
+	SuccessCount uint64           `json:"success_count"`
+	FailureCount uint64           `json:"failure_count"`
+	LastError    string           `json:"last_error"`
+	PartitionLag map[int32]uint64 `json:"partition_lag"`
 }
 
 type MessageStatus int

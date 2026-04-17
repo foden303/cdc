@@ -58,7 +58,7 @@ export default function TopicDetailPage() {
     <div className="p-8 space-y-8 animate-in fade-in duration-700">
       {/* Detail Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-white/[0.02] border border-white/5 p-8 rounded-[2.5rem] relative overflow-hidden">
-        <div className="absolute top-0 right-0 p-8 opacity-[0.03]">
+        <div className="absolute top-0 right-0 p-8 ui-opacity-ghost">
            <Layers className="w-32 h-32" />
         </div>
         
@@ -70,14 +70,14 @@ export default function TopicDetailPage() {
             <ArrowLeft className="w-5 h-5 text-slate-400 group-hover:text-white transition-colors" />
           </button>
           <div>
-            <div className="flex items-center gap-2 text-blue-400 font-mono text-[10px] uppercase font-bold tracking-[0.2em] mb-2">
+            <div className="flex items-center gap-2 text-blue-400 font-mono text-compact uppercase font-bold tracking-[0.2em] mb-2">
               <Database className="w-3 h-3" /> Topic Instance
             </div>
             <h1 className="text-4xl font-mono font-bold text-white tracking-tight leading-none">
               {topicName}
             </h1>
             <div className="flex items-center gap-4 mt-4">
-               <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-bold text-emerald-400 uppercase tracking-wider">
+               <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-compact font-bold text-emerald-400 uppercase tracking-wider">
                   Live Stream
                </div>
                <div className="text-slate-500 text-xs font-medium">Capture source: <span className="text-slate-300">Native CDC v1</span></div>
@@ -87,11 +87,11 @@ export default function TopicDetailPage() {
 
         <div className="grid grid-cols-2 gap-4 relative z-10">
            <div className="px-6 py-4 rounded-2xl bg-white/[0.02] border border-white/5">
-              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Partitions</div>
+              <div className="text-compact font-bold text-slate-500 uppercase tracking-widest mb-1">Partitions</div>
               <div className="text-xl font-mono font-bold text-white">{partitions.length}</div>
            </div>
            <div className="px-6 py-4 rounded-2xl bg-white/[0.02] border border-white/5">
-              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Total Payload</div>
+              <div className="text-compact font-bold text-slate-500 uppercase tracking-widest mb-1">Total Payload</div>
               <div className="text-xl font-mono font-bold text-white">{totalMessages.toLocaleString()}</div>
            </div>
         </div>
@@ -135,7 +135,7 @@ export default function TopicDetailPage() {
             <div className="rounded-2xl border border-white/5 overflow-hidden">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-white/5 text-[10px] text-slate-500 uppercase font-bold tracking-widest">
+                  <tr className="border-b border-white/5 text-compact text-slate-500 uppercase font-bold tracking-widest">
                     <th className="px-6 py-4 text-left">Partition Path</th>
                     <th className="px-6 py-4 text-center">Status</th>
                     <th className="px-6 py-4 text-right">Sequence Gap</th>
@@ -147,7 +147,7 @@ export default function TopicDetailPage() {
                     <tr key={p.id} className="hover:bg-white/[0.01] transition-colors">
                       <td className="px-6 py-5 font-mono text-xs font-bold text-white">{p.id}</td>
                       <td className="px-6 py-5 text-center">
-                        <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-bold uppercase">Healthy</span>
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-mini-compact font-bold uppercase">Healthy</span>
                       </td>
                       <td className="px-6 py-5 text-right font-mono text-xs text-slate-500">None</td>
                       <td className="px-6 py-5 text-right font-mono font-bold text-white">{Number(p.message_count).toLocaleString()}</td>
@@ -160,14 +160,14 @@ export default function TopicDetailPage() {
         )}
 
         {activeTab === "consumers" && (
-           <div className="flex flex-col items-center justify-center py-32 opacity-20">
+           <div className="flex flex-col items-center justify-center py-32 ui-opacity-empty">
               <Users className="w-16 h-16 mb-4" />
               <p className="font-bold tracking-widest uppercase text-xs">No active consumers detected</p>
            </div>
         )}
 
         {activeTab === "config" && (
-           <div className="flex flex-col items-center justify-center py-32 opacity-20">
+           <div className="flex flex-col items-center justify-center py-32 ui-opacity-empty">
               <Settings className="w-16 h-16 mb-4" />
               <p className="font-bold tracking-widest uppercase text-xs">Runtime configuration is read-only</p>
            </div>

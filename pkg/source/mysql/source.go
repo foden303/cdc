@@ -19,6 +19,7 @@ import (
 	"github.com/foden/cdc/pkg/constant"
 	"github.com/foden/cdc/pkg/interfaces"
 	"github.com/foden/cdc/pkg/models"
+	"github.com/foden/cdc/pkg/pool"
 	"github.com/foden/cdc/pkg/registry"
 	"github.com/foden/cdc/pkg/utils"
 )
@@ -319,18 +320,20 @@ func (s *MySQLSource) processTask(t *mysqlTask) {
 	// 5. Build Hierarchical Subject (5 levels)
 	subject := fmt.Sprintf("%s.%s.%s.%s.%d", topic, s.cfg.InstanceID, t.db, t.table.Name, partitionID)
 
-	s.pipeline <- models.NewEvent(
-		topic,
-		subject,
-		s.cfg.InstanceID,
-		t.db,
-		t.table.Name,
-		t.op,
-		t.lsn,
-		t.offset,
-		data,
-		partitionID,
-	)
+	// 6. Get event from pool
+	ev := pool.GetEvent()
+	ev.Topic = topic
+	ev.Subject = subject
+	ev.InstanceID = s.cfg.InstanceID
+	ev.Schema = t.db
+	ev.Table = t.table.Name
+	ev.Op = t.op
+	ev.LSN = t.lsn
+	ev.Offset = t.offset
+	ev.Data = data
+	ev.Partition = partitionID
+
+	s.pipeline <- ev
 }
 
 // calculatePartition hashes the Primary Key of the row to determine the destination partition.

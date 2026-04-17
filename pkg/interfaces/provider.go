@@ -47,7 +47,7 @@ type PipelineEngine interface {
 	// RemoveSource removes a source from the pipeline
 	RemoveSource(instanceID string) error
 	// AddSink adds a new sink to the pipeline
-	AddSink(sink Sink)
+	AddSink(ctx context.Context, sink Sink) error
 	// RemoveSink removes a sink from the pipeline
 	RemoveSink(instanceID string) error
 	// GetStats returns the statistics of the pipeline
@@ -64,4 +64,6 @@ type PipelineEngine interface {
 	ReprocessDLQ(ctx context.Context) (int, error)
 	// UpdatePipelineConfig updates the pipeline configuration
 	UpdatePipelineConfig(cfg config.PipelineConfig)
+	// SetRevision updates the last processed revision for a given key to prevent redundant watcher triggers
+	SetRevision(key string, rev uint64)
 }

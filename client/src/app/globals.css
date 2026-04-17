@@ -3,80 +3,156 @@
 @theme {
   --font-sans: "Inter", system-ui, -apple-system, sans-serif;
   --font-mono: "JetBrains Mono", "SF Mono", monospace;
+
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+
+  /* Centralized Typography Scale */
+  --font-size-3xs: 7px;
+  --font-size-2xs: 8px;
+  --font-size-xs-compact: 10px;
+  --font-size-sm-compact: 11px;
 }
 
 :root {
-  --background: #050505;
-  --foreground: #ffffff;
-  --card: rgba(255, 255, 255, 0.03);
-  --card-foreground: #ffffff;
-  --popover: #0a0a0a;
-  --popover-foreground: #ffffff;
-  --primary: #3b82f6;
-  --primary-foreground: #ffffff;
-  --secondary: rgba(255, 255, 255, 0.05);
-  --secondary-foreground: #ffffff;
-  --muted: rgba(255, 255, 255, 0.1);
-  --muted-foreground: #a1a1aa;
-  --accent: rgba(255, 255, 255, 0.1);
-  --accent-foreground: #ffffff;
-  --destructive: #ef4444;
-  --destructive-foreground: #ffffff;
-  --border: rgba(255, 255, 255, 0.08);
-  --input: rgba(255, 255, 255, 0.05);
-  --ring: #3b82f6;
+  /* Dark Mode - Deep & Professional */
+  --background: 240 10% 3.9%;
+  --foreground: 0 0% 98%;
+  --card: 240 10% 6%;
+  --card-foreground: 0 0% 98%;
+  --popover: 240 10% 4%;
+  --popover-foreground: 0 0% 98%;
+  --primary: 217.2 91.2% 59.8%;
+  --primary-foreground: 222.2 47.4% 11.2%;
+  --secondary: 240 3.7% 15.9%;
+  --secondary-foreground: 0 0% 98%;
+  --muted: 240 3.7% 10%;
+  --muted-foreground: 240 5% 64.9%;
+  --accent: 240 3.7% 15.9%;
+  --accent-foreground: 0 0% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 240 3.7% 15.9%;
+  --input: 240 3.7% 15.9%;
+  --ring: 240 4.9% 83.9%;
   --radius: 0.75rem;
 }
 
+.light {
+  /* Light Mode - Crisp & Clean (Redpanda Style) */
+  --background: 210 40% 98%;
+  --foreground: 222.2 84% 4.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 84% 4.9%;
+  --primary: 221.2 83.2% 53.3%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 210 40% 96.1%;
+  --secondary-foreground: 222.2 47.4% 11.2%;
+  --muted: 210 40% 92%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --accent: 210 40% 96.1%;
+  --accent-foreground: 222.2 47.4% 11.2%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: 221.2 83.2% 53.3%;
+}
+
 @layer base {
-  * {
-    border-color: var(--border);
+
+  /* Reduced Typography Scale for Compaction */
+  h1 {
+    @apply text-2xl md:text-3xl font-black tracking-tighter;
   }
+
+  h2 {
+    @apply text-xl md:text-xl font-black tracking-tight;
+  }
+
+  h3 {
+    @apply text-base md:text-lg font-bold tracking-tight;
+  }
+
+  * {
+    border-color: hsl(var(--border));
+  }
+
   body {
-    background-color: var(--background);
-    color: var(--foreground);
-    font-family: var(--font-sans);
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-feature-settings: "rlig" 1, "calt" 1;
     -webkit-font-smoothing: antialiased;
-    letter-spacing: -0.01em;
+    font-family: var(--font-sans);
   }
 }
 
-/* Custom Scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+@layer components {
+  .glass {
+    @apply backdrop-blur-xl bg-card border border-border shadow-sm;
+  }
+
+  .glass-card {
+    @apply bg-card border border-border shadow-md transition-shadow hover:shadow-lg;
+  }
+
+  .premium-gradient {
+    @apply bg-gradient-to-br from-primary to-blue-700;
+  }
+
+  .glass-panel {
+    @apply bg-card border border-border rounded-xl transition-all duration-200;
+  }
 }
-::-webkit-scrollbar-track {
-  background: transparent;
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
 }
-::-webkit-scrollbar-thumb {
-  background: var(--muted);
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.2);
   border-radius: 10px;
 }
-::-webkit-scrollbar-thumb:hover {
-  background: var(--muted-foreground);
-}
 
-/* Premium Layout Utilities */
 .app-container {
   display: flex;
-  height: 100vh;
   width: 100vw;
+  height: 100vh;
   overflow: hidden;
-  background-image: 
-    radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.05) 0, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(147, 51, 234, 0.05) 0, transparent 50%);
 }
 
 .sidebar {
-  width: 260px;
+  width: 220px;
   height: 100%;
-  background: rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(12px);
-  border-right: 1px solid var(--border);
+  background: hsl(var(--card));
+  border-right: 1px solid hsl(var(--border));
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
+  z-index: 50;
 }
 
 .main-wrapper {
@@ -84,95 +160,101 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
-  overflow: hidden;
+  background-color: hsl(var(--background));
 }
 
 .main-content {
   flex: 1;
-  padding: 2.5rem;
+  padding: 1.25rem;
   overflow-y: auto;
   scroll-behavior: smooth;
 }
 
-/* Glassmorphism Classes */
-.glass-panel {
-  background: rgba(255, 255, 255, 0.02);
-  backdrop-filter: blur(8px);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.glass-panel:hover {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.15);
-}
-
-/* Typography & Visual Identity */
 .gradient-text {
-  background: linear-gradient(135deg, #fff 0%, #a1a1aa 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  @apply font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-foreground to-muted-foreground;
 }
 
-.accent-text {
-  background: linear-gradient(135deg, #3b82f6 0%, #2dd4bf 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+/* Redpanda Style Labels */
+.overline-label {
+  @apply font-black uppercase tracking-[0.15em] text-muted-foreground;
+  font-size: 10px;
 }
 
-/* Animated Table Rows */
-@keyframes fadeInTableRow {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
+.overline-label-tiny {
+  @apply font-black uppercase tracking-tight text-muted-foreground;
+  font-size: 9px;
 }
 
-.table-row-animate {
-  animation: fadeInTableRow 0.4s ease-out forwards;
+.overline-label-micro {
+  @apply font-black uppercase tracking-tight text-muted-foreground;
+  font-size: 7px;
 }
 
-/* Modern Input */
-.modern-input {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  padding: 0.625rem 1rem;
-  color: #fff;
-  font-size: 0.875rem;
-  transition: all 0.2s;
+.overline-label-dim {
+  opacity: 0.6;
 }
 
-.modern-input:focus {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: #3b82f6;
-  outline: none;
-  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+.overline-label-soft {
+  opacity: 0.7;
 }
 
-/* Nav Item Refinement */
-.sidebar .active-nav {
-  background: rgba(59, 130, 246, 0.1);
-  color: #3b82f6;
-  border-right: 2px solid #3b82f6;
+.overline-label-faint {
+  opacity: 0.4;
 }
 
-/* Status Badges */
-.status-pill {
-  padding: 0.125rem 0.625rem;
-  border-radius: 9999px;
-  font-size: 0.7rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.025em;
+.overline-label-solid {
+  opacity: 1;
 }
 
-.status-active { background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2); }
-.status-pending { background: rgba(245, 158, 11, 0.1); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.2); }
-.status-error { background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); }
+/* Centralized UI opacity tokens */
+.ui-opacity-soft {
+  opacity: 0.7;
+}
 
-/* Custom Grid for Dash */
-.dash-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 1.5rem;
+.ui-opacity-ghost {
+  opacity: 0.03;
+}
+
+.ui-opacity-empty {
+  opacity: 0.2;
+}
+
+.ui-fade-hidden {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.ui-disabled-soft:disabled {
+  opacity: 0.3;
+}
+
+.ui-disabled-faint:disabled {
+  opacity: 0.2;
+}
+
+.ui-disabled-default:disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Semantic Compact Typography */
+.text-tiny { font-size: 9px; }
+.text-compact { font-size: 11px; }
+.text-base-compact { font-size: 12px; }
+.text-micro-compact { font-size: 8px; }
+.text-mini-compact { font-size: 9px; }
+.text-table-compact { font-size: 11px; }
+
+.body-compact {
+  @apply font-medium leading-relaxed;
+  font-size: 11px;
+}
+
+.caption-compact {
+  @apply leading-relaxed;
+  font-size: 10px;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
 }

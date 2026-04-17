@@ -2,6 +2,7 @@ package pipeline
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"strconv"
@@ -18,6 +19,7 @@ import (
 	"github.com/foden/cdc/pkg/models"
 	"github.com/foden/cdc/pkg/nats"
 	"github.com/foden/cdc/pkg/pool"
+	"github.com/foden/cdc/pkg/registry"
 	"github.com/foden/cdc/pkg/retry"
 	"github.com/foden/cdc/pkg/utils"
 	"github.com/nats-io/nats.go/jetstream"
@@ -63,21 +65,26 @@ type Engine struct {
 	// Sink workers
 	sinkCancels map[string]context.CancelFunc
 	sinkWgs     map[string]*sync.WaitGroup
+
+	// KV revision tracking — prevents processing duplicate/stale config updates
+	revMu         sync.Mutex
+	lastRevisions map[string]uint64
 }
 
 // NewEngine creates a pipeline engine with configurable settings.
 func NewEngine(cfg *config.Config, sources []interfaces.Source, sinks []interfaces.Sink, natsClient *nats.Client) *Engine {
 	e := &Engine{
-		sources:      sources,
-		sinks:        sinks,
-		natsClient:   natsClient,
-		sourceAckChs: make(map[string]chan uint64),
-		eventCh:      make(chan *models.Event, cfg.Pipeline.ChannelBufferSize),
-		stopCh:       make(chan struct{}),
-		sourceStats:  make(map[string]*models.ComponentStats),
-		sinkStats:    make(map[string]*models.ComponentStats),
-		sinkCancels:  make(map[string]context.CancelFunc),
-		sinkWgs:      make(map[string]*sync.WaitGroup),
+		sources:       sources,
+		sinks:         sinks,
+		natsClient:    natsClient,
+		sourceAckChs:  make(map[string]chan uint64),
+		eventCh:       make(chan *models.Event, cfg.Pipeline.ChannelBufferSize),
+		stopCh:        make(chan struct{}),
+		sourceStats:   make(map[string]*models.ComponentStats),
+		sinkStats:     make(map[string]*models.ComponentStats),
+		sinkCancels:   make(map[string]context.CancelFunc),
+		sinkWgs:       make(map[string]*sync.WaitGroup),
+		lastRevisions: make(map[string]uint64),
 	}
 	e.batchSize.Store(int32(cfg.Pipeline.BatchSize))
 	e.flushInterval.Store(int64(time.Duration(cfg.Pipeline.FlushIntervalMs) * time.Millisecond))
@@ -117,7 +124,21 @@ func (e *Engine) Start() error {
 	}
 	e.mu.Unlock()
 
-	// 3. Start all sources
+	// 3. Start background metrics loop
+	go e.lagStatsLoop()
+
+	// 4. Start background config watcher
+	go e.configWatcherLoop()
+
+	// 5. Start background scaling tuner
+	go e.scalingTunerLoop()
+
+	// 6. Ensure DLQ Stream exists
+	if err := e.natsClient.CreateDLQStream(context.Background()); err != nil {
+		slog.Warn("failed to initialize DLQ stream", _nameErr, err)
+	}
+
+	// 6. Start all sources
 	for _, src := range e.sources {
 		if err := e.startSourceInternal(context.Background(), src); err != nil {
 			return err
@@ -139,8 +160,79 @@ func (e *Engine) startSourceInternal(ctx context.Context, src interfaces.Source)
 	initialOffset := utils.DerefString(offset, "")
 
 	if err := src.Start(e.eventCh, ackCh, initialOffset); err != nil {
+		close(ackCh)
+		delete(e.sourceAckChs, instanceID)
 		return fmt.Errorf("failed to start source %s: %w", instanceID, err)
 	}
+	return nil
+}
+
+func normalizedSinkTopic(topic string) string {
+	if topic == "" {
+		return "cdc.>"
+	}
+	return topic
+}
+
+func consumerNameForSinkPartition(instanceID string, partID int) string {
+	return fmt.Sprintf("pipeline-%s-p%d", instanceID, partID)
+}
+
+func filterSubjectForSinkPartition(topic string, partID int) string {
+	normalizedTopic := normalizedSinkTopic(topic)
+	prefix := strings.Split(normalizedTopic, ".")[0]
+	return fmt.Sprintf("%s.*.*.*.%d", prefix, partID)
+}
+
+func (e *Engine) preflightSinkConsumers(ctx context.Context, sink interfaces.Sink) error {
+	partitionCount := int(e.partitionCount.Load())
+	for i := 0; i < partitionCount; i++ {
+		consumerName := consumerNameForSinkPartition(sink.InstanceID(), i)
+		filterSubject := filterSubjectForSinkPartition(sink.Topic(), i)
+		if _, err := e.natsClient.CreateOrUpdateConsumer(ctx, consumerName, []string{filterSubject}); err != nil {
+			return fmt.Errorf("create consumer %s: %w", consumerName, err)
+		}
+	}
+	return nil
+}
+
+func (e *Engine) sinkExists(instanceID string) bool {
+	for _, s := range e.sinks {
+		if s.InstanceID() == instanceID {
+			return true
+		}
+	}
+	return false
+}
+
+func (e *Engine) removeSinkUnlocked(instanceID string) error {
+	for i, s := range e.sinks {
+		if s.InstanceID() == instanceID {
+			if cancel, ok := e.sinkCancels[instanceID]; ok {
+				cancel()
+				delete(e.sinkCancels, instanceID)
+			}
+			if wg, ok := e.sinkWgs[instanceID]; ok {
+				wg.Wait()
+				delete(e.sinkWgs, instanceID)
+			}
+			s.Close()
+			e.sinks = append(e.sinks[:i], e.sinks[i+1:]...)
+			return nil
+		}
+	}
+	return fmt.Errorf("sink %s not found", instanceID)
+}
+
+func (e *Engine) addSinkUnlocked(ctx context.Context, sink interfaces.Sink) error {
+	if e.sinkExists(sink.InstanceID()) {
+		return fmt.Errorf("sink %s already exists", sink.InstanceID())
+	}
+	if err := e.preflightSinkConsumers(ctx, sink); err != nil {
+		return err
+	}
+	e.sinks = append(e.sinks, sink)
+	e.startSinkWorkersUnlocked(sink)
 	return nil
 }
 
@@ -192,6 +284,9 @@ func (e *Engine) producer() {
 			}
 			if len(batch) >= getBatchSize() {
 				e.publishBatchWithRetry(subjectFunc, batch)
+				for _, ev := range batch {
+					pool.PutEvent(ev)
+				}
 				batch = batch[:0]
 			}
 
@@ -200,6 +295,9 @@ func (e *Engine) producer() {
 			flushTicker.Reset(getFlushInterval())
 			if len(batch) > 0 {
 				e.publishBatchWithRetry(subjectFunc, batch)
+				for _, ev := range batch {
+					pool.PutEvent(ev)
+				}
 				batch = batch[:0]
 			}
 		case <-backpressureTicker.C:
@@ -301,9 +399,9 @@ func (e *Engine) worker(ctx context.Context, sink interfaces.Sink, partID int) {
 	// to share load, while different sinks consume independently.
 	// STRICT PARTITIONING: Each worker has its own durable consumer and only filters for its partition ID.
 	// Filter subject pattern: cdc.*.*.*.<partition>
-	consumerName := fmt.Sprintf("pipeline-%s-p%d", sink.InstanceID(), partID)
-	filterSubject := fmt.Sprintf("%s.*.*.*.%d", strings.Split(sink.Topic(), ".")[0], partID)
-	
+	consumerName := consumerNameForSinkPartition(sink.InstanceID(), partID)
+	filterSubject := filterSubjectForSinkPartition(sink.Topic(), partID)
+
 	consumer, err := e.natsClient.CreateOrUpdateConsumer(ctx, consumerName, []string{filterSubject})
 	if err != nil {
 		slog.Error("failed to create NATS consumer", "worker_id", partID, "sink", sink.InstanceID(), _nameErr, err)
@@ -600,33 +698,17 @@ func (e *Engine) RemoveSource(instanceID string) error {
 }
 
 // AddSink dynamically adds a new sink.
-func (e *Engine) AddSink(sink interfaces.Sink) {
+func (e *Engine) AddSink(ctx context.Context, sink interfaces.Sink) error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	e.sinks = append(e.sinks, sink)
-	e.startSinkWorkersUnlocked(sink)
+	return e.addSinkUnlocked(ctx, sink)
 }
 
 // RemoveSink stops and removes a sink by its unique instance ID.
 func (e *Engine) RemoveSink(instanceID string) error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	for i, s := range e.sinks {
-		if s.InstanceID() == instanceID {
-			if cancel, ok := e.sinkCancels[instanceID]; ok {
-				cancel()
-				delete(e.sinkCancels, instanceID)
-			}
-			if wg, ok := e.sinkWgs[instanceID]; ok {
-				wg.Wait()
-				delete(e.sinkWgs, instanceID)
-			}
-			s.Close()
-			e.sinks = append(e.sinks[:i], e.sinks[i+1:]...)
-			return nil
-		}
-	}
-	return fmt.Errorf("sink %s not found", instanceID)
+	return e.removeSinkUnlocked(instanceID)
 }
 
 // UpdatePipelineConfig hot-reloads the global pipeline settings.
@@ -660,6 +742,12 @@ func (e *Engine) UpdatePipelineConfig(cfg config.PipelineConfig) {
 			e.startSinkWorkersUnlocked(sink)
 		}
 	}
+}
+
+func (e *Engine) SetRevision(key string, rev uint64) {
+	e.revMu.Lock()
+	defer e.revMu.Unlock()
+	e.lastRevisions[key] = rev
 }
 
 // GetStats returns the current success/failure metrics.
@@ -775,4 +863,224 @@ func (e *Engine) ReprocessDLQ(ctx context.Context) (int, error) {
 			return fmt.Errorf("engine stopped")
 		}
 	})
+}
+
+// lagStatsLoop periodically fetches lag metrics for each partition of each sink.
+func (e *Engine) lagStatsLoop() {
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			e.fetchLagStats()
+		case <-e.stopCh:
+			return
+		}
+	}
+}
+
+func (e *Engine) fetchLagStats() {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	e.mu.RLock()
+	sinks := make([]interfaces.Sink, len(e.sinks))
+	copy(sinks, e.sinks)
+	e.mu.RUnlock()
+
+	partitions := int(e.partitionCount.Load())
+
+	for _, s := range sinks {
+		sinkID := s.InstanceID()
+		lagMap := make(map[int32]uint64)
+
+		for i := 0; i < partitions; i++ {
+			consumerName := fmt.Sprintf("pipeline-%s-p%d", sinkID, i)
+			_, pending, err := e.natsClient.GetConsumerInfo(ctx, consumerName)
+			if err != nil {
+				// Don't log spam, maybe it hasn't started yet
+				continue
+			}
+			lagMap[int32(i)] = pending
+		}
+
+		// Update stats in engine
+		e.metricsMu.Lock()
+		stats, ok := e.sinkStats[sinkID]
+		if !ok {
+			stats = &models.ComponentStats{}
+			e.sinkStats[sinkID] = stats
+		}
+		stats.PartitionLag = lagMap
+		e.metricsMu.Unlock()
+	}
+}
+
+// configWatcherLoop observes NATS KV for source/sink configuration changes.
+// IMPORTANT: NATS KV WatchAll replays ALL existing keys before sending a nil
+// sentinel. We MUST skip this initial replay because those sources/sinks are
+// already started by engine.Start(). Only react to genuine runtime changes.
+func (e *Engine) configWatcherLoop() {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	watcher, err := e.natsClient.WatchConfig(ctx)
+	if err != nil {
+		slog.Error("failed to start config watcher", "err", err)
+		return
+	}
+	defer watcher.Stop()
+
+	// Phase 1: Drain the initial replay. WatchAll sends all existing KV entries
+	// followed by a nil to signal "caught up". We skip these because the engine
+	// already started all sources/sinks from the restored config.
+	for entry := range watcher.Updates() {
+		if entry == nil {
+			// nil = sentinel marking end of initial replay
+			break
+		}
+		// Silently skip — these are already-running instances
+	}
+	slog.Info("config watcher: initial replay drained, now watching for live changes")
+
+	// Phase 2: React only to real-time changes
+	for {
+		select {
+		case <-e.stopCh:
+			return
+		case entry := <-watcher.Updates():
+			if entry == nil {
+				continue
+			}
+			e.handleConfigUpdate(entry)
+		}
+	}
+}
+
+func (e *Engine) handleConfigUpdate(entry jetstream.KeyValueEntry) {
+	key := entry.Key()
+	rev := entry.Revision()
+
+	// Skip already-processed or stale revisions to prevent duplicate restarts
+	e.revMu.Lock()
+	if lastRev, ok := e.lastRevisions[key]; ok && rev <= lastRev {
+		e.revMu.Unlock()
+		return
+	}
+	e.lastRevisions[key] = rev
+	e.revMu.Unlock()
+
+	ctx := context.Background()
+
+	// Handle Sources
+	if strings.HasPrefix(key, nats.SourceConfigPrefix) {
+		instanceID := strings.TrimPrefix(key, nats.SourceConfigPrefix)
+		if entry.Operation() == jetstream.KeyValueDelete || entry.Operation() == jetstream.KeyValuePurge {
+			slog.Info("dynamic config: removing source", "id", instanceID, "rev", rev)
+			if err := e.RemoveSource(instanceID); err != nil {
+				slog.Warn("remove source failed", "id", instanceID, "err", err)
+			}
+			return
+		}
+
+		// Upsert source
+		var sc config.SourceConfig
+		if err := json.Unmarshal(entry.Value(), &sc); err != nil {
+			slog.Error("failed to decode source config", "key", key, "err", err)
+			return
+		}
+
+		// If it exists, remove it first (hot-reload)
+		_ = e.RemoveSource(instanceID)
+
+		slog.Info("dynamic config: adding/updating source", "id", instanceID, "type", sc.Type, "rev", rev)
+		src, err := registry.CreateSource(&sc)
+		if err != nil {
+			slog.Error("failed to create dynamic source", "id", instanceID, "err", err)
+			return
+		}
+		if err := e.AddSource(ctx, src); err != nil {
+			slog.Error("failed to start dynamic source", "id", instanceID, "err", err)
+		}
+		return
+	}
+
+	// Handle Sinks
+	if strings.HasPrefix(key, nats.SinkConfigPrefix) {
+		instanceID := strings.TrimPrefix(key, nats.SinkConfigPrefix)
+		if entry.Operation() == jetstream.KeyValueDelete || entry.Operation() == jetstream.KeyValuePurge {
+			slog.Info("dynamic config: removing sink", "id", instanceID, "rev", rev)
+			if err := e.RemoveSink(instanceID); err != nil {
+				slog.Warn("remove sink failed", "id", instanceID, "err", err)
+			}
+			return
+		}
+
+		var sk config.SinkConfig
+		if err := json.Unmarshal(entry.Value(), &sk); err != nil {
+			slog.Error("failed to decode sink config", "key", key, "err", err)
+			return
+		}
+
+		_ = e.RemoveSink(instanceID)
+
+		slog.Info("dynamic config: adding/updating sink", "id", instanceID, "type", sk.Type, "rev", rev)
+		snk, err := registry.CreateSink(&sk)
+		if err != nil {
+			slog.Error("failed to create dynamic sink", "id", instanceID, "err", err)
+			return
+		}
+		if err := e.AddSink(ctx, snk); err != nil {
+			slog.Error("failed to start dynamic sink", "id", instanceID, "err", err)
+		}
+	}
+}
+
+const (
+	LagThresholdHeavy  = 5000
+	maxGlobalBatchSize = 5000
+)
+
+// scalingTunerLoop monitors lag and adjusts worker parameters dynamically.
+func (e *Engine) scalingTunerLoop() {
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			e.tuneThroughput()
+		case <-e.stopCh:
+			return
+		}
+	}
+}
+
+// tuneThroughput adjusts global engine batch size based on aggregate sink lag.
+// It updates the in-memory atomic value ONLY — no KV writes — to avoid
+// triggering cascading sink restarts through the config watcher.
+func (e *Engine) tuneThroughput() {
+	e.metricsMu.RLock()
+	defer e.metricsMu.RUnlock()
+
+	totalLag := uint64(0)
+	for _, stats := range e.sinkStats {
+		for _, lag := range stats.PartitionLag {
+			totalLag += lag
+		}
+	}
+
+	if totalLag > LagThresholdHeavy {
+		current := e.batchSize.Load()
+		if current < int32(maxGlobalBatchSize) {
+			newSize := int32(float64(current) * 1.5)
+			if newSize > int32(maxGlobalBatchSize) {
+				newSize = int32(maxGlobalBatchSize)
+			}
+			e.batchSize.Store(newSize)
+			slog.Info("auto-tuned global batch size for lag",
+				"from", current, "to", newSize, "total_lag", totalLag)
+		}
+	}
 }

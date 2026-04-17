@@ -71,21 +71,27 @@ func restoreConfig(client *nats.Client, cfg *config.Config) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	var persistedCfg config.Config
-	found, err := client.GetConfig(ctx, &persistedCfg)
-	if err != nil || !found {
-		return err
+	// 1. Fetch Sources
+	sources, err := client.GetSourcesConfig(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to fetch sources: %w", err)
+	}
+
+	// 2. Fetch Sinks
+	sinks, err := client.GetSinksConfig(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to fetch sinks: %w", err)
 	}
 
 	slog.Info("restoring dynamic instances from NATS KV",
-		"sources", len(persistedCfg.Sources),
-		"sinks", len(persistedCfg.Sinks))
+		"sources", len(sources),
+		"sinks", len(sinks))
 
-	// 1. Restore Instances (Dynamic)
-	cfg.Sources = persistedCfg.Sources
-	cfg.Sinks = persistedCfg.Sinks
+	// 3. Update active config
+	cfg.Sources = sources
+	cfg.Sinks = sinks
 
-	// 2. RE-WARM CEL Programs: Because 'programs' field is private and not stored in KV.
+	// 4. RE-WARM CEL Programs
 	for i := range cfg.Sinks {
 		if err := cfg.Sinks[i].CompileTransformations(); err != nil {
 			return fmt.Errorf("failed to re-compile sink %s: %w", cfg.Sinks[i].InstanceID, err)

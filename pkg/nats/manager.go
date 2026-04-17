@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/nats-io/nats.go/jetstream"
@@ -42,7 +43,6 @@ func (c *Client) CreateOrUpdateConsumer(ctx context.Context, name string, filter
 // It defaults to a 30-day retention unless specified otherwise.
 func (c *Client) CreateDLQStream(ctx context.Context) error {
 	dlqStreamName := c.streamName + "_DLQ"
-	// Use retention days from config if available, otherwise default to 30 days
 	retention := 30 * 24 * time.Hour
 	if c.cfg.RetentionDays > 0 {
 		retention = time.Duration(c.cfg.RetentionDays) * 24 * time.Hour
@@ -75,25 +75,76 @@ func (c *Client) GetConsumer(ctx context.Context, name string) (jetstream.Consum
 	return c.js.Consumer(ctx, c.streamName, name)
 }
 
+func (c *Client) ListPipelineConsumerNames(ctx context.Context) ([]string, error) {
+	stream, err := c.js.Stream(ctx, c.streamName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to bind to stream %s: %w", c.streamName, err)
+	}
+
+	lister := stream.ConsumerNames(ctx)
+	var names []string
+	for name := range lister.Name() {
+		if strings.HasPrefix(name, "pipeline-") {
+			names = append(names, name)
+		}
+	}
+	if err := lister.Err(); err != nil {
+		return nil, fmt.Errorf("list consumers: %w", err)
+	}
+	return names, nil
+}
+
 // GetConsumerInfo returns the current sequence floor and pending message count.
-// Useful for monitoring consumer progress and lag.
+// If name is empty, it aggregates across all pipeline-* consumers.
 func (c *Client) GetConsumerInfo(ctx context.Context, name string) (uint64, uint64, error) {
-	consumer, err := c.GetConsumer(ctx, name) // Reuse GetConsumer method
+	if strings.TrimSpace(name) != "" {
+		consumer, err := c.GetConsumer(ctx, name)
+		if err != nil {
+			return 0, 0, err
+		}
+
+		info, err := consumer.Info(ctx)
+		if err != nil {
+			return 0, 0, fmt.Errorf("failed to fetch consumer info for %s: %w", name, err)
+		}
+		return info.AckFloor.Stream, info.NumPending, nil
+	}
+
+	names, err := c.ListPipelineConsumerNames(ctx)
 	if err != nil {
 		return 0, 0, err
 	}
-
-	info, err := consumer.Info(ctx)
-	if err != nil {
-		return 0, 0, fmt.Errorf("failed to fetch consumer info for %s: %w", name, err)
+	if len(names) == 0 {
+		return 0, 0, fmt.Errorf("no pipeline consumers found")
 	}
-	// AckFloor.Stream represents the sequence of the last acknowledged message.
-	return info.AckFloor.Stream, info.NumPending, nil
+
+	var ackFloor uint64
+	var pending uint64
+	matched := false
+	for _, consumerName := range names {
+		consumer, err := c.GetConsumer(ctx, consumerName)
+		if err != nil {
+			continue
+		}
+		info, err := consumer.Info(ctx)
+		if err != nil {
+			continue
+		}
+		if !matched || info.AckFloor.Stream < ackFloor {
+			ackFloor = info.AckFloor.Stream
+		}
+		pending += info.NumPending
+		matched = true
+	}
+	if !matched {
+		return 0, 0, fmt.Errorf("no matching consumer info found")
+	}
+	return ackFloor, pending, nil
 }
 
 // GetStreamStats returns simplified high-level metrics of the stream.
 func (c *Client) GetStreamStats(ctx context.Context) (*StreamStats, error) {
-	info, err := c.GetStreamInfo(ctx) // Reuse GetStreamInfo method
+	info, err := c.GetStreamInfo(ctx)
 	if err != nil {
 		return nil, err
 	}

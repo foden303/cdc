@@ -42,6 +42,7 @@ export interface ComponentStats {
   success_count: number;
   failure_count: number;
   last_error: string;
+  partition_lag?: Record<number, number>;
 }
 
 export interface GetStatsResponse {
@@ -91,6 +92,13 @@ export interface GetPerformanceMetricsResponse {
   sources: Record<string, SourcePerformance>;
 }
 
+export interface RedisSettings {
+  command: string;
+  key_template: string;
+  value_fields: string[];
+  ttl: number;
+}
+
 export interface SinkConfig {
   type: string;
   url: string[];
@@ -105,8 +113,10 @@ export interface SinkConfig {
   retry_base_ms?: number;
   api_key?: string;
   instance_id: string; // Unique ID for sink
+  name?: string;        // Added to match proto
   topic?: string;
   field_mapping?: Record<string, string>;
+  redis?: RedisSettings;
 }
 
 export interface PipelineConfig {
@@ -263,3 +273,7 @@ export const listMessages = (params: {
 // Consumer
 export const getConsumerInfo = (consumer_name = '') =>
   call<ConsumerInfoResponse>('GetConsumerInfo', { consumer_name });
+
+// DLQ
+export const reprocessDLQ = () =>
+  call<{ processed_count: number }>('ReprocessDLQ', {});

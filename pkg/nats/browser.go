@@ -40,7 +40,7 @@ func (c *Client) ListMessages(ctx context.Context, status models.MessageStatus, 
 
 	// 2. Determine the starting sequence (Offset)
 	startSeq := info.State.FirstSeq
-	ackFloor, _, err := c.GetConsumerInfo(ctx, "pipeline-worker")
+	ackFloor, _, err := c.GetConsumerInfo(ctx, "")
 
 	// If looking for Unsent messages, start from the last acknowledged message + 1
 	if status == models.MessageStatusUnsent && err == nil {

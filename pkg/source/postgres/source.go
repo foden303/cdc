@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"net/url"
 	"strconv"
 	"strings"
 	"sync"
@@ -16,6 +17,7 @@ import (
 	"github.com/foden/cdc/pkg/constant"
 	"github.com/foden/cdc/pkg/interfaces"
 	"github.com/foden/cdc/pkg/models"
+	"github.com/foden/cdc/pkg/pool"
 	"github.com/foden/cdc/pkg/registry"
 	"github.com/foden/cdc/pkg/utils"
 	"github.com/jackc/pglogrepl"
@@ -176,7 +178,20 @@ func (p *PostgresSource) processTask(t *walTask) {
 	// 5. Build Hierarchical Subject (5 levels)
 	subject := fmt.Sprintf("%s.%s.%s.%s.%d", topic, p.cfg.InstanceID, namespace, table, partitionID)
 
-	p.pipeline <- models.NewEvent(topic, subject, p.cfg.InstanceID, namespace, table, t.op, t.lsn, strconv.FormatUint(t.lsn, 10), data, partitionID)
+	// 6. Get event from pool to reduce GC pressure
+	ev := pool.GetEvent()
+	ev.Topic = topic
+	ev.Subject = subject
+	ev.InstanceID = p.cfg.InstanceID
+	ev.Schema = namespace
+	ev.Table = table
+	ev.Op = t.op
+	ev.LSN = t.lsn
+	ev.Offset = strconv.FormatUint(t.lsn, 10)
+	ev.Data = data
+	ev.Partition = partitionID
+
+	p.pipeline <- ev
 }
 
 // calculatePartition hashes the Primary Key of the row to determine the destination partition.
@@ -453,7 +468,11 @@ func (p *PostgresSource) runSnapshot(ctx context.Context) error {
 	slog.Info("Starting high-performance snapshot", "instance", p.cfg.InstanceID)
 
 	connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s",
-		p.cfg.Username, p.cfg.Password, p.cfg.Host, p.cfg.Port, p.cfg.Database)
+		url.QueryEscape(p.cfg.Username),
+		url.QueryEscape(p.cfg.Password),
+		p.cfg.Host,
+		p.cfg.Port,
+		p.cfg.Database)
 	conn, err := pgx.Connect(ctx, connStr)
 	if err != nil {
 		return err
@@ -484,6 +503,11 @@ func (p *PostgresSource) runSnapshot(ctx context.Context) error {
 				// This keeps CPU usage balanced
 				p.taskChan <- p.wrapSnapshotRow(tableName, fields, values)
 				count++
+			}
+			// importance
+			if err := rows.Err(); err != nil {
+				rows.Close()
+				return err
 			}
 			rows.Close()
 			if count == 0 {
