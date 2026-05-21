@@ -34,7 +34,7 @@ COPY --from=builder-node /app/client/.next/static /app/.next/static
 COPY --from=builder-node /app/client/public /app/public
 
 # Copy entrypoint script
-COPY entrypoint.sh /app/entrypoint.sh
+COPY deploy/docker/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
 # Production settings

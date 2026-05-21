@@ -11,5 +11,5 @@ plugins:
       - paths=source_relative
   - remote: buf.build/grpc-ecosystem/gateway:v2.18.0
     out: api/proto/v1
-    opt: 
+    opt:
       - paths=source_relative

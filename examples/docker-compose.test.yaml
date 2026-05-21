@@ -1,0 +1,64 @@
+services:
+  nats-1:
+    image: nats:latest
+    container_name: nats-node-1
+    command: ["-js", "-sd", "/data", "-m", "8222"]
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    volumes:
+      - ./nats-data:/data
+    networks:
+      - cdc-network
+
+  # === SOURCE DATABASE (PostgreSQL with logical replication) ===
+  source-db:
+    image: postgres:16
+    container_name: cdc-source-db
+    environment:
+      POSTGRES_USER: cdc_user
+      POSTGRES_PASSWORD: cdc_pass
+      POSTGRES_DB: source_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - ./init-source.sql:/docker-entrypoint-initdb.d/01-init.sql
+    command:
+      - "postgres"
+      - "-c"
+      - "wal_level=logical"
+      - "-c"
+      - "max_replication_slots=4"
+      - "-c"
+      - "max_wal_senders=4"
+    networks:
+      - cdc-network
+
+  # === SINK DATABASE (PostgreSQL) ===
+  sink-db:
+    image: postgres:16
+    container_name: cdc-sink-db
+    environment:
+      POSTGRES_USER: cdc_user
+      POSTGRES_PASSWORD: cdc_pass
+      POSTGRES_DB: sink_db
+    ports:
+      - "5434:5432"
+    volumes:
+      - ./init-sink.sql:/docker-entrypoint-initdb.d/01-init.sql
+    networks:
+      - cdc-network
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9095:9090"
+    volumes:
+      - ../deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - cdc-network
+
+networks:
+  cdc-network:
+    driver: bridge

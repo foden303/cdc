@@ -31,8 +31,8 @@ services:
   # --- CDC Application (Backend + UI) ---
   cdc-app:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: deploy/docker/Dockerfile
     container_name: cdc-app
     ports:
       - "9090:9090"   # gRPC API
