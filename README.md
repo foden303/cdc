@@ -1,127 +1,94 @@
-# High-Performance Change Data Capture (CDC) System
+# CDC
+
+![Go](https://img.shields.io/badge/Go-1.25+-00ADD8?logo=go&logoColor=white)
+![NATS](https://img.shields.io/badge/NATS-JetStream-27AAE1?logo=natsdotio&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)
+![gRPC](https://img.shields.io/badge/gRPC-4285F4?logo=google&logoColor=white)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![GitHub Stars](https://img.shields.io/github/stars/foden303/cdc?style=social)](https://github.com/foden303/cdc/stargazers)
 
 ## Overview
 
-This is a robust, scalable, and highly available Change Data Capture (CDC) system built in Go. It enables real-time data streaming from various source databases (PostgreSQL, MySQL, MariaDB) and REST APIs, routes them through a flexible pipeline engine, stores them reliably using NATS JetStream, and finally delivers them to various sinks (PostgreSQL, Elasticsearch, Webhooks).
+A real-time Change Data Capture system built with Go. It captures data changes from databases via WAL/Binlog, routes them through NATS JetStream, and delivers to various destinations. All sources and sinks are managed dynamically through the Web UI — no manual config files needed.
 
-## System Architecture
+## Tech Stack
 
-The CDC ecosystem is logically partitioned into **Sources**, a **Pipeline Engine**, a **Message Bus (NATS)**, and **Sinks**.
+| Layer | Technology |
+|-------|-----------|
+| Backend | Go 1.25, gRPC, grpc-gateway |
+| Message Broker | NATS JetStream |
+| Transformations | Google CEL |
+| Metrics | Prometheus |
+| Frontend | React 19, Vite, TypeScript, Tailwind CSS, shadcn/ui |
+| State Management | Zustand, TanStack Query |
+
+## Architecture
 
 ```mermaid
-graph TD
-    subgraph Sources ["Data Sources (Producers)"]
-        PG_SRC[(PostgreSQL)] --> |Logical Replication / WAL| Source_Worker
-        MY_SRC[(MySQL/MariaDB)] --> |Binlog| Source_Worker
-        REST_SRC[REST API] --> |Polling/Webhook| Source_Worker
+graph LR
+    subgraph Sources
+        PG[(PostgreSQL)] -->|WAL| Engine
+        MySQL[(MySQL)] -->|Binlog| Engine
     end
 
-    subgraph CDC_Core ["CDC Service Core"]
-        Source_Worker[Source Interfaces] --> |Raw Events| PipelineEngine
-        
-        PipelineEngine{Pipeline Engine}
-        PipelineEngine -->|Filter & Transform| PipelineEngine
-        PipelineEngine -->|Topic/Partition Routing| NATS_Client
-        
-        NATS_Client((NATS JetStream Client))
+    subgraph Core
+        Engine[Pipeline Engine] -->|Publish| NATS[NATS JetStream]
+        NATS -->|Consume| Engine
     end
 
-    subgraph Message_Broker ["NATS JetStream Cluster"]
-        NATS_Client --> |Publish| Topic_A[Topic A: Users]
-        NATS_Client --> |Publish| Topic_B[Topic B: Orders]
-        
-        Topic_A --> |Consume| NATS_Client
-        Topic_B --> |Consume| NATS_Client
-        
-        DLQ_A[DLQ Topic A] -.->|Fallback| Topic_A
+    subgraph Sinks
+        Engine --> ClickHouse[(ClickHouse)]
+        Engine --> PG2[(PostgreSQL)]
+        Engine --> ES[(Elasticsearch)]
     end
 
-    subgraph Sinks ["Data Sinks (Consumers)"]
-        NATS_Client --> |Batch/Stream Delivery| Sink_Worker
-        Sink_Worker[Sink Interfaces] --> PG_SINK[(PostgreSQL)]
-        Sink_Worker --> ES_SINK[(Elasticsearch)]
-        Sink_Worker --> WEBHOOK_SINK[Webhooks]
+    subgraph Management
+        UI[Web UI] -->|gRPC/REST| Engine
     end
-
-    style CDC_Core fill:#f9f,stroke:#333,stroke-width:2px
-    style Message_Broker fill:#bbf,stroke:#333,stroke-width:2px
 ```
 
-## Core Components
+## Features
 
-### 1. Sources
-Sources connect to external systems and capture data changes in real-time.
-- **PostgreSQL**: Connects via logical replication (e.g., `pgoutput`) to stream WAL (Write-Ahead Log) changes.
-- **MySQL / MariaDB**: Connects via replication protocols to stream Binlog events. Guarantees message ordering and smooth recovery upon disconnects.
-- **REST API**: Periodically polls external APIs for new data.
+- **Sources**: PostgreSQL (WAL logical replication), MySQL/MariaDB (Binlog)
+- **Sinks**: ClickHouse, PostgreSQL, Elasticsearch
+- **Pipeline**: CEL-based filtering & transformation, N-to-N routing, partition-aware consumers
+- **Delivery**: Exactly-once semantics, Dead Letter Queue, configurable batching & retries
+- **Management**: gRPC + REST API, Web UI dashboard, schema discovery, message explorer
+- **Observability**: Prometheus metrics, structured logging, health checks
+- **Hot Reload**: Add/remove sources and sinks at runtime without restart
 
-### 2. Pipeline Engine
-The brain of the CDC service that dictates how data moves from *A to B*.
-- **Transformation & Filtering**: Modifies raw payloads and drops unwanted events.
-- **Routing logic (N-to-N)**: A single topic can receive data from multiple sources. Multiple sinks can consume from exactly the same topic independently, enabling fan-in and fan-out architectural patterns.
+## Quick Start
 
-### 3. Message Broker (NATS JetStream)
-Provides guaranteed message delivery, durability, and exactly-once semantics.
-- **Topics & Partitions**: Events are logically grouped. For example, `db.users` or `db.orders`.
-- **Consumer Management**: Supports idempotent consumer tracking to prevent duplicate processing ensuring strictly ordered message delivery.
-- **Dead Letter Queue (DLQ)**: Failed message processing attempts are routed to a DLQ so that the main pipeline continues functioning. These can be inspected and re-processed manually via the API.
+### Run
 
-### 4. Sinks
-Consumers that push structured events into target data stores.
-- **PostgreSQL**: Upserts data securely into tables.
-- **Elasticsearch**: Indexes documents for heavy text-search capabilities.
-- **Webhooks**: Pushes JSON payloads directly to an HTTP endpoint.
+```bash
+# Start infrastructure (NATS + Prometheus)
+make up
 
-### 5. Management API
-A gRPC-based management API (`cdc.proto`) providing control-plane capabilities:
-- Register, Read, Update, and Delete `Sources` and `Sinks` dynamically.
-- Discover and monitor active topics and partitions.
-- Manage message streams with the **Message Explorer**, which offers pagination-based retrieval (limit, page), sorting, and detailed status filtering (Sent vs. Unsent).
-- Monitor pipeline processing offsets and un-acked fallback messages.
+# Build & run the CDC service
+make run
 
-## General Data Flow (The Lifecycle of an Event)
-
-1. **Capture**: A database transaction occurs (e.g., `INSERT INTO users`). The configured `Source` captures this event via Binlog/WAL.
-2. **Ingestion**: The event is passed to the `PipelineEngine` containing metadata (table name, timestamp, sequence tracker).
-3. **Routing**: The Engine transforms the event (if needed) and maps it to a specific `Topic` (e.g., `CDC.db.users`) and `Partition`.
-4. **Publishing**: The Engine publishes the event into `NATS JetStream`. The broker safely persists the data to disk.
-5. **Consumption**: Independent `Sink` workers, acting as NATS Consumers, pull the event from the broker. Each sink tracks its own offset/ACK floor to realize exactly-once delivery dynamically. 
-6. **Processing**: The `Sink` writes the object to its destination (e.g., sending it to Elasticsearch).
-7. **Acknowledgement**: Once the write succeeds, the `Sink` acknowledges (ACKs) the message in NATS. If execution fails consecutively, the message drops into the DLQ.
-
-## Project Structure
-```text
-.
-├── api/
-│   └── proto/v1/   # gRPC Protobuf definitions (cdc.proto)
-├── cmd/cdc/        # Application entrypoint
-├── pkg/
-│   ├── config/     # Dynamic configuration entities
-│   ├── interfaces/ # Core contracts (PipelineEngine, Source, Sink)
-│   ├── nats/       # NATS JetStream publisher/consumer implementations
-│   ├── pipeline/   # Pipeline engine business logic
-│   ├── server/     # gRPC handlers for API operations
-│   ├── sink/       # Destination logic (Postgres, Elasticsearch)
-│   ├── source/     # Capture logic (Postgres, MySQL)
-│   └── utils/      # Common utilities (sorting, mapping)
-└── Makefile        # Common build sequences (e.g. gen-proto)
+# Start the Web UI
+make fe-install
+make fe-dev
 ```
 
-## Setup & Running
+Services:
+- gRPC API → `:9090`
+- REST API → `:9091`
+- Web UI → `:5173`
 
-**1. Generate Protobuf Files**
-Assuming you have `protoc` and the Go gRPC tools installed, format your endpoints by running:
-```sh
-make gen-proto
-```
+### All Commands
 
-**2. Start Dependencies (NATS, Databases)**
-Make sure your NATS JetStream server is running locally or remotely. For local development with Docker:
-```sh
-docker run -p 4222:4222 -p 8222:8222 -ti nats:latest -js
-```
-
-**3. Run the CDC Service**
-```sh
-go run cmd/cdc/main.go
+```bash
+make build        # Build binary
+make run          # Build & run
+make test         # Run tests
+make tidy         # go mod tidy
+make gen-proto    # Regenerate protobuf
+make up / down    # Docker infra up/down
+make fe-install   # Install frontend deps
+make fe-dev       # Run frontend dev server
+make fe-build     # Build frontend
+make fe-lint      # Lint frontend
 ```
