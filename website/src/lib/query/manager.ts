@@ -1,0 +1,274 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { api } from '@/lib/api/client';
+import { ENDPOINTS } from '@/lib/api/endpoints';
+import { POLLING } from '@/config/constants';
+import type {
+  SourceConfig,
+  SinkConfig,
+  GetConfigResponse,
+  TestConnectionResponse,
+  DiscoverTablesResponse,
+  ListFlowsResponse,
+  FlowConfig,
+  GetFlowStatsResponse,
+  GetFlowTableProgressResponse,
+} from '@/types/api';
+
+// ─── Query Keys ──────────────────────────────────────────────────────
+
+export const managerKeys = {
+  config: ['config'] as const,
+  flows: ['flows'] as const,
+  flow: (id: string) => ['flow', id] as const,
+  flowStats: (id: string) => ['flowStats', id] as const,
+  flowProgress: (id: string) => ['flowProgress', id] as const,
+  sourceTables: (id: string) => ['sourceTables', id] as const,
+  sinkTables: (id: string) => ['sinkTables', id] as const,
+};
+
+// ─── Config (Sources + Sinks live here) ──────────────────────────────
+
+/** Fetches the full system config (includes sources and sinks arrays). */
+export function useConfig() {
+  return useQuery({
+    queryKey: managerKeys.config,
+    queryFn: () => api.get<GetConfigResponse>(ENDPOINTS.config),
+    refetchInterval: POLLING.FLOWS,
+  });
+}
+
+// ─── Sources ─────────────────────────────────────────────────────────
+
+/** Add a new source connector. */
+export function useAddSource() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (source: Partial<SourceConfig>) =>
+      api.post<{ instance_id: string }>(ENDPOINTS.sources, { source }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: managerKeys.config }),
+  });
+}
+
+/** Update an existing source connector. */
+export function useUpdateSource() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (source: SourceConfig) =>
+      api.put<{ success: boolean }>(
+        ENDPOINTS.sourceById(source.instance_id),
+        { source },
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: managerKeys.config }),
+  });
+}
+
+/** Remove a source connector by instance ID. */
+export function useRemoveSource() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (instanceId: string) =>
+      api.del<{ success: boolean }>(ENDPOINTS.sourceById(instanceId)),
+    onSuccess: () => qc.invalidateQueries({ queryKey: managerKeys.config }),
+  });
+}
+
+/** Test a source connection (returns success/message/latency without throwing). */
+export function useTestSourceConnection() {
+  return useMutation({
+    mutationFn: (source: Partial<SourceConfig>) =>
+      api.post<TestConnectionResponse>(ENDPOINTS.sourcesTest, { source }),
+  });
+}
+
+/** Discover tables for a registered source. */
+export function useDiscoverSourceTables(sourceId: string) {
+  return useQuery({
+    queryKey: managerKeys.sourceTables(sourceId),
+    queryFn: () =>
+      api.get<DiscoverTablesResponse>(ENDPOINTS.sourceTables(sourceId)),
+    enabled: !!sourceId,
+  });
+}
+
+// ─── Sinks ───────────────────────────────────────────────────────────
+
+/** Add a new sink connector. */
+export function useAddSink() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (sink: Partial<SinkConfig>) =>
+      api.post<{ instance_id: string }>(ENDPOINTS.sinks, { sink }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: managerKeys.config }),
+  });
+}
+
+/** Update an existing sink connector. */
+export function useUpdateSink() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (sink: SinkConfig) =>
+      api.put<{ success: boolean }>(
+        ENDPOINTS.sinkById(sink.instance_id),
+        { sink },
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: managerKeys.config }),
+  });
+}
+
+/** Remove a sink connector by instance ID. */
+export function useRemoveSink() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (instanceId: string) =>
+      api.del<{ success: boolean }>(ENDPOINTS.sinkById(instanceId)),
+    onSuccess: () => qc.invalidateQueries({ queryKey: managerKeys.config }),
+  });
+}
+
+/** Test a sink connection (returns success/message/latency without throwing). */
+export function useTestSinkConnection() {
+  return useMutation({
+    mutationFn: (sink: Partial<SinkConfig>) =>
+      api.post<TestConnectionResponse>(ENDPOINTS.sinksTest, { sink }),
+  });
+}
+
+/** Discover tables for a registered sink. */
+export function useDiscoverSinkTables(sinkId: string) {
+  return useQuery({
+    queryKey: managerKeys.sinkTables(sinkId),
+    queryFn: () =>
+      api.get<DiscoverTablesResponse>(ENDPOINTS.sinkTables(sinkId)),
+    enabled: !!sinkId,
+  });
+}
+
+// ─── Flows ───────────────────────────────────────────────────────────
+
+/** Fetches all flows with polling. */
+export function useFlows() {
+  return useQuery({
+    queryKey: managerKeys.flows,
+    queryFn: () => api.get<ListFlowsResponse>(ENDPOINTS.flows),
+    refetchInterval: POLLING.FLOWS,
+  });
+}
+
+/** Fetches a single flow by ID. */
+export function useFlow(flowId: string) {
+  return useQuery({
+    queryKey: managerKeys.flow(flowId),
+    queryFn: () =>
+      api.get<{ flow: FlowConfig }>(ENDPOINTS.flowById(flowId)),
+    enabled: !!flowId,
+  });
+}
+
+/** Create a new flow. */
+export function useCreateFlow() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: {
+      name: string;
+      source_id: string;
+      sink_id: string;
+      source_table: string;
+      sink_table: string;
+      column_mappings?: Array<{
+        source_column: string;
+        sink_column: string;
+        source_type: string;
+        sink_type: string;
+        enabled: boolean;
+      }>;
+      options?: {
+        batch_size?: number;
+        flush_interval_ms?: number;
+        filter_expression?: string;
+      };
+    }) => api.post<{ flow_id: string; status: string }>(ENDPOINTS.flows, payload),
+    onSuccess: () => qc.invalidateQueries({ queryKey: managerKeys.flows }),
+  });
+}
+
+/** Update an existing flow. */
+export function useUpdateFlow() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: {
+      flow_id: string;
+      name?: string;
+      source_table?: string;
+      sink_table?: string;
+      column_mappings?: Array<{
+        source_column: string;
+        sink_column: string;
+        source_type: string;
+        sink_type: string;
+        enabled: boolean;
+      }>;
+      options?: {
+        batch_size?: number;
+        flush_interval_ms?: number;
+        filter_expression?: string;
+      };
+    }) =>
+      api.put<{ flow: FlowConfig }>(
+        ENDPOINTS.flowById(payload.flow_id),
+        payload,
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: managerKeys.flows }),
+  });
+}
+
+/** Delete a flow by ID. */
+export function useDeleteFlow() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (flowId: string) =>
+      api.del<{ success: boolean }>(ENDPOINTS.flowById(flowId)),
+    onSuccess: () => qc.invalidateQueries({ queryKey: managerKeys.flows }),
+  });
+}
+
+/** Pause a running flow. */
+export function usePauseFlow() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (flowId: string) =>
+      api.post<{ status: string }>(ENDPOINTS.flowPause(flowId)),
+    onSuccess: () => qc.invalidateQueries({ queryKey: managerKeys.flows }),
+  });
+}
+
+/** Resume a paused flow. */
+export function useResumeFlow() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (flowId: string) =>
+      api.post<{ status: string }>(ENDPOINTS.flowResume(flowId)),
+    onSuccess: () => qc.invalidateQueries({ queryKey: managerKeys.flows }),
+  });
+}
+
+/** Fetches real-time stats for a single flow. */
+export function useFlowStats(flowId: string) {
+  return useQuery({
+    queryKey: managerKeys.flowStats(flowId),
+    queryFn: () =>
+      api.get<GetFlowStatsResponse>(ENDPOINTS.flowStats(flowId)),
+    enabled: !!flowId,
+    refetchInterval: POLLING.FLOW_STATS,
+  });
+}
+
+/** Fetches per-table sync progress for a single flow. */
+export function useFlowProgress(flowId: string) {
+  return useQuery({
+    queryKey: managerKeys.flowProgress(flowId),
+    queryFn: () =>
+      api.get<GetFlowTableProgressResponse>(ENDPOINTS.flowTables(flowId)),
+    enabled: !!flowId,
+    refetchInterval: POLLING.FLOW_STATS,
+  });
+}
