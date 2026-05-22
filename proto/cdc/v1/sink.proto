@@ -1,0 +1,67 @@
+syntax = "proto3";
+
+package cdc.v1;
+
+option go_package = "github.com/foden/cdc/api/proto/v1;cdcpb";
+
+// Redis-specific settings for a sink connector.
+message RedisSettings {
+  string command = 1;      // set, hset, sadd, bf_add
+  string key_template = 2; // CEL template
+  repeated string value_fields = 3;
+  int32 ttl = 4;           // seconds
+}
+
+// Configuration for a CDC sink connector.
+message SinkConfig {
+  string type = 1;
+  repeated string url = 2;
+  optional string username = 3;
+  optional string password = 4;
+  optional string index_prefix = 5;
+  optional string index = 6;
+  map<string, string> index_mapping = 7;
+  optional int32 batch_size = 8;
+  optional int32 flush_interval_ms = 9;
+  optional int32 max_retries = 10;
+  optional int32 retry_base_ms = 11;
+  optional string api_key = 12;
+  string instance_id = 13; // Unique ID for sink
+  optional string name = 14;        // Display name
+  optional string topic = 15;       // Routing topic
+  map<string, string> field_mapping = 16;
+  RedisSettings redis = 17;
+  optional string host = 18;
+  optional int32 port = 19;
+  optional string database = 20;
+}
+
+// Request to add a new sink.
+message AddSinkRequest {
+  SinkConfig sink = 1;
+}
+
+// Response after adding a sink.
+message AddSinkResponse {
+  string instance_id = 1;
+}
+
+// Request to remove an existing sink.
+message RemoveSinkRequest {
+  string instance_id = 1;
+}
+
+// Response after removing a sink.
+message RemoveSinkResponse {
+  bool success = 1;
+}
+
+// Request to update an existing sink.
+message UpdateSinkRequest {
+  SinkConfig sink = 1;
+}
+
+// Response after updating a sink.
+message UpdateSinkResponse {
+  bool success = 1;
+}

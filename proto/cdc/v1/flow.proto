@@ -1,0 +1,207 @@
+syntax = "proto3";
+
+package cdc.v1;
+
+option go_package = "github.com/foden/cdc/api/proto/v1;cdcpb";
+
+import "google/api/annotations.proto";
+import "source.proto";
+import "sink.proto";
+
+// --- Flow enums ---
+
+enum FlowStatus {
+  FLOW_STATUS_UNSPECIFIED = 0;
+  FLOW_STATUS_RUNNING = 1;
+  FLOW_STATUS_PAUSED = 2;
+  FLOW_STATUS_ERROR = 3;
+}
+
+enum TableSyncState {
+  TABLE_SYNC_STATE_UNSPECIFIED = 0;
+  TABLE_SYNC_STATE_SYNCING = 1;
+  TABLE_SYNC_STATE_COMPLETED = 2;
+  TABLE_SYNC_STATE_ERROR = 3;
+}
+
+// --- Flow messages ---
+
+message FlowOptions {
+  int32 batch_size = 1;
+  int32 flush_interval_ms = 2;
+  string filter_expression = 3;
+}
+
+message ColumnMapping {
+  string source_column = 1;
+  string sink_column = 2;
+  string source_type = 3;
+  string sink_type = 4;
+  bool enabled = 5;
+}
+
+message FlowConfig {
+  string flow_id = 1;
+  string name = 2;
+  string source_id = 3;
+  string sink_id = 4;
+  string source_table = 5;
+  string sink_table = 6;
+  FlowStatus status = 7;
+  int64 created_at = 8;
+  int64 updated_at = 9;
+  FlowOptions options = 10;
+  repeated ColumnMapping column_mappings = 11;
+}
+
+message TableProgress {
+  string table_name = 1;
+  TableSyncState state = 2;
+  uint64 rows_synced = 3;
+  string last_offset = 4;
+  string error_message = 5;
+}
+
+// --- Flow CRUD ---
+
+message CreateFlowRequest {
+  string name = 1;
+  string source_id = 2;
+  string sink_id = 3;
+  string source_table = 4;
+  string sink_table = 5;
+  FlowOptions options = 6;
+  repeated ColumnMapping column_mappings = 7;
+}
+
+message CreateFlowResponse {
+  string flow_id = 1;
+  FlowStatus status = 2;
+}
+
+message ListFlowsRequest {}
+
+message ListFlowsResponse {
+  repeated FlowConfig flows = 1;
+}
+
+message GetFlowRequest {
+  string flow_id = 1;
+}
+
+message GetFlowResponse {
+  FlowConfig flow = 1;
+}
+
+message UpdateFlowRequest {
+  string flow_id = 1;
+  string name = 2;
+  string source_table = 3;
+  string sink_table = 4;
+  FlowOptions options = 5;
+  repeated ColumnMapping column_mappings = 6;
+}
+
+message UpdateFlowResponse {
+  FlowConfig flow = 1;
+}
+
+message DeleteFlowRequest {
+  string flow_id = 1;
+}
+
+message DeleteFlowResponse {
+  bool success = 1;
+}
+
+// --- Connection Test ---
+
+message TestSourceConnectionRequest {
+  SourceConfig source = 1;
+}
+
+message TestSourceConnectionResponse {
+  bool success = 1;
+  string message = 2;
+  int64 latency_ms = 3;
+}
+
+message TestSinkConnectionRequest {
+  SinkConfig sink = 1;
+}
+
+message TestSinkConnectionResponse {
+  bool success = 1;
+  string message = 2;
+  int64 latency_ms = 3;
+}
+
+// --- Table Discovery ---
+
+message ColumnInfo {
+  string name = 1;
+  string type = 2;
+  bool is_primary_key = 3;
+  bool is_nullable = 4;
+}
+
+message TableInfo {
+  string schema = 1;
+  string name = 2;
+  repeated ColumnInfo columns = 3;
+}
+
+message DiscoverTablesRequest {
+  string source_id = 1;
+}
+
+message DiscoverTablesResponse {
+  repeated TableInfo tables = 1;
+}
+
+message DiscoverSinkTablesRequest {
+  string sink_id = 1;
+}
+
+message DiscoverSinkTablesResponse {
+  repeated TableInfo tables = 1;
+}
+
+// --- Pause/Resume ---
+
+message PauseFlowRequest {
+  string flow_id = 1;
+}
+
+message PauseFlowResponse {
+  FlowStatus status = 1;
+}
+
+message ResumeFlowRequest {
+  string flow_id = 1;
+}
+
+message ResumeFlowResponse {
+  FlowStatus status = 1;
+}
+
+// --- Flow Stats ---
+
+message GetFlowStatsRequest {
+  string flow_id = 1;
+}
+
+message GetFlowStatsResponse {
+  double events_per_second = 1;
+  int64 replication_lag_ms = 2;
+  int64 last_synced_at = 3;
+  uint64 total_events_processed = 4;
+}
+
+message GetFlowTableProgressRequest {
+  string flow_id = 1;
+}
+
+message GetFlowTableProgressResponse {
+  repeated TableProgress tables = 1;
+}

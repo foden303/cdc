@@ -5,7 +5,7 @@ PROTO_DIR := proto
 PROTO_IMAGE_NAME := cdc-proto-gen
 PROTO_DOCKERFILE := $(PROTO_DIR)/Dockerfile
 
-.PHONY: all build run test tidy up down fix-perms clean gen-proto .docker-check .proto-image fe-install fe-dev fe-build fe-lint
+.PHONY: all build run test tidy up down fix-perms clean gen-proto proto-lint proto-breaking .docker-check .proto-image fe-install fe-dev fe-build fe-lint
 
 all: tidy build
 
@@ -48,6 +48,20 @@ gen-proto: .docker-check .proto-image
 		--user $(shell id -u):$(shell id -g) \
 		-e BUF_CACHE_DIR=/tmp/buf-cache \
 		$(PROTO_IMAGE_NAME) sh /workspace/$(PROTO_DIR)/generate.sh
+
+proto-lint: .docker-check .proto-image
+	@docker run --rm \
+		-v $(PWD):/workspace \
+		--user $(shell id -u):$(shell id -g) \
+		-e BUF_CACHE_DIR=/tmp/buf-cache \
+		$(PROTO_IMAGE_NAME) sh -c "cd /workspace/proto && buf lint"
+
+proto-breaking: .docker-check .proto-image
+	@docker run --rm \
+		-v $(PWD):/workspace \
+		--user $(shell id -u):$(shell id -g) \
+		-e BUF_CACHE_DIR=/tmp/buf-cache \
+		$(PROTO_IMAGE_NAME) sh -c "cd /workspace/proto && buf breaking --against '.git#subdir=proto'"
 
 
 # ─── Frontend ────────────────────────────────────────────────────────

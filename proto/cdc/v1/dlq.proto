@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package cdc.v1;
+
+option go_package = "github.com/foden/cdc/api/proto/v1;cdcpb";
+
+message ReprocessDLQRequest {}
+
+message ReprocessDLQResponse {
+  int32 count = 1;
+}

@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package cdc.v1;
+
+option go_package = "github.com/foden/cdc/api/proto/v1;cdcpb";
+
+// Health check request (empty).
+message HealthCheckRequest {}
+
+// Health check response with service status information.
+message HealthCheckResponse {
+  string status = 1;
+  string version = 2;
+  int64 uptime = 3; // seconds since start
+}
