@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-// Pipeline errors — use errors.Is() for comparison.
+// Sentinel errors — use errors.Is() for comparison.
 var (
 	// ErrSourceStopped is returned when a source voluntarily stops.
 	ErrSourceStopped = errors.New("source stopped")
@@ -16,15 +16,21 @@ var (
 	// ErrNATSDisconnected is returned when NATS connection is lost.
 	ErrNATSDisconnected = errors.New("nats disconnected")
 
-	// ErrLeaderLost is returned when this instance loses leadership.
-	ErrLeaderLost = errors.New("leader election lost")
+	// ErrSourceConfigRequired is returned when a source API request has no source config.
+	ErrSourceConfigRequired = errors.New("source config is required")
 
-	// ErrSnapshotInvalidated is returned when the snapshot transaction
-	// is closed unexpectedly (e.g. coordinator restart).
-	ErrSnapshotInvalidated = errors.New("snapshot invalidated")
+	// ErrSinkConfigRequired is returned when a sink API request has no sink config.
+	ErrSinkConfigRequired = errors.New("sink config is required")
 
 	// ErrNonRetryable wraps errors that should not be retried.
+	// Retry frameworks should check IsNonRetryable() and fail fast.
 	ErrNonRetryable = errors.New("non-retryable error")
+)
+
+const (
+	DLQErrorSink      = "sink_error"
+	DLQErrorMapping   = "mapping_error"
+	DLQErrorMalformed = "malformed_event"
 )
 
 // IsNonRetryable checks if an error is wrapped as non-retryable.
@@ -33,7 +39,7 @@ func IsNonRetryable(err error) bool {
 }
 
 // Permanent wraps an error as non-retryable.
-// Retry frameworks should check IsNonRetryable() and fail fast.
+// Use this to signal that retrying will not help (e.g., invalid config, auth failure).
 func Permanent(err error) error {
 	return fmt.Errorf("%w: %w", ErrNonRetryable, err)
 }

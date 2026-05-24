@@ -13,7 +13,7 @@ func GeneratePartition(key string, partitionCount int) int {
 	}
 	// MurmurHash3 is statistically stronger than CRC32 for small bucket partitioning
 	checksum := murmur3.Sum32([]byte(key))
-	
+
 	return int(checksum % uint32(partitionCount))
 }
 
@@ -25,7 +25,7 @@ func CombineKeys(keys ...string) string {
 	if len(keys) == 1 {
 		return keys[0]
 	}
-	
+
 	res := keys[0]
 	for i := 1; i < len(keys); i++ {
 		res += ":" + keys[i]

@@ -2,136 +2,100 @@ package retry
 
 import (
 	"context"
-	"math"
 	"math/rand/v2"
 	"time"
+
+	cdcerrors "github.com/foden/cdc/pkg/errors"
 )
 
-const (
-	_defaultBackoffMult = 1.0
-)
-
+// Config holds retry configuration.
 type Config struct {
-	// MaxAttempts is the maximum number of retries. 0 means infinite.
-	MaxAttempts uint
-	// IsRetryable classifies errors. Return false to fail fast.
-	// Defaults to always retry if nil.
-	IsRetryable func(error) bool
-	// Delay is the initial delay between retries.
-	Delay time.Duration
-	// MaxDelay caps the backoff delay. 0 means no cap.
-	MaxDelay time.Duration
-	// BackoffMult multiplies the delay after each failed attempt.
-	BackoffMult float64
-	// OnRetry is called after a failed attempt and before the next retry.
-	// attempt is the attempt number that just failed.
-	OnRetry func(attempt uint, err error)
+	MaxAttempts int           // Maximum retry attempts (0 = infinite)
+	BaseDelay   time.Duration // Initial delay between retries
+	MaxDelay    time.Duration // Maximum delay cap
+	Multiplier  float64       // Backoff multiplier (e.g., 2.0)
 }
 
-// Do executes fn with retries, exponential backoff, and jitter.
-// It respects context cancellation between attempts.
-func Do[T any](ctx context.Context, cfg Config, fn func() (T, error)) (T, error) {
-	var zero T
+// DefaultConfig returns sensible defaults for transient error retry.
+func DefaultConfig() Config {
+	return Config{
+		MaxAttempts: 3,
+		BaseDelay:   100 * time.Millisecond,
+		MaxDelay:    5 * time.Second,
+		Multiplier:  2.0,
+	}
+}
 
+// SourceReconnectConfig returns config for source reconnection (longer delays).
+func SourceReconnectConfig() Config {
+	return Config{
+		MaxAttempts: 0, // infinite
+		BaseDelay:   1 * time.Second,
+		MaxDelay:    30 * time.Second,
+		Multiplier:  2.0,
+	}
+}
+
+// Do executes fn with exponential backoff + jitter.
+// Stops when: fn returns nil, maxAttempts reached, ctx cancelled, or error is non-retryable.
+// Non-retryable errors (wrapped with errors.Permanent) cause immediate failure without retry.
+func Do(ctx context.Context, cfg Config, fn func() error) error {
+	delay := cfg.BaseDelay
 	maxAttempts := cfg.MaxAttempts
-	if maxAttempts == 0 {
-		maxAttempts = ^uint(0) // infinite
+	if maxAttempts <= 0 {
+		maxAttempts = int(^uint(0) >> 1) // effectively infinite
 	}
 
-	delay := cfg.cappedDelay(cfg.initialDelay())
-
-	for attempt := uint(1); attempt <= maxAttempts; attempt++ {
-		result, err := fn()
-		if err == nil {
-			return result, nil
+	var lastErr error
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		lastErr = fn()
+		if lastErr == nil {
+			return nil
 		}
 
-		if !cfg.retryable(err) {
-			return zero, err
+		// Fail fast for non-retryable errors
+		if cdcerrors.IsNonRetryable(lastErr) {
+			return lastErr
 		}
 
-		if attempt == maxAttempts {
-			return zero, err
+		// Don't sleep after the last attempt
+		if attempt == maxAttempts-1 {
+			break
 		}
 
-		if cfg.OnRetry != nil {
-			cfg.OnRetry(attempt, err)
+		// Calculate delay with jitter
+		jitteredDelay := delay + jitter(delay)
+
+		// Wait or cancel
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(jitteredDelay):
 		}
 
-		if err := wait(ctx, delay+jitter(delay)); err != nil {
-			return zero, err
-		}
-
-		delay = cfg.nextDelay(delay)
+		// Exponential backoff
+		delay = nextDelay(delay, cfg.MaxDelay, cfg.Multiplier)
 	}
 
-	return zero, nil // unreachable
+	return lastErr
 }
 
-// retryable checks if the error is retryable.
-func (c Config) retryable(err error) bool {
-	return c.IsRetryable == nil || c.IsRetryable(err)
-}
-
-// initialDelay returns the initial delay.
-func (c Config) initialDelay() time.Duration {
-	if c.Delay < 0 {
-		return 0
-	}
-	return c.Delay
-}
-
-// backoffMult returns the backoff multiplier.
-func (c Config) backoffMult() float64 {
-	if c.BackoffMult <= 0 {
-		return _defaultBackoffMult
-	}
-	return c.BackoffMult
-}
-
-// cappedDelay caps the delay at the maximum delay.
-func (c Config) cappedDelay(delay time.Duration) time.Duration {
-	if c.MaxDelay > 0 && delay > c.MaxDelay {
-		return c.MaxDelay
-	}
-	return delay
-}
-
-// nextDelay calculates the next delay using the backoff multiplier.
-func (c Config) nextDelay(delay time.Duration) time.Duration {
-	next := float64(delay) * c.backoffMult()
-	if next > float64(math.MaxInt64) {
-		return c.cappedDelay(time.Duration(math.MaxInt64))
-	}
-	return c.cappedDelay(time.Duration(next))
-}
-
-// jitter adds random delay to the delay.
+// jitter adds random delay (0 to 50% of base delay) to prevent thundering herd.
 func jitter(delay time.Duration) time.Duration {
-	if delay <= 1 {
+	if delay <= 0 {
 		return 0
 	}
 	return time.Duration(rand.Int64N(int64(delay) / 2))
 }
 
-// wait blocks until the delay has passed or the context is cancelled.
-func wait(ctx context.Context, delay time.Duration) error {
-	if delay <= 0 {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-			return nil
-		}
+// nextDelay calculates the next backoff delay, capped at maxDelay.
+func nextDelay(current, max time.Duration, multiplier float64) time.Duration {
+	if multiplier <= 0 {
+		multiplier = 2.0
 	}
-
-	timer := time.NewTimer(delay)
-	defer timer.Stop()
-
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case <-timer.C:
-		return nil
+	next := time.Duration(float64(current) * multiplier)
+	if max > 0 && next > max {
+		return max
 	}
+	return next
 }
