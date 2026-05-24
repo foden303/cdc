@@ -25,6 +25,7 @@ type NATSClient interface {
 	CreateStream(ctx context.Context, subjects []string) error
 	CreateDLQStream(ctx context.Context) error
 	// Connection
+	Health(ctx context.Context) error
 	Close()
 }
 

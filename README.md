@@ -55,7 +55,6 @@ graph LR
 - **Delivery**: Exactly-once semantics, Dead Letter Queue, configurable batching & retries
 - **Management**: gRPC + REST API, Web UI dashboard, schema discovery, message explorer
 - **Observability**: Prometheus metrics, structured logging, health checks
-- **Hot Reload**: Add/remove sources and sinks at runtime without restart
 
 ## Quick Start
 
@@ -64,6 +63,9 @@ graph LR
 ```bash
 # Start infrastructure (NATS + Prometheus)
 make up
+
+# Generate gRPC stubs
+make gen-proto
 
 # Build & run the CDC service
 make run

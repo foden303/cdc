@@ -22,7 +22,7 @@ func SetupDependencies(resources Resources) *Container {
 		Discovery:        resources.Discovery,
 		NATSClient:       resources.NATSClient,
 		CDCService:       drivergrpc.NewCDCService(resources.Store, resources.FlowManager, resources.Registry, resources.Discovery, resources.NATSClient),
-		DashboardService: service.NewDashboardService(resources.Store, resources.FlowManager),
+		DashboardService: service.NewDashboardService(resources.Store, resources.FlowManager, resources.NATSClient),
 	}
 	GlobalContainer = container
 	return container

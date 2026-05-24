@@ -5,51 +5,55 @@ package cdc.v1;
 option go_package = "github.com/foden/cdc/api/proto/v1;cdcpb";
 
 // Configuration for a CDC source connector.
+// Connection-level fields only — no table lists, topic routing, or field mappings.
 message SourceConfig {
+  reserved 7, 8;
+  reserved "slot_name", "publication_name";
+
   string type = 1;
   string host = 2;
   int32 port = 3;
   optional string username = 4;
   optional string password = 5;
   string database = 6;
-  repeated string tables = 7;
-  optional string slot_name = 8;
-  optional string publication_name = 9;
-  string instance_id = 10; // Unique ID for source
-  optional string name = 11; // Display name
-  optional string topic = 12; // Routing topic
-  optional string url = 13;
-  map<string, string> headers = 14;
-  optional int32 polling_interval_ms = 15;
-  optional string snapshot_mode = 16;
+  string instance_id = 9;
+  optional string name = 10;
 }
 
-// Request to add a new source.
-message AddSourceRequest {
+// Request to create a new source.
+message CreateSourceRequest {
   SourceConfig source = 1;
 }
 
-// Response after adding a source.
-message AddSourceResponse {
+// Response after creating a source.
+message CreateSourceResponse {
   string instance_id = 1;
 }
 
-// Request to remove an existing source.
-message RemoveSourceRequest {
+// Request to get a source by instance_id.
+message GetSourceRequest {
   string instance_id = 1;
 }
 
-// Response after removing a source.
-message RemoveSourceResponse {
-  bool success = 1;
-}
-
-// Request to update an existing source.
-message UpdateSourceRequest {
+// Response containing a source configuration.
+message GetSourceResponse {
   SourceConfig source = 1;
 }
 
-// Response after updating a source.
-message UpdateSourceResponse {
+// Request to list all sources.
+message ListSourcesRequest {}
+
+// Response containing all source configurations.
+message ListSourcesResponse {
+  repeated SourceConfig sources = 1;
+}
+
+// Request to delete an existing source.
+message DeleteSourceRequest {
+  string instance_id = 1;
+}
+
+// Response after deleting a source.
+message DeleteSourceResponse {
   bool success = 1;
 }

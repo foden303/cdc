@@ -13,12 +13,14 @@ type DashboardSystemInventoryResponse struct {
 }
 
 type DashboardLiveTelemetryResponse struct {
-	Throughput        float64 `json:"throughput"`
-	LatencyP99        float64 `json:"latency_p99"`
-	ActiveWorkers     uint32  `json:"active_workers"`
-	ErrorRate         float64 `json:"error_rate"`
-	TotalSyncedEvents uint64  `json:"total_synced_events"`
-	FailureCount      uint64  `json:"failure_count"`
+	Throughput         float64 `json:"throughput"`
+	LatencyP99         float64 `json:"latency_p99"`
+	ActiveWorkers      uint32  `json:"active_workers"`
+	ChannelUtilization float64 `json:"channel_utilization"`
+	NATSHealthy        bool    `json:"nats_healthy"`
+	ErrorRate          float64 `json:"error_rate"`
+	TotalSyncedEvents  uint64  `json:"total_synced_events"`
+	FailureCount       uint64  `json:"failure_count"`
 }
 
 type DashboardThroughputPoint struct {

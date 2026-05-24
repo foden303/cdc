@@ -49,6 +49,24 @@ message GetConsumerInfoResponse {
   uint64 pending_count = 2;
 }
 
+message ConsumerSummary {
+  string name = 1;
+  repeated string filter_subjects = 2;
+  uint64 num_pending = 3;
+  uint64 num_ack_pending = 4;
+  uint64 delivered_stream_seq = 5;
+  uint64 ack_floor_stream_seq = 6;
+}
+
+message ListConsumersRequest {
+  OffsetPaginationRequest pagination = 1;
+}
+
+message ListConsumersResponse {
+  repeated ConsumerSummary data = 1;
+  OffsetPaginationResponse pagination = 2;
+}
+
 // Request to list topics.
 message ListTopicsRequest {
   OffsetPaginationRequest pagination = 1;

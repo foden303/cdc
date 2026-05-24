@@ -63,6 +63,7 @@ func (n *workerTestNATS) ListConsumers(context.Context, int, int) ([]ports.NATSC
 }
 func (n *workerTestNATS) CreateStream(context.Context, []string) error { return nil }
 func (n *workerTestNATS) CreateDLQStream(context.Context) error        { return nil }
+func (n *workerTestNATS) Health(context.Context) error                 { return nil }
 func (n *workerTestNATS) Close()                                       {}
 
 func TestHandleFailureUsesConfiguredMaxDeliver(t *testing.T) {

@@ -50,23 +50,27 @@ export function SinkForm({ open, onOpenChange, sinkToEdit }: SinkFormProps) {
   const testMutation = useTestSinkConnection();
   const { data: configData } = useConfig();
 
-  // Only DB types for now
+  // Backend-supported sink connectors.
   const availableTypes = useMemo(() => {
-    const dbTypes = ['postgres', 'mysql'];
+    const supportedTypes = ['postgres', 'elasticsearch', 'clickhouse'];
     if (configData?.available_sinks && configData.available_sinks.length > 0) {
-      return configData.available_sinks.filter((t) => dbTypes.includes(t));
+      return configData.available_sinks.filter((t) => supportedTypes.includes(t));
     }
-    return dbTypes;
+    return supportedTypes;
   }, [configData]);
 
-  // Form State — simple DB connection only
+  // Form State — mirrors SinkConfig from the backend API.
   const [name, setName] = useState('');
-  const [type, setType] = useState('postgres');
+  const [type, setType] = useState<SinkConfig['type']>('postgres');
   const [host, setHost] = useState('');
   const [port, setPort] = useState(5432);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [database, setDatabase] = useState('');
+  const [urls, setUrls] = useState('');
+  const [apiKey, setApiKey] = useState('');
+  const [indexPrefix, setIndexPrefix] = useState('');
+  const [maxRetries, setMaxRetries] = useState(3);
 
   // Connection testing state
   const [testResult, setTestResult] = useState<TestConnectionResponse | null>(null);
@@ -77,10 +81,14 @@ export function SinkForm({ open, onOpenChange, sinkToEdit }: SinkFormProps) {
       setName(sinkToEdit.name || '');
       setType(sinkToEdit.type || 'postgres');
       setHost(sinkToEdit.host || '');
-      setPort(sinkToEdit.port || (sinkToEdit.type === 'mysql' ? 3306 : 5432));
+      setPort(sinkToEdit.port || (sinkToEdit.type === 'clickhouse' ? 9000 : 5432));
       setUsername(sinkToEdit.username || '');
       setPassword(sinkToEdit.password || '');
       setDatabase(sinkToEdit.database || '');
+      setUrls(sinkToEdit.url?.join(', ') || '');
+      setApiKey(sinkToEdit.api_key || '');
+      setIndexPrefix(sinkToEdit.index_prefix || '');
+      setMaxRetries(sinkToEdit.max_retries ?? 3);
     } else {
       resetForm();
     }
@@ -91,32 +99,44 @@ export function SinkForm({ open, onOpenChange, sinkToEdit }: SinkFormProps) {
   useEffect(() => {
     if (!isEdit) {
       if (type === 'postgres') setPort(5432);
-      else if (type === 'mysql') setPort(3306);
+      else if (type === 'clickhouse') setPort(9000);
     }
     setTestResult(null);
   }, [type, isEdit]);
 
   const resetForm = () => {
     setName('');
-    setType(availableTypes[0] || 'postgres');
+    setType((availableTypes[0] || 'postgres') as SinkConfig['type']);
     setHost('');
     setPort(5432);
     setUsername('');
     setPassword('');
     setDatabase('');
+    setUrls('');
+    setApiKey('');
+    setIndexPrefix('');
+    setMaxRetries(3);
     setTestResult(null);
   };
 
   const parsePayload = (): Partial<SinkConfig> => {
-    const payload: Partial<SinkConfig> = {
-      type,
-      name: name || undefined,
-      host,
-      port: Number(port),
-      username: username || undefined,
-      password: password || undefined,
-      database,
-    };
+    const payload: Partial<SinkConfig> = { type, name: name || undefined };
+
+    if (type === 'elasticsearch') {
+      payload.url = urls
+        .split(',')
+        .map((url) => url.trim())
+        .filter(Boolean);
+      payload.api_key = apiKey || undefined;
+      payload.index_prefix = indexPrefix || undefined;
+      payload.max_retries = Number(maxRetries);
+    } else {
+      payload.host = host;
+      payload.port = Number(port);
+      payload.username = username || undefined;
+      payload.password = password || undefined;
+      payload.database = database;
+    }
 
     // Include instance_id only when editing
     if (isEdit && sinkToEdit) {
@@ -127,7 +147,12 @@ export function SinkForm({ open, onOpenChange, sinkToEdit }: SinkFormProps) {
   };
 
   const handleTestConnection = async () => {
-    if (!host || !database) {
+    if (type === 'elasticsearch' && urls.trim().length === 0) {
+      toast.error(t('manager.sinks.toast.urlRequired'));
+      return;
+    }
+
+    if (type !== 'elasticsearch' && (!host || !database)) {
       toast.error(t('manager.sinks.toast.hostDatabaseRequired'));
       return;
     }
@@ -135,10 +160,11 @@ export function SinkForm({ open, onOpenChange, sinkToEdit }: SinkFormProps) {
     try {
       const payload = parsePayload();
       const res = await testMutation.mutateAsync(payload);
-      setTestResult(res);
       if (res.success) {
-        toast.success(t('manager.sinks.testSuccess') + ` (${res.latency_ms}ms)`);
+        setTestResult(null);
+        toast.success(t('manager.sinks.testSuccess'));
       } else {
+        setTestResult(res);
         toast.error(t('manager.sinks.testFailed') + `: ${res.message}`);
       }
     } catch (err: any) {
@@ -149,7 +175,12 @@ export function SinkForm({ open, onOpenChange, sinkToEdit }: SinkFormProps) {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!host || !database) {
+    if (type === 'elasticsearch' && urls.trim().length === 0) {
+      toast.error(t('manager.sinks.toast.urlRequired'));
+      return;
+    }
+
+    if (type !== 'elasticsearch' && (!host || !database)) {
       toast.error(t('manager.sinks.toast.hostDatabaseRequired'));
       return;
     }
@@ -202,14 +233,18 @@ export function SinkForm({ open, onOpenChange, sinkToEdit }: SinkFormProps) {
               <label className="text-[11px] font-semibold text-muted-foreground mb-1.5 block">
                 {t('manager.sinks.fields.type')}
               </label>
-              <Select value={type} onValueChange={(val) => setType(val || '')} disabled={isEdit}>
+              <Select value={type} onValueChange={(val) => setType(val as SinkConfig['type'])} disabled={isEdit}>
                 <SelectTrigger className="w-full h-9 text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {availableTypes.map((tName) => (
                     <SelectItem key={tName} value={tName} className="text-xs">
-                      {tName === 'postgres' ? 'PostgreSQL' : 'MySQL'}
+                      {tName === 'postgres'
+                        ? 'PostgreSQL'
+                        : tName === 'elasticsearch'
+                          ? 'Elasticsearch'
+                          : 'ClickHouse'}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -217,72 +252,128 @@ export function SinkForm({ open, onOpenChange, sinkToEdit }: SinkFormProps) {
             </div>
           </div>
 
-          {/* Host + Port */}
-          <div className="grid grid-cols-3 gap-4">
-            <div className="col-span-2">
-              <label className="text-[11px] font-semibold text-muted-foreground mb-1.5 block">
-                {t('manager.sinks.fields.host')}
-              </label>
-              <Input
-                value={host}
-                onChange={(e) => setHost(e.target.value)}
-                placeholder="localhost"
-                className="h-9 text-xs"
-                required
-              />
-            </div>
-            <div>
-              <label className="text-[11px] font-semibold text-muted-foreground mb-1.5 block">
-                {t('manager.sinks.fields.port')}
-              </label>
-              <Input
-                type="number"
-                value={port}
-                onChange={(e) => setPort(Number(e.target.value))}
-                className="h-9 text-xs"
-                required
-              />
-            </div>
-          </div>
+          {type === 'elasticsearch' ? (
+            <>
+              <div>
+                <label className="text-[11px] font-semibold text-muted-foreground mb-1.5 block">
+                  {t('manager.sinks.fields.esUrls')}
+                </label>
+                <Input
+                  value={urls}
+                  onChange={(e) => setUrls(e.target.value)}
+                  placeholder={t('manager.sinks.placeholders.esUrls')}
+                  className="h-9 text-xs"
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="text-[11px] font-semibold text-muted-foreground mb-1.5 block">
+                    {t('manager.sinks.fields.indexPrefix')}
+                  </label>
+                  <Input
+                    value={indexPrefix}
+                    onChange={(e) => setIndexPrefix(e.target.value)}
+                    placeholder={t('manager.sinks.placeholders.indexPrefix')}
+                    className="h-9 text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] font-semibold text-muted-foreground mb-1.5 block">
+                    {t('manager.sinks.fields.apiKey')}
+                  </label>
+                  <Input
+                    type="password"
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    placeholder={t('manager.sinks.placeholders.apiKey')}
+                    className="h-9 text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] font-semibold text-muted-foreground mb-1.5 block">
+                    {t('manager.sinks.tuning.maxRetries')}
+                  </label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={maxRetries}
+                    onChange={(e) => setMaxRetries(Number(e.target.value))}
+                    className="h-9 text-xs"
+                  />
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Host + Port */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="col-span-2">
+                  <label className="text-[11px] font-semibold text-muted-foreground mb-1.5 block">
+                    {t('manager.sinks.fields.host')}
+                  </label>
+                  <Input
+                    value={host}
+                    onChange={(e) => setHost(e.target.value)}
+                    placeholder="localhost"
+                    className="h-9 text-xs"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] font-semibold text-muted-foreground mb-1.5 block">
+                    {t('manager.sinks.fields.port')}
+                  </label>
+                  <Input
+                    type="number"
+                    value={port}
+                    onChange={(e) => setPort(Number(e.target.value))}
+                    className="h-9 text-xs"
+                    required
+                  />
+                </div>
+              </div>
 
-          {/* Username + Password + Database */}
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="text-[11px] font-semibold text-muted-foreground mb-1.5 block">
-                {t('manager.sinks.fields.username')}
-              </label>
-              <Input
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder={type === 'postgres' ? 'postgres' : 'root'}
-                className="h-9 text-xs"
-              />
-            </div>
-            <div>
-              <label className="text-[11px] font-semibold text-muted-foreground mb-1.5 block">
-                {t('manager.sinks.fields.password')}
-              </label>
-              <Input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder={isEdit ? '••••••••' : 'password'}
-                className="h-9 text-xs"
-              />
-            </div>
-            <div>
-              <label className="text-[11px] font-semibold text-muted-foreground mb-1.5 block">
-                {t('manager.sinks.fields.database')}
-              </label>
-              <Input
-                value={database}
-                onChange={(e) => setDatabase(e.target.value)}
-                placeholder="my_database"
-                className="h-9 text-xs"
-                required
-              />
-            </div>
-          </div>
+              {/* Username + Password + Database */}
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="text-[11px] font-semibold text-muted-foreground mb-1.5 block">
+                    {t('manager.sinks.fields.username')}
+                  </label>
+                  <Input
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder={type === 'postgres' ? 'postgres' : 'default'}
+                    className="h-9 text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] font-semibold text-muted-foreground mb-1.5 block">
+                    {t('manager.sinks.fields.password')}
+                  </label>
+                  <Input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder={isEdit ? '••••••••' : 'password'}
+                    className="h-9 text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] font-semibold text-muted-foreground mb-1.5 block">
+                    {t('manager.sinks.fields.database')}
+                  </label>
+                  <Input
+                    value={database}
+                    onChange={(e) => setDatabase(e.target.value)}
+                    placeholder="my_database"
+                    className="h-9 text-xs"
+                    required
+                  />
+                </div>
+              </div>
+            </>
+          )}
 
           {/* Test connection visual results */}
           {testResult && (
@@ -305,9 +396,9 @@ export function SinkForm({ open, onOpenChange, sinkToEdit }: SinkFormProps) {
                 <p className="opacity-90 mt-0.5 leading-relaxed">
                   {testResult.message || t('manager.sinks.test.successDesc')}
                 </p>
-                {testResult.success && (
+                {testResult.success && (testResult.latency_ms ?? testResult.latencyMs) !== undefined && (
                   <span className="inline-block mt-1 font-mono text-[10px] bg-emerald-950/40 border border-emerald-900 px-1.5 py-0.5 rounded">
-                    {t('manager.sinks.test.latency', { latency: testResult.latency_ms })}
+                    {t('manager.sinks.test.latency', { latency: testResult.latency_ms ?? testResult.latencyMs })}
                   </span>
                 )}
               </div>

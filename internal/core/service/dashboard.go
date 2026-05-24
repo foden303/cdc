@@ -14,12 +14,12 @@ import (
 
 const (
 	throughputHistoryLimit = 60
-	fallbackWorkerCount    = 4
 )
 
 type DashboardService struct {
 	store       ports.Store
 	flowManager ports.FlowManager
+	natsClient  ports.NATSClient
 	startTime   time.Time
 
 	throughputMu      sync.Mutex
@@ -29,10 +29,12 @@ type DashboardService struct {
 func NewDashboardService(
 	store ports.Store,
 	flowManager ports.FlowManager,
+	natsClient ports.NATSClient,
 ) *DashboardService {
 	return &DashboardService{
 		store:       store,
 		flowManager: flowManager,
+		natsClient:  natsClient,
 		startTime:   time.Now(),
 	}
 }
@@ -83,6 +85,7 @@ func (s *DashboardService) LiveTelemetry(
 		totalLatency    float64
 		totalEvents     uint64
 		activeWorkers   uint32
+		channelUtil     float64
 		runningFlows    int
 	)
 
@@ -101,7 +104,10 @@ func (s *DashboardService) LiveTelemetry(
 		totalThroughput += flowStats.EventsPerSecond
 		totalLatency += float64(flowStats.ReplicationLagMs)
 		totalEvents += flowStats.TotalEventsProcessed
-		activeWorkers += dashboardWorkerCount(flow)
+		activeWorkers += flowStats.RunningWorkers
+		if flowStats.WorkerUtilization > channelUtil {
+			channelUtil = flowStats.WorkerUtilization
+		}
 	}
 
 	var latencyP99 float64
@@ -109,13 +115,26 @@ func (s *DashboardService) LiveTelemetry(
 		latencyP99 = totalLatency / float64(runningFlows)
 	}
 
+	natsHealthy := false
+	if s.natsClient != nil {
+		healthCtx, cancel := context.WithTimeout(ctx, 750*time.Millisecond)
+		defer cancel()
+		if err := s.natsClient.Health(healthCtx); err != nil {
+			slog.Warn("dashboard telemetry: nats health unavailable", "err", err)
+		} else {
+			natsHealthy = true
+		}
+	}
+
 	return response.DashboardLiveTelemetryResponse{
-		Throughput:        totalThroughput,
-		LatencyP99:        latencyP99,
-		ActiveWorkers:     activeWorkers,
-		ErrorRate:         0,
-		TotalSyncedEvents: totalEvents,
-		FailureCount:      0,
+		Throughput:         totalThroughput,
+		LatencyP99:         latencyP99,
+		ActiveWorkers:      activeWorkers,
+		ChannelUtilization: channelUtil,
+		NATSHealthy:        natsHealthy,
+		ErrorRate:          0,
+		TotalSyncedEvents:  totalEvents,
+		FailureCount:       0,
 	}, nil
 }
 
@@ -142,17 +161,4 @@ func (s *DashboardService) ThroughputOverTime(
 	s.throughputMu.Unlock()
 
 	return response.DashboardThroughputOverTimeResponse{Points: points}, nil
-}
-
-func dashboardWorkerCount(flow *ports.FlowConfig) uint32 {
-	if flow.Options == nil {
-		return fallbackWorkerCount
-	}
-	if flow.Options.PoolSize > 0 {
-		return uint32(flow.Options.PoolSize)
-	}
-	if flow.Options.PartitionCount > 0 {
-		return uint32(flow.Options.PartitionCount)
-	}
-	return fallbackWorkerCount
 }

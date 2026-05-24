@@ -1,30 +1,55 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   HardDrive,
   Plus,
-  Trash2,
-  Edit3,
   RefreshCw,
   Server,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { useConfig, useRemoveSink } from '@/lib/query/manager';
+import { useFlows, useRemoveSink, useSinks, useStats } from '@/lib/query/manager';
 import { Button } from '@/components/ui/button';
 import { SinkForm } from './SinkForm';
+import { formatNumber } from '@/lib/format';
 import type { SinkConfig } from '@/types/api';
+import { ConnectorCard } from '../components/ConnectorCard';
+
+function sinkTypeLabel(type: SinkConfig['type']) {
+  if (type === 'postgres') return 'PostgreSQL';
+  if (type === 'elasticsearch') return 'Elasticsearch';
+  if (type === 'clickhouse') return 'ClickHouse';
+  return String(type).toUpperCase();
+}
+
+function endpointLabel(sink: SinkConfig) {
+  if (sink.host) return `${sink.host}:${sink.port}`;
+  if (sink.url?.length) return sink.url[0];
+  return sink.instance_id;
+}
+
+function targetLabel(sink: SinkConfig) {
+  return sink.database || sink.index_prefix || sink.url?.[0] || '-';
+}
 
 export default function SinksPage() {
   const { t } = useTranslation();
 
-  // Modal State
   const [formOpen, setFormOpen] = useState(false);
   const [editingSink, setEditingSink] = useState<SinkConfig | null>(null);
 
-  // Queries & Mutations
-  const { data, isLoading, refetch, isFetching } = useConfig();
+  const { data, isLoading, refetch, isFetching } = useSinks();
+  const { data: flowsData } = useFlows();
+  const { data: statsData } = useStats();
   const removeMutation = useRemoveSink();
+
+  const usageBySink = useMemo(() => {
+    const usage = new Map<string, number>();
+    for (const flow of flowsData?.flows ?? []) {
+      usage.set(flow.sink_id, (usage.get(flow.sink_id) ?? 0) + 1);
+    }
+    return usage;
+  }, [flowsData]);
 
   const handleAddClick = () => {
     setEditingSink(null);
@@ -37,11 +62,7 @@ export default function SinksPage() {
   };
 
   const handleDeleteClick = async (instanceId: string) => {
-    if (
-      confirm(
-        t('manager.sinks.confirm.delete', { id: instanceId })
-      )
-    ) {
+    if (confirm(t('manager.sinks.confirm.delete', { id: instanceId }))) {
       try {
         await removeMutation.mutateAsync(instanceId);
         toast.success(t('manager.sinks.toast.deleted'));
@@ -51,18 +72,17 @@ export default function SinksPage() {
     }
   };
 
-  const sinks = data?.config?.sinks || [];
+  const sinks = data?.sinks || [];
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-7.5rem)] space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="flex min-h-[calc(100vh-7.5rem)] flex-col space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-            <HardDrive className="h-6 w-6 text-sky-400" />
+          <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-foreground">
+            <HardDrive className="h-6 w-6 text-violet-500 dark:text-violet-400" />
             {t('manager.sinks.title')}
           </h1>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="mt-1 max-w-2xl text-xs text-muted-foreground">
             {t('manager.sinks.desc')}
           </p>
         </div>
@@ -70,121 +90,96 @@ export default function SinksPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => refetch()}
-            className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-border hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             title={t('common.refresh')}
           >
             <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
           </button>
           <Button
             onClick={handleAddClick}
-            className="h-9 text-xs bg-sky-500 text-slate-950 hover:bg-sky-400 font-semibold cursor-pointer"
+            className="h-9 cursor-pointer bg-violet-500 text-xs font-semibold text-white hover:bg-violet-400"
           >
-            <Plus className="h-4 w-4 mr-1" />
+            <Plus className="mr-1 h-4 w-4" />
             {t('manager.sinks.add')}
           </Button>
         </div>
       </div>
 
-      {/* Main Content */}
       {isLoading ? (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div
-              key={i}
-              className="h-40 rounded-xl bg-muted/40 animate-pulse border border-border"
-            />
+            <div key={i} className="h-52 animate-pulse rounded-lg border border-border bg-muted/40" />
           ))}
         </div>
       ) : sinks.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center p-8 text-center rounded-xl border border-dashed border-border bg-card">
-          <div className="p-3.5 rounded-full bg-muted border border-border mb-4">
+        <div className="flex flex-1 flex-col items-center justify-center rounded-lg border border-dashed border-border bg-card p-8 text-center">
+          <div className="mb-4 rounded-full border border-border bg-muted p-3.5">
             <HardDrive className="h-6 w-6 text-muted-foreground" />
           </div>
-          <h3 className="text-sm font-semibold text-foreground mb-1">
+          <h3 className="mb-1 text-sm font-semibold text-foreground">
             {t('manager.sinks.noSinks')}
           </h3>
-          <p className="text-xs text-muted-foreground max-w-xs mb-4">
+          <p className="mb-4 max-w-xs text-xs text-muted-foreground">
             {t('manager.sinks.noSinksDesc')}
           </p>
           <Button
             onClick={handleAddClick}
-            className="h-8 text-xs bg-sky-500 text-slate-950 hover:bg-sky-400 font-semibold cursor-pointer"
+            className="h-8 cursor-pointer bg-violet-500 text-xs font-semibold text-white hover:bg-violet-400"
           >
-            <Plus className="h-3.5 w-3.5 mr-1" />
+            <Plus className="mr-1 h-3.5 w-3.5" />
             {t('manager.sinks.add')}
           </Button>
         </div>
       ) : (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {sinks.map((sink) => (
-            <div
-              key={sink.instance_id}
-              className="rounded-xl border border-border bg-card p-5 flex flex-col justify-between hover:border-border/80 hover:bg-card/90 transition-all duration-300 shadow-sm shadow-black/10"
-            >
-              <div className="space-y-4">
-                {/* Top: Icon + Name + Type */}
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <div className="p-2 bg-muted border border-border rounded-lg text-sky-500 dark:text-sky-400 shrink-0">
-                      <Server className="h-4.5 w-4.5" />
-                    </div>
-                    <div className="truncate max-w-[170px]">
-                      <span className="font-mono text-xs font-semibold text-foreground block truncate">
-                        {sink.name || sink.database}
-                      </span>
-                      <span className="text-[10px] text-muted-foreground font-mono block mt-0.5 truncate">
-                        {sink.host}:{sink.port}
-                      </span>
-                    </div>
-                  </div>
-                  <span className="inline-flex items-center rounded-md bg-sky-500/10 px-1.5 py-0.5 text-[9px] font-mono font-medium text-sky-400 ring-1 ring-inset ring-sky-500/20 select-none">
-                    {sink.type === 'postgres' ? 'PostgreSQL' : sink.type.toUpperCase()}
-                  </span>
-                </div>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {sinks.map((sink) => {
+            const usageCount = usageBySink.get(sink.instance_id) ?? 0;
+            const stats = statsData?.sink_stats?.[sink.instance_id];
+            const written = stats?.success_count ?? 0;
+            const errors = stats?.failure_count ?? 0;
+            const total = written + errors;
+            const errorRate = total > 0 ? (errors / total) * 100 : 0;
 
-                {/* Connection info */}
-                <div className="space-y-2 bg-muted/20 p-3 rounded-lg border border-border font-mono text-[10px] text-muted-foreground">
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground/80">Database</span>
-                    <span className="text-foreground font-semibold">{sink.database}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground/80">Host</span>
-                    <span className="text-foreground">{sink.host}:{sink.port}</span>
-                  </div>
-                  {sink.username && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground/80">User</span>
-                      <span className="text-foreground">{sink.username}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Bottom actions */}
-              <div className="mt-5 pt-4 border-t border-border flex items-center justify-end gap-1.5">
-                <button
-                  onClick={() => handleEditClick(sink)}
-                  className="p-1.5 rounded hover:bg-muted border border-border text-muted-foreground hover:text-foreground transition-all cursor-pointer"
-                  title={t('manager.sinks.card.editTooltip')}
-                >
-                  <Edit3 className="h-3.5 w-3.5" />
-                </button>
-                <button
-                  onClick={() => handleDeleteClick(sink.instance_id)}
-                  disabled={removeMutation.isPending}
-                  className="p-1.5 rounded hover:bg-destructive/10 border border-border hover:border-destructive/30 text-muted-foreground hover:text-destructive transition-all cursor-pointer"
-                  title={t('manager.sinks.card.deleteTooltip')}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            </div>
-          ))}
+            return (
+              <ConnectorCard
+                key={sink.instance_id}
+                tone="sink"
+                icon={Server}
+                name={sink.name || targetLabel(sink)}
+                endpoint={endpointLabel(sink)}
+                typeLabel={sinkTypeLabel(sink.type)}
+                instanceId={sink.instance_id}
+                metrics={[
+                  {
+                    label: t('manager.cards.usage', { defaultValue: 'Usage' }),
+                    value: usageCount > 0
+                      ? t('manager.cards.usedByFlows', {
+                          defaultValue: '{{count}} flows',
+                          count: usageCount,
+                        })
+                      : t('manager.cards.unused', { defaultValue: 'Unused' }),
+                  },
+                  {
+                    label: t('manager.cards.written', { defaultValue: 'Written' }),
+                    value: formatNumber(written),
+                  },
+                  {
+                    label: t('manager.cards.errors', { defaultValue: 'Errors' }),
+                    value: errors > 0 ? `${formatNumber(errors)} · ${errorRate.toFixed(2)}%` : '0',
+                    tone: errors > 0 ? 'danger' : 'default',
+                  },
+                ]}
+                editLabel={t('manager.sinks.card.editTooltip')}
+                deleteLabel={t('manager.sinks.card.deleteTooltip')}
+                deleteDisabled={removeMutation.isPending}
+                onEdit={() => handleEditClick(sink)}
+                onDelete={() => handleDeleteClick(sink.instance_id)}
+              />
+            );
+          })}
         </div>
       )}
 
-      {/* CREATE / EDIT DIALOG */}
       <SinkForm
         open={formOpen}
         onOpenChange={setFormOpen}

@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { RefreshCw, RadioTower, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -15,6 +16,7 @@ import { useConsumers } from '@/lib/query/explorer';
 import { StatusBadge } from '../shared';
 
 export default function ExplorerConsumersPage() {
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const topicFilter = searchParams.get('topic') || '';
   const { data, isLoading, isFetching, refetch } = useConsumers(1, 100);
@@ -30,15 +32,17 @@ export default function ExplorerConsumersPage() {
     <div className="flex h-full flex-col gap-5">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Consumers</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+            {t('explorer.consumers')}
+          </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Global flow consumers, filter subjects, pending messages, and ack lag.
+            {t('explorer.consumersDesc')}
           </p>
           {topicFilter ? (
             <button
               type="button"
               onClick={() => setSearchParams({})}
-              className="mt-3 inline-flex max-w-full cursor-pointer items-center gap-2 rounded-full border border-sky-500/25 bg-sky-500/10 px-3 py-1 text-xs text-sky-300 transition-colors hover:bg-sky-500/15"
+              className="mt-3 inline-flex max-w-full cursor-pointer items-center gap-2 rounded-full border border-sky-500/25 bg-sky-500/10 px-3 py-1 text-xs text-sky-700 transition-colors hover:bg-sky-500/15 dark:text-sky-300"
             >
               <span className="truncate font-mono">{topicFilter}</span>
               <X className="h-3.5 w-3.5" />
@@ -54,13 +58,13 @@ export default function ExplorerConsumersPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Consumer</TableHead>
-              <TableHead>Filter Subjects</TableHead>
-              <TableHead className="text-right">Pending</TableHead>
-              <TableHead className="text-right">Ack Pending</TableHead>
-              <TableHead className="text-right">Delivered Seq</TableHead>
-              <TableHead className="text-right">Ack Floor</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead>{t('explorer.consumer')}</TableHead>
+              <TableHead>{t('explorer.filterSubjects')}</TableHead>
+              <TableHead className="text-right">{t('explorer.pending')}</TableHead>
+              <TableHead className="text-right">{t('explorer.ackPending')}</TableHead>
+              <TableHead className="text-right">{t('explorer.deliveredSeq')}</TableHead>
+              <TableHead className="text-right">{t('explorer.ackFloor')}</TableHead>
+              <TableHead>{t('dashboard.status')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -76,7 +80,7 @@ export default function ExplorerConsumersPage() {
               <TableRow>
                 <TableCell colSpan={7} className="h-40 text-center text-sm text-muted-foreground">
                   <RadioTower className="mx-auto mb-3 h-8 w-8 opacity-50" />
-                  No active flow consumers.
+                  {t('explorer.noConsumers')}
                 </TableCell>
               </TableRow>
             ) : (

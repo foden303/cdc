@@ -10,6 +10,7 @@ import (
 	"github.com/foden/cdc/config"
 	"github.com/foden/cdc/internal/adapters/driven/metrics"
 	"github.com/foden/cdc/internal/core/ports"
+	cdcerrors "github.com/foden/cdc/pkg/errors"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 )
@@ -78,6 +79,28 @@ func NewClient(cfg *config.NATSConfig) (*Client, error) {
 // JetStream returns the underlying JetStream handle for use by other packages (e.g., storage).
 func (c *Client) JetStream() jetstream.JetStream {
 	return c.js
+}
+
+// Health verifies that the underlying NATS connection can still round-trip.
+func (c *Client) Health(ctx context.Context) error {
+	if c.nc == nil || !c.nc.IsConnected() {
+		return cdcerrors.ErrNATSDisconnected
+	}
+
+	done := make(chan error, 1)
+	go func() {
+		done <- c.nc.FlushTimeout(500 * time.Millisecond)
+	}()
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case err := <-done:
+		if err != nil {
+			return fmt.Errorf("nats health check failed: %w", err)
+		}
+		return nil
+	}
 }
 
 // Close closes the NATS connection

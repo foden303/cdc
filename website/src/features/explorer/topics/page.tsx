@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Copy, Database, Eye, RefreshCw, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +19,7 @@ import { useTopics } from '@/lib/query/explorer';
 import { parseSubject } from '../shared';
 
 export default function ExplorerTopicsPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const { data, isLoading, isFetching, refetch } = useTopics(1, 100);
@@ -31,16 +33,18 @@ export default function ExplorerTopicsPage() {
 
   const copy = async (value: string) => {
     await navigator.clipboard.writeText(value);
-    toast.success('Topic copied');
+    toast.success(t('explorer.topicCopied'));
   };
 
   return (
     <div className="flex h-full flex-col gap-5">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Topics</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+            {t('explorer.topics')}
+          </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            CDC event streams grouped by source, schema, and table.
+            {t('explorer.topicsDesc')}
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={() => refetch()}>
@@ -54,7 +58,7 @@ export default function ExplorerTopicsPage() {
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           className="pl-9"
-          placeholder="Search by topic, source, schema, table"
+          placeholder={t('explorer.searchTopicsDetailed')}
         />
       </div>
 
@@ -62,13 +66,13 @@ export default function ExplorerTopicsPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Topic</TableHead>
-              <TableHead>Source</TableHead>
-              <TableHead>Schema</TableHead>
-              <TableHead>Table</TableHead>
-              <TableHead className="text-right">Partitions</TableHead>
-              <TableHead className="text-right">Messages</TableHead>
-              <TableHead className="w-24 text-right">Actions</TableHead>
+              <TableHead>{t('explorer.topic')}</TableHead>
+              <TableHead>{t('explorer.source')}</TableHead>
+              <TableHead>{t('explorer.schema')}</TableHead>
+              <TableHead>{t('explorer.table')}</TableHead>
+              <TableHead className="text-right">{t('explorer.partitions')}</TableHead>
+              <TableHead className="text-right">{t('explorer.messages')}</TableHead>
+              <TableHead className="w-24 text-right">{t('explorer.actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -84,7 +88,7 @@ export default function ExplorerTopicsPage() {
               <TableRow>
                 <TableCell colSpan={7} className="h-40 text-center text-sm text-muted-foreground">
                   <Database className="mx-auto mb-3 h-8 w-8 opacity-50" />
-                  No CDC topics yet.
+                  {t('explorer.noTopics')}
                 </TableCell>
               </TableRow>
             ) : (

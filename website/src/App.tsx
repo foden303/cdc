@@ -9,7 +9,11 @@ import { ROUTES } from '@/config/routes';
 
 // Lazy-loaded pages for code splitting
 const DashboardPage = lazy(() => import('@/features/dashboard/page'));
-const ExplorerPage = lazy(() => import('@/features/explorer/page'));
+const ExplorerTopicsPage = lazy(() => import('@/features/explorer/topics/page'));
+const ExplorerTopicDetailPage = lazy(() => import('@/features/explorer/topics/detail'));
+const ExplorerConsumersPage = lazy(() => import('@/features/explorer/consumers/page'));
+const ExplorerMessagesPage = lazy(() => import('@/features/explorer/messages/page'));
+const ExplorerDLQPage = lazy(() => import('@/features/explorer/dlq/page'));
 const SourcesPage = lazy(() => import('@/features/manager/sources/page'));
 const SinksPage = lazy(() => import('@/features/manager/sinks/page'));
 const FlowsPage = lazy(() => import('@/features/manager/flows/page'));
@@ -59,9 +63,45 @@ export default function App() {
               />
               <Route
                 path={ROUTES.EXPLORER}
+                element={<Navigate to={ROUTES.EXPLORER_TOPICS} replace />}
+              />
+              <Route
+                path={ROUTES.EXPLORER_TOPICS}
                 element={
                   <Suspense fallback={<PageLoader />}>
-                    <ExplorerPage />
+                    <ExplorerTopicsPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path={ROUTES.EXPLORER_TOPIC_DETAIL}
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <ExplorerTopicDetailPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path={ROUTES.EXPLORER_TOPIC_PARTITION}
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <ExplorerMessagesPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path={ROUTES.EXPLORER_CONSUMERS}
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <ExplorerConsumersPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path={ROUTES.EXPLORER_DLQ}
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <ExplorerDLQPage />
                   </Suspense>
                 }
               />

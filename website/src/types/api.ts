@@ -7,185 +7,49 @@
 
 export interface HealthCheckResponse {
   status: string;
-  version: string;
-  uptime: number; // seconds since start
+  uptime?: number; // seconds since start
+  version?: string;
 }
 
-// ─── Config ──────────────────────────────────────────────────────────
+// ─── Source ──────────────────────────────────────────────────────────
 
 export interface SourceConfig {
-  type: string;
+  type: 'postgres' | 'mysql';
   host: string;
   port: number;
   username?: string;
   password?: string;
   database: string;
-  tables: string[];
-  slot_name?: string;
-  publication_name?: string;
   instance_id: string;
   name?: string;
-  topic?: string;
-  url?: string;
-  headers?: Record<string, string>;
-  polling_interval_ms?: number;
-  snapshot_mode?: string;
 }
+
+export interface ListSourcesResponse {
+  sources: SourceConfig[];
+}
+
+// ─── Sink ────────────────────────────────────────────────────────────
 
 export interface SinkConfig {
-  type: string;
-  url: string[];
-  username?: string;
-  password?: string;
-  index_prefix?: string;
-  index?: string;
-  index_mapping?: Record<string, string>;
-  batch_size?: number;
-  flush_interval_ms?: number;
-  max_retries?: number;
-  retry_base_ms?: number;
-  api_key?: string;
-  instance_id: string;
-  name?: string;
-  topic?: string;
-  field_mapping?: Record<string, string>;
+  type: 'postgres' | 'elasticsearch' | 'clickhouse';
   host?: string;
   port?: number;
+  username?: string;
+  password?: string;
   database?: string;
+  instance_id: string;
+  name?: string;
+  url?: string[];       // elasticsearch
+  api_key?: string;     // elasticsearch
+  index_prefix?: string; // elasticsearch
+  max_retries?: number;
 }
 
-export interface PipelineConfig {
-  channel_buffer_size: number;
-  worker_count: number;
-  batch_size: number;
-  flush_interval_ms: number;
-  subject_filter: string[];
-}
-
-export interface NATSConfig {
-  enabled: boolean;
-  url: string;
-  stream_name: string;
-  retention_days: number;
-  max_reconnects: number;
-  reconnect_wait_ms: number;
-  reconnect_buffer_size_mb: number;
-  max_ack_pending: number;
-  ack_wait_ms: number;
-  max_deliver: number;
-}
-
-export interface AppConfig {
-  name: string;
-  log_mode: string;
-  sources: SourceConfig[];
+export interface ListSinksResponse {
   sinks: SinkConfig[];
-  pipeline: PipelineConfig;
-  nats: NATSConfig;
 }
 
-export interface GetConfigResponse {
-  config: AppConfig;
-  available_sources: string[];
-  available_sinks: string[];
-}
-
-// ─── Stats ───────────────────────────────────────────────────────────
-
-export interface ComponentStats {
-  success_count: number;
-  failure_count: number;
-  last_error: string;
-  partition_lag: Record<number, number>;
-}
-
-export interface GetStatsResponse {
-  source_stats: Record<string, ComponentStats>;
-  sink_stats: Record<string, ComponentStats>;
-}
-
-// ─── Performance ─────────────────────────────────────────────────────
-
-export interface SourcePerformance {
-  source_id: string;
-  throughput: number;
-  error_rate: number;
-}
-
-export interface SinkPerformance {
-  sink_id: string;
-  throughput: number;
-  avg_latency: number;
-}
-
-export interface GetPerformanceMetricsResponse {
-  throughput: number;
-  latency_p99: number;
-  active_workers: number;
-  error_rate: number;
-  sinks: Record<string, SinkPerformance>;
-  sources: Record<string, SourcePerformance>;
-}
-
-// ─── Explorer ────────────────────────────────────────────────────────
-
-export interface TopicSummary {
-  name: string;
-  message_count: number;
-  partition_count: number;
-}
-
-export interface PartitionSummary {
-  id: string;
-  message_count: number;
-  topic: string;
-}
-
-export interface MessageItem {
-  sequence: number;
-  timestamp: string;
-  subject: string;
-  data: string; // base64 encoded
-  headers: Record<string, string>;
-}
-
-export interface Sort {
-  field: string;
-  order: 'SORT_ORDER_ASC' | 'SORT_ORDER_DESC' | 'SORT_ORDER_UNSPECIFIED';
-}
-
-export interface OffsetPaginationRequest {
-  limit: number;
-  page: number;
-  sort?: Sort[];
-}
-
-export interface OffsetPaginationResponse {
-  total_rows: number;
-  limit: number;
-  page: number;
-  has_next: boolean;
-  has_prev: boolean;
-  sort?: Sort[];
-}
-
-export interface ListTopicsResponse {
-  data: TopicSummary[];
-  pagination: OffsetPaginationResponse;
-}
-
-export interface ListPartitionsResponse {
-  data: PartitionSummary[];
-  pagination: OffsetPaginationResponse;
-}
-
-export interface ListMessagesResponse {
-  data: MessageItem[];
-  total_count: number;
-  pagination: OffsetPaginationResponse;
-}
-
-// ─── Flows ───────────────────────────────────────────────────────────
+// ─── Flow ────────────────────────────────────────────────────────────
 
 export type FlowStatus = 'FLOW_STATUS_RUNNING' | 'FLOW_STATUS_PAUSED' | 'FLOW_STATUS_ERROR' | 'FLOW_STATUS_UNSPECIFIED';
 
@@ -193,6 +57,7 @@ export interface FlowOptions {
   batch_size: number;
   flush_interval_ms: number;
   filter_expression: string;
+  partition_count: number;
 }
 
 export interface ColumnMapping {
@@ -209,16 +74,31 @@ export interface FlowConfig {
   source_id: string;
   sink_id: string;
   source_table: string;
+  sink_table: string;
   status: FlowStatus;
   created_at: number;
   updated_at: number;
-  options: FlowOptions;
-  sink_table: string;
-  column_mappings: ColumnMapping[];
+  options?: FlowOptions;
+  column_mappings?: ColumnMapping[];
 }
 
 export interface ListFlowsResponse {
   flows: FlowConfig[];
+}
+
+export interface CreateFlowRequest {
+  name: string;
+  source_id: string;
+  sink_id: string;
+  source_table: string;
+  sink_table: string;
+  options?: Partial<FlowOptions>;
+  column_mappings?: ColumnMapping[];
+}
+
+export interface CreateFlowResponse {
+  flow_id: string;
+  status: FlowStatus;
 }
 
 export interface GetFlowStatsResponse {
@@ -228,18 +108,89 @@ export interface GetFlowStatsResponse {
   total_events_processed: number;
 }
 
-export type TableSyncState = 'TABLE_SYNC_STATE_SYNCING' | 'TABLE_SYNC_STATE_COMPLETED' | 'TABLE_SYNC_STATE_ERROR' | 'TABLE_SYNC_STATE_UNSPECIFIED';
+// ─── Performance ─────────────────────────────────────────────────────
 
-export interface TableProgress {
-  table_name: string;
-  state: TableSyncState;
-  rows_synced: number;
-  last_offset: string;
-  error_message: string;
+/** Per-source performance metrics returned within the global performance response. */
+export interface SourcePerformance {
+  source_id: string;
+  throughput: number;
+  error_rate: number;
 }
 
-export interface GetFlowTableProgressResponse {
-  tables: TableProgress[];
+/** Per-sink performance metrics returned within the global performance response. */
+export interface SinkPerformance {
+  sink_id: string;
+  throughput: number;
+  avg_latency: number;
+}
+
+export interface GetPerformanceMetricsResponse {
+  throughput: number;
+  latency_p99: number;
+  active_workers: number;
+  error_rate: number;
+  sources: Record<string, SourcePerformance>;
+  sinks: Record<string, SinkPerformance>;
+}
+
+// ─── Dashboard Aggregates ────────────────────────────────────────────
+
+export interface DashboardSystemInventoryResponse {
+  sources_count: number;
+  sinks_count: number;
+  flows_count: number;
+}
+
+export interface DashboardLiveTelemetryResponse {
+  throughput: number;
+  latency_p99: number;
+  active_workers: number;
+  channel_utilization: number;
+  nats_healthy: boolean;
+  error_rate: number;
+  total_synced_events: number;
+  failure_count: number;
+}
+
+export interface DashboardThroughputPoint {
+  timestamp: number;
+  throughput: number;
+}
+
+export interface DashboardThroughputOverTimeResponse {
+  points: DashboardThroughputPoint[];
+}
+
+// ─── Component Stats ─────────────────────────────────────────────────
+
+/** Stats for a single source or sink component. */
+export interface ComponentStats {
+  success_count: number;
+  failure_count: number;
+  last_error: string;
+  partition_lag: Record<number, number>;
+}
+
+/** Aggregated stats response keyed by component instance ID. */
+export interface GetStatsResponse {
+  source_stats: Record<string, ComponentStats>;
+  sink_stats: Record<string, ComponentStats>;
+}
+
+// ─── Flow Progress ───────────────────────────────────────────────────
+
+/** Sync progress for a single table within a flow. */
+export interface FlowTableProgress {
+  table_name: string;
+  state: string;
+  rows_synced: number;
+  last_offset?: string;
+  error_message?: string;
+}
+
+/** Response for GET /api/v1/flows/:id/progress. */
+export interface GetFlowProgressResponse {
+  tables: FlowTableProgress[];
 }
 
 // ─── Connection Testing ──────────────────────────────────────────────
@@ -247,7 +198,8 @@ export interface GetFlowTableProgressResponse {
 export interface TestConnectionResponse {
   success: boolean;
   message: string;
-  latency_ms: number;
+  latency_ms?: number;
+  latencyMs?: number;
 }
 
 // ─── Table Discovery ─────────────────────────────────────────────────
@@ -273,4 +225,74 @@ export interface DiscoverTablesResponse {
 
 export interface ReprocessDLQResponse {
   count: number;
+}
+
+// ─── Explorer ────────────────────────────────────────────────────────
+
+export interface TopicSummary {
+  name: string;
+  message_count: number;
+  partition_count: number;
+}
+
+export interface PartitionSummary {
+  id: string;
+  message_count: number;
+  topic: string;
+}
+
+export interface MessageItem {
+  sequence: number;
+  timestamp: string | number;
+  subject: string;
+  data: string;
+  headers: Record<string, string>;
+}
+
+export interface DLQMessage extends MessageItem {
+  reason?: string;
+  original_subject?: string;
+}
+
+export interface ConsumerSummary {
+  name: string;
+  filter_subjects: string[];
+  num_pending: number;
+  num_ack_pending: number;
+  delivered_stream_seq: number;
+  ack_floor_stream_seq: number;
+}
+
+export interface OffsetPaginationResponse {
+  total_rows: number;
+  page: number;
+  limit: number;
+  has_next: boolean;
+  has_prev: boolean;
+}
+
+export interface ListTopicsResponse {
+  data: TopicSummary[];
+  pagination?: OffsetPaginationResponse;
+}
+
+export interface ListPartitionsResponse {
+  data: PartitionSummary[];
+  pagination?: OffsetPaginationResponse;
+}
+
+export interface ListMessagesResponse {
+  data: MessageItem[];
+  total_count: number;
+  pagination?: OffsetPaginationResponse;
+}
+
+export interface ListDLQMessagesResponse {
+  data: DLQMessage[];
+  pagination?: OffsetPaginationResponse;
+}
+
+export interface ListConsumersResponse {
+  data: ConsumerSummary[];
+  pagination?: OffsetPaginationResponse;
 }

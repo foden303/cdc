@@ -61,7 +61,7 @@ export function SourceForm({ open, onOpenChange, sourceToEdit }: SourceFormProps
 
   // Form State — simple DB connection only
   const [name, setName] = useState('');
-  const [type, setType] = useState('postgres');
+  const [type, setType] = useState<SourceConfig['type']>('postgres');
   const [host, setHost] = useState('');
   const [port, setPort] = useState(5432);
   const [username, setUsername] = useState('');
@@ -98,7 +98,7 @@ export function SourceForm({ open, onOpenChange, sourceToEdit }: SourceFormProps
 
   const resetForm = () => {
     setName('');
-    setType(availableTypes[0] || 'postgres');
+    setType((availableTypes[0] || 'postgres') as SourceConfig['type']);
     setHost('');
     setPort(5432);
     setUsername('');
@@ -135,10 +135,11 @@ export function SourceForm({ open, onOpenChange, sourceToEdit }: SourceFormProps
     try {
       const payload = parsePayload();
       const res = await testMutation.mutateAsync(payload);
-      setTestResult(res);
       if (res.success) {
-        toast.success(t('manager.sources.testSuccess') + ` (${res.latency_ms}ms)`);
+        setTestResult(null);
+        toast.success(t('manager.sources.testSuccess'));
       } else {
+        setTestResult(res);
         toast.error(t('manager.sources.testFailed') + `: ${res.message}`);
       }
     } catch (err: any) {
@@ -202,7 +203,7 @@ export function SourceForm({ open, onOpenChange, sourceToEdit }: SourceFormProps
               <label className="text-[11px] font-semibold text-muted-foreground mb-1.5 block">
                 {t('manager.sources.fields.type')}
               </label>
-              <Select value={type} onValueChange={(val) => setType(val || '')} disabled={isEdit}>
+              <Select value={type} onValueChange={(val) => setType(val as SourceConfig['type'])} disabled={isEdit}>
                 <SelectTrigger className="w-full h-9 text-xs">
                   <SelectValue />
                 </SelectTrigger>
@@ -305,9 +306,9 @@ export function SourceForm({ open, onOpenChange, sourceToEdit }: SourceFormProps
                 <p className="opacity-90 mt-0.5 leading-relaxed">
                   {testResult.message || t('manager.sources.test.successDesc')}
                 </p>
-                {testResult.success && (
+                {testResult.success && (testResult.latency_ms ?? testResult.latencyMs) !== undefined && (
                   <span className="inline-block mt-1 font-mono text-[10px] bg-emerald-950/40 border border-emerald-900 px-1.5 py-0.5 rounded">
-                    {t('manager.sources.test.latency', { latency: testResult.latency_ms })}
+                    {t('manager.sources.test.latency', { latency: testResult.latency_ms ?? testResult.latencyMs })}
                   </span>
                 )}
               </div>

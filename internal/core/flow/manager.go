@@ -459,6 +459,9 @@ func (m *Manager) GetFlowStats(ctx context.Context, flowID string) (*ports.FlowS
 		stats.TotalEventsProcessed = 0
 		stats.ReplicationLagMs = 0
 		stats.EventsPerSecond = 0
+		stats.RunningWorkers = uint32(metrics.RunningWorkers)
+		stats.PoolCapacity = uint32(metrics.PoolCapacity)
+		stats.WorkerUtilization = metrics.UtilizationPercent
 	}
 
 	return stats, nil

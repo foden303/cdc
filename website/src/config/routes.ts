@@ -5,8 +5,12 @@
 export const ROUTES = {
   DASHBOARD: '/',
   EXPLORER: '/explorer',
-  EXPLORER_TOPIC: '/explorer/:topic',
-  EXPLORER_PARTITION: '/explorer/:topic/:partition',
+  EXPLORER_TOPICS: '/explorer/topics',
+  EXPLORER_TOPIC_DETAIL: '/explorer/topics/:topic',
+  EXPLORER_TOPIC_PARTITION: '/explorer/topics/:topic/partitions/:partition',
+  EXPLORER_CONSUMERS: '/explorer/consumers',
+  EXPLORER_CONSUMER_DETAIL: '/explorer/consumers/:consumer',
+  EXPLORER_DLQ: '/explorer/dlq',
   MANAGER: '/manager',
   MANAGER_SOURCES: '/manager/sources',
   MANAGER_SINKS: '/manager/sinks',
@@ -25,8 +29,13 @@ export const NAV_ITEMS = [
   {
     key: 'explorer',
     labelKey: 'nav.explorer',
-    path: ROUTES.EXPLORER,
+    path: ROUTES.EXPLORER_TOPICS,
     icon: 'Search' as const,
+    children: [
+      { key: 'topics', labelKey: 'nav.topics', path: ROUTES.EXPLORER_TOPICS },
+      { key: 'consumers', labelKey: 'nav.consumers', path: ROUTES.EXPLORER_CONSUMERS },
+      { key: 'dlq', labelKey: 'nav.dlq', path: ROUTES.EXPLORER_DLQ },
+    ],
   },
   {
     key: 'manager',

@@ -50,6 +50,9 @@ type FlowStats struct {
 	ReplicationLagMs     int64   `json:"replication_lag_ms"`
 	LastSyncedAt         int64   `json:"last_synced_at"`
 	TotalEventsProcessed uint64  `json:"total_events_processed"`
+	RunningWorkers       uint32  `json:"running_workers"`
+	PoolCapacity         uint32  `json:"pool_capacity"`
+	WorkerUtilization    float64 `json:"worker_utilization"`
 }
 
 // FlowManager defines the lifecycle operations for flows.

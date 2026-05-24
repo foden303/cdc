@@ -57,6 +57,7 @@ export function FlowWizard({ open, onOpenChange }: FlowWizardProps) {
   const [columnMappings, setColumnMappings] = useState<ColumnMapping[]>([]);
   const [batchSize, setBatchSize] = useState(100);
   const [flushIntervalMs, setFlushIntervalMs] = useState(1000);
+  const [partitionCount, setPartitionCount] = useState(4);
   const [filterExpression, setFilterExpression] = useState('');
 
   // Queries
@@ -155,6 +156,7 @@ export function FlowWizard({ open, onOpenChange }: FlowWizardProps) {
     setColumnMappings([]);
     setBatchSize(100);
     setFlushIntervalMs(1000);
+    setPartitionCount(4);
     setFilterExpression('');
   };
 
@@ -181,6 +183,7 @@ export function FlowWizard({ open, onOpenChange }: FlowWizardProps) {
         options: {
           batch_size: batchSize,
           flush_interval_ms: flushIntervalMs,
+          partition_count: partitionCount,
           filter_expression: filterExpression || undefined,
         },
       });
@@ -325,12 +328,6 @@ export function FlowWizard({ open, onOpenChange }: FlowWizardProps) {
                       onChange={(e) => setSelectedSinkTable(e.target.value)}
                       placeholder={t('manager.flows.placeholders.targetIndex')}
                       className="h-10 text-xs"
-                    />
-                  ) : selectedSink?.type === 'webhook' ? (
-                    <Input
-                      disabled
-                      placeholder={t('manager.flows.placeholders.webhookDirect')}
-                      className="h-10 text-xs cursor-not-allowed"
                     />
                   ) : sinkTablesLoading ? (
                     <div className="h-10 w-full bg-muted animate-pulse rounded-lg border border-border" />
@@ -490,7 +487,7 @@ export function FlowWizard({ open, onOpenChange }: FlowWizardProps) {
               </div>
 
               {/* Sync Rate Options */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="text-xs font-semibold text-muted-foreground mb-2 block">
                     {t('manager.flows.fields.batchSize')}
@@ -510,6 +507,18 @@ export function FlowWizard({ open, onOpenChange }: FlowWizardProps) {
                     type="number"
                     value={flushIntervalMs}
                     onChange={(e) => setFlushIntervalMs(Number(e.target.value))}
+                    className="h-10 text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground mb-2 block">
+                    {t('manager.flows.fields.partitionCount')}
+                  </label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={partitionCount}
+                    onChange={(e) => setPartitionCount(Number(e.target.value))}
                     className="h-10 text-xs"
                   />
                 </div>

@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -11,6 +10,7 @@ import {
   HardDrive,
   GitBranch,
   Zap,
+  RefreshCw,
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MetricCard } from '@/components/shared/MetricCard';
@@ -19,93 +19,99 @@ import { ThroughputChart } from './components/ThroughputChart';
 import { SystemHealthBar } from './components/SystemHealthBar';
 import { ROUTES } from '@/config/routes';
 import {
-  useHealth,
-  useStats,
-  usePerformance,
-  useFlows,
-  useConfig,
   dashboardKeys,
+  useHealth,
+  useSystemInventory,
+  useLiveTelemetry,
+  useThroughputOverTime,
 } from '@/lib/query/dashboard';
 import { api } from '@/lib/api/client';
 import { ENDPOINTS } from '@/lib/api/endpoints';
 import { formatNumber, formatDuration, formatPercent } from '@/lib/format';
 import type { ReprocessDLQResponse } from '@/types/api';
 
-/** Dashboard page — single overview of all system metrics (pure telemetries). */
+function isHealthyStatus(status?: string) {
+  return status === 'healthy' || status === 'ok' || status === 'up';
+}
+
+/** Dashboard page — overview cards backed by grouped dashboard API queries. */
 export default function DashboardPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const { data: health, isLoading: healthLoading } = useHealth();
-  const { data: stats, isLoading: statsLoading } = useStats();
-  const { data: perf, isLoading: perfLoading } = usePerformance();
-  const { data: flows, isLoading: flowsLoading } = useFlows();
-  const { data: config, isLoading: configLoading } = useConfig();
+  const {
+    data: health,
+    isLoading: healthLoading,
+    isFetching: healthFetching,
+  } = useHealth();
+  const {
+    data: inventory,
+    isLoading: inventoryLoading,
+    isFetching: inventoryFetching,
+  } = useSystemInventory();
+  const {
+    data: telemetry,
+    isLoading: telemetryLoading,
+    isFetching: telemetryFetching,
+  } = useLiveTelemetry();
+  const {
+    data: throughputOverTime,
+    isFetching: throughputFetching,
+  } = useThroughputOverTime();
 
-  // DLQ reprocess mutation
+  const healthy = isHealthyStatus(health?.status);
+  const isRefreshing =
+    healthFetching || inventoryFetching || telemetryFetching || throughputFetching;
+  const dlqCount = telemetry?.failure_count ?? 0;
   const dlqMutation = useMutation({
     mutationFn: () => api.post<ReprocessDLQResponse>(ENDPOINTS.dlqReprocess),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: dashboardKeys.stats });
+      queryClient.invalidateQueries({ queryKey: dashboardKeys.telemetry });
     },
   });
 
-  // Compute total DLQ count from all sink failure_counts
-  const dlqCount = useMemo(() => {
-    if (!stats?.sink_stats) return 0;
-    return Object.values(stats.sink_stats).reduce(
-      (sum, s) => sum + (s.failure_count || 0),
-      0,
-    );
-  }, [stats]);
-
-  // Compute total data synced (success count from all sinks)
-  const totalSynced = useMemo(() => {
-    if (!stats?.sink_stats) return 0;
-    return Object.values(stats.sink_stats).reduce(
-      (sum, s) => sum + (s.success_count || 0),
-      0,
-    );
-  }, [stats]);
-
-  const sourcesCount = config?.config?.sources?.length ?? 0;
-  const sinksCount = config?.config?.sinks?.length ?? 0;
-  const flowsCount = flows?.flows?.length ?? 0;
-
-  const isLoading = healthLoading || statsLoading || perfLoading || configLoading || flowsLoading;
-
   return (
     <div className="space-y-6">
-      {/* Header: System Status */}
       <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-4">
         <h1 className="text-2xl font-bold tracking-tight text-foreground">
           {t('dashboard.title')}
         </h1>
         {health ? (
           <div className="flex items-center gap-3 text-xs text-muted-foreground sm:mt-1">
-            <StatusBadge
-              status={health.status === 'ok' ? 'healthy' : 'unhealthy'}
-            />
-            <span className="font-mono bg-accent/30 text-accent-foreground px-1.5 py-0.5 rounded text-[10px] font-semibold">
-              v{health.version}
-            </span>
-            <span className="flex items-center gap-1">
-              {t('dashboard.uptime')}: <span className="font-semibold text-foreground">{formatDuration(health.uptime)}</span>
-            </span>
+            <StatusBadge status={healthy ? 'healthy' : 'unhealthy'} />
+            {health.version && (
+              <span className="font-mono bg-accent/30 text-accent-foreground px-1.5 py-0.5 rounded text-[10px] font-semibold">
+                v{health.version}
+              </span>
+            )}
+            {typeof health.uptime === 'number' && (
+              <span className="flex items-center gap-1">
+                {t('dashboard.uptime')}:
+                <span className="font-semibold text-foreground">
+                  {formatDuration(health.uptime)}
+                </span>
+              </span>
+            )}
+            {isRefreshing && (
+              <RefreshCw className="h-3 w-3 animate-spin text-muted-foreground/70" />
+            )}
           </div>
+        ) : healthLoading ? (
+          <Skeleton className="h-5 w-48 sm:mt-1" />
         ) : (
-          healthLoading && <Skeleton className="h-5 w-48 sm:mt-1" />
+          <div className="flex items-center gap-3 text-xs text-muted-foreground sm:mt-1">
+            <StatusBadge status="unhealthy" />
+          </div>
         )}
       </div>
 
-      {/* Row 1: System Scale / Inventory Cards */}
       <div className="space-y-2">
         <h2 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">
           {t('dashboard.systemInventory')}
         </h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {isLoading ? (
+          {inventoryLoading ? (
             Array.from({ length: 4 }).map((_, i) => (
               <Skeleton key={i} className="h-[108px]" />
             ))
@@ -113,28 +119,28 @@ export default function DashboardPage() {
             <>
               <MetricCard
                 title={t('dashboard.activeSources')}
-                value={sourcesCount}
+                value={inventory?.sources_count ?? 0}
                 icon={Database}
                 iconClassName="bg-blue-500/10 text-blue-500"
                 onClick={() => navigate(ROUTES.MANAGER_SOURCES)}
               />
               <MetricCard
                 title={t('dashboard.activeSinks')}
-                value={sinksCount}
+                value={inventory?.sinks_count ?? 0}
                 icon={HardDrive}
                 iconClassName="bg-indigo-500/10 text-indigo-500"
                 onClick={() => navigate(ROUTES.MANAGER_SINKS)}
               />
               <MetricCard
                 title={t('dashboard.activeFlows')}
-                value={flowsCount}
+                value={inventory?.flows_count ?? 0}
                 icon={GitBranch}
                 iconClassName="bg-amber-500/10 text-amber-500"
                 onClick={() => navigate(ROUTES.MANAGER_FLOWS)}
               />
               <MetricCard
                 title={t('dashboard.totalSyncedEvents')}
-                value={formatNumber(totalSynced)}
+                value={formatNumber(telemetry?.total_synced_events ?? 0)}
                 icon={Zap}
                 iconClassName="bg-emerald-500/10 text-emerald-500"
               />
@@ -143,13 +149,12 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Row 2: Live Traffic / Performance Metrics */}
       <div className="space-y-2">
         <h2 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">
           {t('dashboard.liveTelemetry')}
         </h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {isLoading ? (
+          {telemetryLoading ? (
             Array.from({ length: 4 }).map((_, i) => (
               <Skeleton key={i} className="h-[108px]" />
             ))
@@ -157,27 +162,27 @@ export default function DashboardPage() {
             <>
               <MetricCard
                 title={t('dashboard.throughput')}
-                value={formatNumber(perf?.throughput ?? 0)}
+                value={formatNumber(telemetry?.throughput ?? 0)}
                 unit={t('dashboard.eventsPerSec')}
                 icon={Activity}
                 iconClassName="bg-cyan-500/10 text-cyan-500"
               />
               <MetricCard
                 title={t('dashboard.latency')}
-                value={(perf?.latency_p99 ?? 0).toFixed(1)}
+                value={(telemetry?.latency_p99 ?? 0).toFixed(1)}
                 unit={t('dashboard.ms')}
                 icon={Timer}
                 iconClassName="bg-violet-500/10 text-violet-500"
               />
               <MetricCard
                 title={t('dashboard.errorRate')}
-                value={formatPercent(perf?.error_rate ?? 0)}
+                value={formatPercent(telemetry?.error_rate ?? 0)}
                 icon={AlertTriangle}
                 iconClassName="bg-yellow-500/10 text-yellow-500"
               />
               <MetricCard
                 title={t('dashboard.dlqCount')}
-                value={formatNumber(dlqCount)}
+                value={formatNumber(telemetry?.failure_count ?? 0)}
                 icon={MailWarning}
                 iconClassName="bg-red-500/10 text-red-500"
               />
@@ -186,14 +191,12 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Throughput Chart */}
-      <ThroughputChart currentValue={perf?.throughput} />
+      <ThroughputChart points={throughputOverTime?.points ?? []} />
 
-      {/* System Health */}
       <SystemHealthBar
-        natsConnected={health?.status === 'ok'}
-        channelUtilPercent={0}
-        activeWorkers={perf?.active_workers ?? 0}
+        natsConnected={telemetry?.nats_healthy ?? false}
+        channelUtilPercent={telemetry?.channel_utilization ?? 0}
+        activeWorkers={telemetry?.active_workers ?? 0}
         dlqCount={dlqCount}
         onReprocessDlq={() => dlqMutation.mutate()}
         isReprocessing={dlqMutation.isPending}

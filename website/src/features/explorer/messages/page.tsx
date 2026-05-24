@@ -1,9 +1,17 @@
 import { useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, GitBranch, RefreshCw, Search } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { ROUTES } from '@/config/routes';
 import {
   Table,
@@ -19,6 +27,7 @@ import { MessageDetailSheet } from '../components/MessageDetailSheet';
 import { formatBytes, formatTime, messageSize, parseSubject, StatusBadge } from '../shared';
 
 export default function ExplorerMessagesPage() {
+  const { t } = useTranslation();
   const routeParams = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const routeTopic = routeParams.topic ? decodeURIComponent(routeParams.topic) : '';
@@ -72,16 +81,16 @@ export default function ExplorerMessagesPage() {
               className="mb-3 -ml-2 inline-flex h-7 items-center gap-1 rounded-lg px-2.5 text-[0.8rem] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
               <ArrowLeft className="h-4 w-4" />
-              Topic partitions
+              {t('explorer.topicPartitions')}
             </Link>
           ) : null}
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-            {isNested ? `Partition ${activePartition}` : 'Messages'}
+            {isNested ? t('explorer.partitionLabel', { partition: activePartition }) : t('explorer.messages')}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {isNested
-              ? 'Ordered CDC messages for the selected topic partition.'
-              : 'Inspect CDC payloads, headers, metadata, and stream sequence.'}
+              ? t('explorer.partitionMessagesDesc')
+              : t('explorer.messagesDesc')}
           </p>
           {activeTopic ? (
             <div className="mt-2 flex flex-wrap items-center gap-2 font-mono text-xs text-muted-foreground">
@@ -98,31 +107,43 @@ export default function ExplorerMessagesPage() {
       <div className={`grid gap-3 ${isNested ? 'lg:grid-cols-[minmax(240px,1fr)]' : 'lg:grid-cols-[minmax(240px,1fr)_minmax(180px,240px)_minmax(240px,1fr)]'}`}>
         {!isNested ? (
           <>
-            <select
-              value={topic}
-              onChange={(event) => selectTopic(event.target.value)}
-              className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground"
+            <Select
+              value={topic || 'all'}
+              onValueChange={(value) => {
+                if (value !== null) selectTopic(value === 'all' ? '' : value);
+              }}
             >
-              <option value="">All topics</option>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder={t('explorer.allTopics')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('explorer.allTopics')}</SelectItem>
               {(topicsData?.data ?? []).map((item) => (
-                <option key={item.name} value={item.name}>
+                <SelectItem key={item.name} value={item.name}>
                   {item.name}
-                </option>
+                </SelectItem>
               ))}
-            </select>
-            <select
+              </SelectContent>
+            </Select>
+            <Select
               value={partition}
-              onChange={(event) => setPartition(event.target.value)}
-              className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground"
+              onValueChange={(value) => {
+                if (value !== null) setPartition(value);
+              }}
               disabled={!activeTopic}
             >
-              <option value="all">All partitions</option>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder={t('explorer.allPartitions')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('explorer.allPartitions')}</SelectItem>
               {(partitionsData?.data ?? []).map((item) => (
-                <option key={item.id} value={item.id}>
+                <SelectItem key={item.id} value={item.id}>
                   {item.id}
-                </option>
+                </SelectItem>
               ))}
-            </select>
+              </SelectContent>
+            </Select>
           </>
         ) : null}
         <div className="relative">
@@ -131,7 +152,7 @@ export default function ExplorerMessagesPage() {
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             className="pl-9"
-            placeholder="Search subject or sequence"
+            placeholder={t('explorer.searchSubjectOrSequence')}
           />
         </div>
       </div>
@@ -140,12 +161,12 @@ export default function ExplorerMessagesPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Time</TableHead>
-              <TableHead>Topic</TableHead>
-              <TableHead>Partition</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Sequence</TableHead>
-              <TableHead className="text-right">Size</TableHead>
+              <TableHead>{t('explorer.time')}</TableHead>
+              <TableHead>{t('explorer.topic')}</TableHead>
+              <TableHead>{t('explorer.partitionId')}</TableHead>
+              <TableHead>{t('dashboard.status')}</TableHead>
+              <TableHead className="text-right">{t('explorer.sequence')}</TableHead>
+              <TableHead className="text-right">{t('explorer.size')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -160,7 +181,7 @@ export default function ExplorerMessagesPage() {
             ) : messages.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="h-40 text-center text-sm text-muted-foreground">
-                  No messages match these filters.
+                  {t('explorer.noMessagesMatch')}
                 </TableCell>
               </TableRow>
             ) : (

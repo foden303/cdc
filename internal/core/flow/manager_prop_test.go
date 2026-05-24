@@ -163,6 +163,7 @@ func (n *mockNATSClient) ListConsumers(_ context.Context, _ int, _ int) ([]ports
 }
 func (n *mockNATSClient) CreateStream(_ context.Context, _ []string) error { return nil }
 func (n *mockNATSClient) CreateDLQStream(_ context.Context) error          { return nil }
+func (n *mockNATSClient) Health(_ context.Context) error                   { return nil }
 func (n *mockNATSClient) Close()                                           {}
 
 type mockSource struct {

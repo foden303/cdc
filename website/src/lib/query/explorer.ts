@@ -6,14 +6,18 @@ import type {
   ListTopicsResponse,
   ListPartitionsResponse,
   ListMessagesResponse,
+  ListDLQMessagesResponse,
+  ListConsumersResponse,
   ReprocessDLQResponse,
 } from '@/types/api';
 
 /** Query key factory for explorer queries. */
 export const explorerKeys = {
   topics: (page?: number) => ['topics', page] as const,
+  consumers: (page?: number) => ['consumers', page] as const,
   partitions: (topic: string, page?: number) => ['partitions', topic, page] as const,
   messages: (params: Record<string, unknown>) => ['messages', params] as const,
+  dlqMessages: (page?: number) => ['dlqMessages', page] as const,
 };
 
 /** Fetches topic list with 10s polling. */
@@ -44,6 +48,19 @@ export function usePartitions(topic: string, page = 1, limit = 25) {
   });
 }
 
+/** Fetches flow consumers with lag/pending summary. */
+export function useConsumers(page = 1, limit = 25) {
+  return useQuery({
+    queryKey: explorerKeys.consumers(page),
+    queryFn: () =>
+      api.get<ListConsumersResponse>(ENDPOINTS.consumers, {
+        'pagination.page': page,
+        'pagination.limit': limit,
+      }),
+    refetchInterval: POLLING.PARTITIONS,
+  });
+}
+
 /** Fetches messages with filtering — manual refresh only (no auto-polling). */
 export function useMessages(params: {
   status?: number;
@@ -67,6 +84,19 @@ export function useMessages(params: {
   });
 }
 
+/** Fetches dead-letter queue messages. */
+export function useDLQMessages(page = 1, limit = 25) {
+  return useQuery({
+    queryKey: explorerKeys.dlqMessages(page),
+    queryFn: () =>
+      api.get<ListDLQMessagesResponse>(ENDPOINTS.dlqMessages, {
+        'pagination.page': page,
+        'pagination.limit': limit,
+      }),
+    refetchInterval: POLLING.MESSAGES,
+  });
+}
+
 /** Mutates to trigger DLQ reprocessing. */
 export function useReprocessDLQ() {
   const qc = useQueryClient();
@@ -75,6 +105,7 @@ export function useReprocessDLQ() {
     onSuccess: () => {
       // Invalidate messages since they might get cleared or status updated
       qc.invalidateQueries({ queryKey: ['messages'] });
+      qc.invalidateQueries({ queryKey: ['dlqMessages'] });
     },
   });
 }

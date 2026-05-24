@@ -1,4 +1,4 @@
-import { useMemo, useRef, useCallback, useState, useEffect } from 'react';
+import { useMemo } from 'react';
 import {
   AreaChart,
   Area,
@@ -10,7 +10,7 @@ import {
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useTranslation } from 'react-i18next';
-import { CHART_MAX_POINTS } from '@/config/constants';
+import type { DashboardThroughputPoint } from '@/types/api';
 
 interface DataPoint {
   time: string;
@@ -18,35 +18,24 @@ interface DataPoint {
 }
 
 interface ThroughputChartProps {
-  currentValue: number | undefined;
+  points: DashboardThroughputPoint[];
 }
 
-/**
- * Rolling area chart for throughput — accumulates data points over time.
- * Keeps up to CHART_MAX_POINTS points in memory using a ref to avoid re-renders.
- */
-export function ThroughputChart({ currentValue }: ThroughputChartProps) {
+/** Rolling area chart for throughput returned by the backend dashboard API. */
+export function ThroughputChart({ points }: ThroughputChartProps) {
   const { t } = useTranslation();
-  const dataRef = useRef<DataPoint[]>([]);
-  const [chartData, setChartData] = useState<DataPoint[]>([]);
-
-  // Append new data point when currentValue changes
-  const appendPoint = useCallback((value: number) => {
-    const now = new Date();
-    const time = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
-
-    dataRef.current = [
-      ...dataRef.current.slice(-(CHART_MAX_POINTS - 1)),
-      { time, value },
-    ];
-    setChartData([...dataRef.current]);
-  }, []);
-
-  useEffect(() => {
-    if (currentValue !== undefined) {
-      appendPoint(currentValue);
-    }
-  }, [currentValue, appendPoint]);
+  const chartData = useMemo<DataPoint[]>(() => {
+    return points.map((point) => {
+      const date = new Date(point.timestamp);
+      return {
+        time: `${date.getHours().toString().padStart(2, '0')}:${date
+          .getMinutes()
+          .toString()
+          .padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}`,
+        value: point.throughput,
+      };
+    });
+  }, [points]);
 
   const maxValue = useMemo(() => {
     if (chartData.length === 0) return 100;

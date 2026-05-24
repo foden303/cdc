@@ -1,5 +1,6 @@
 import { Copy } from 'lucide-react';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { JsonViewer } from '@/components/ui/json-viewer';
@@ -14,6 +15,7 @@ export function MessageDetailSheet({
   message: MessageItem | null;
   onOpenChange: (open: boolean) => void;
 }) {
+  const { t } = useTranslation();
   const raw = message ? decodePayload(message.data) : '';
   const parsedSubject = message ? parseSubject(message.subject) : null;
   let json: unknown = null;
@@ -23,9 +25,9 @@ export function MessageDetailSheet({
     json = null;
   }
 
-  const copy = async (value: string, label: string) => {
+  const copy = async (value: string) => {
     await navigator.clipboard.writeText(value);
-    toast.success(`${label} copied`);
+    toast.success(t('explorer.copied'));
   };
 
   return (
@@ -38,20 +40,20 @@ export function MessageDetailSheet({
         {message && (
           <div className="space-y-5 py-4">
             <section className="grid grid-cols-2 gap-3 text-xs">
-              <Info label="Sequence" value={String(message.sequence)} />
-              <Info label="Topic" value={parsedSubject?.topic || '-'} />
-              <Info label="Partition" value={parsedSubject?.partition || '-'} />
-              <Info label="Timestamp" value={formatTime(message.timestamp)} />
-              <Info label="Source" value={parsedSubject?.sourceId || '-'} />
-              <Info label="Size" value={formatBytes(messageSize(message.data))} />
+              <Info label={t('explorer.sequence')} value={String(message.sequence)} />
+              <Info label={t('explorer.topic')} value={parsedSubject?.topic || '-'} />
+              <Info label={t('explorer.partitionId')} value={parsedSubject?.partition || '-'} />
+              <Info label={t('explorer.timestamp')} value={formatTime(message.timestamp)} />
+              <Info label={t('explorer.source')} value={parsedSubject?.sourceId || '-'} />
+              <Info label={t('explorer.size')} value={formatBytes(messageSize(message.data))} />
             </section>
 
             <section>
               <div className="mb-2 flex items-center justify-between">
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Payload
+                  {t('explorer.payload')}
                 </h3>
-                <Button size="xs" variant="outline" onClick={() => copy(raw, 'Payload')}>
+                <Button size="xs" variant="outline" onClick={() => copy(raw)}>
                   <Copy className="h-3 w-3" />
                 </Button>
               </div>
@@ -67,12 +69,12 @@ export function MessageDetailSheet({
             <section>
               <div className="mb-2 flex items-center justify-between">
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Headers
+                  {t('explorer.headers')}
                 </h3>
                 <Button
                   size="xs"
                   variant="outline"
-                  onClick={() => copy(JSON.stringify(message.headers || {}, null, 2), 'Headers')}
+                  onClick={() => copy(JSON.stringify(message.headers || {}, null, 2))}
                 >
                   <Copy className="h-3 w-3" />
                 </Button>

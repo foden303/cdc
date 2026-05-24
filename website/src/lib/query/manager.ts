@@ -5,39 +5,79 @@ import { POLLING } from '@/config/constants';
 import type {
   SourceConfig,
   SinkConfig,
-  GetConfigResponse,
   TestConnectionResponse,
   DiscoverTablesResponse,
+  ListSourcesResponse,
+  ListSinksResponse,
   ListFlowsResponse,
   FlowConfig,
   GetFlowStatsResponse,
-  GetFlowTableProgressResponse,
+  GetFlowProgressResponse,
+  GetStatsResponse,
 } from '@/types/api';
 
 // ─── Query Keys ──────────────────────────────────────────────────────
 
 export const managerKeys = {
-  config: ['config'] as const,
+  sources: ['sources'] as const,
+  sinks: ['sinks'] as const,
   flows: ['flows'] as const,
   flow: (id: string) => ['flow', id] as const,
   flowStats: (id: string) => ['flowStats', id] as const,
   flowProgress: (id: string) => ['flowProgress', id] as const,
+  stats: ['stats'] as const,
   sourceTables: (id: string) => ['sourceTables', id] as const,
   sinkTables: (id: string) => ['sinkTables', id] as const,
 };
 
-// ─── Config (Sources + Sinks live here) ──────────────────────────────
-
-/** Fetches the full system config (includes sources and sinks arrays). */
+/** Composite runtime config assembled from the backend list endpoints. */
 export function useConfig() {
+  const sourcesQuery = useSources();
+  const sinksQuery = useSinks();
+  const flowsQuery = useFlows();
+
+  return {
+    data: {
+      config: {
+        sources: sourcesQuery.data?.sources ?? [],
+        sinks: sinksQuery.data?.sinks ?? [],
+        flows: flowsQuery.data?.flows ?? [],
+      },
+      available_sources: ['postgres', 'mysql'],
+      available_sinks: ['postgres', 'elasticsearch', 'clickhouse'],
+    },
+    isLoading:
+      sourcesQuery.isLoading || sinksQuery.isLoading || flowsQuery.isLoading,
+    isFetching:
+      sourcesQuery.isFetching || sinksQuery.isFetching || flowsQuery.isFetching,
+    refetch: () =>
+      Promise.all([
+        sourcesQuery.refetch(),
+        sinksQuery.refetch(),
+        flowsQuery.refetch(),
+      ]),
+  };
+}
+
+/** Fetches aggregate source/sink component stats. */
+export function useStats() {
   return useQuery({
-    queryKey: managerKeys.config,
-    queryFn: () => api.get<GetConfigResponse>(ENDPOINTS.config),
-    refetchInterval: POLLING.FLOWS,
+    queryKey: managerKeys.stats,
+    queryFn: () => api.get<GetStatsResponse>(ENDPOINTS.stats),
+    refetchInterval: POLLING.STATS,
   });
 }
 
 // ─── Sources ─────────────────────────────────────────────────────────
+
+/** Fetches all sources. */
+export function useSources() {
+  return useQuery({
+    queryKey: managerKeys.sources,
+    queryFn: () => api.get<ListSourcesResponse>(ENDPOINTS.sources),
+    refetchInterval: POLLING.FLOWS,
+  });
+}
 
 /** Add a new source connector. */
 export function useAddSource() {
@@ -45,7 +85,7 @@ export function useAddSource() {
   return useMutation({
     mutationFn: (source: Partial<SourceConfig>) =>
       api.post<{ instance_id: string }>(ENDPOINTS.sources, { source }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: managerKeys.config }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: managerKeys.sources }),
   });
 }
 
@@ -58,7 +98,7 @@ export function useUpdateSource() {
         ENDPOINTS.sourceById(source.instance_id),
         { source },
       ),
-    onSuccess: () => qc.invalidateQueries({ queryKey: managerKeys.config }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: managerKeys.sources }),
   });
 }
 
@@ -68,7 +108,7 @@ export function useRemoveSource() {
   return useMutation({
     mutationFn: (instanceId: string) =>
       api.del<{ success: boolean }>(ENDPOINTS.sourceById(instanceId)),
-    onSuccess: () => qc.invalidateQueries({ queryKey: managerKeys.config }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: managerKeys.sources }),
   });
 }
 
@@ -76,7 +116,7 @@ export function useRemoveSource() {
 export function useTestSourceConnection() {
   return useMutation({
     mutationFn: (source: Partial<SourceConfig>) =>
-      api.post<TestConnectionResponse>(ENDPOINTS.sourcesTest, { source }),
+      api.post<TestConnectionResponse>(ENDPOINTS.testSource, { source }),
   });
 }
 
@@ -85,12 +125,21 @@ export function useDiscoverSourceTables(sourceId: string) {
   return useQuery({
     queryKey: managerKeys.sourceTables(sourceId),
     queryFn: () =>
-      api.get<DiscoverTablesResponse>(ENDPOINTS.sourceTables(sourceId)),
+      api.get<DiscoverTablesResponse>(ENDPOINTS.discoverTables(sourceId)),
     enabled: !!sourceId,
   });
 }
 
 // ─── Sinks ───────────────────────────────────────────────────────────
+
+/** Fetches all sinks. */
+export function useSinks() {
+  return useQuery({
+    queryKey: managerKeys.sinks,
+    queryFn: () => api.get<ListSinksResponse>(ENDPOINTS.sinks),
+    refetchInterval: POLLING.FLOWS,
+  });
+}
 
 /** Add a new sink connector. */
 export function useAddSink() {
@@ -98,7 +147,7 @@ export function useAddSink() {
   return useMutation({
     mutationFn: (sink: Partial<SinkConfig>) =>
       api.post<{ instance_id: string }>(ENDPOINTS.sinks, { sink }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: managerKeys.config }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: managerKeys.sinks }),
   });
 }
 
@@ -111,7 +160,7 @@ export function useUpdateSink() {
         ENDPOINTS.sinkById(sink.instance_id),
         { sink },
       ),
-    onSuccess: () => qc.invalidateQueries({ queryKey: managerKeys.config }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: managerKeys.sinks }),
   });
 }
 
@@ -121,7 +170,7 @@ export function useRemoveSink() {
   return useMutation({
     mutationFn: (instanceId: string) =>
       api.del<{ success: boolean }>(ENDPOINTS.sinkById(instanceId)),
-    onSuccess: () => qc.invalidateQueries({ queryKey: managerKeys.config }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: managerKeys.sinks }),
   });
 }
 
@@ -129,7 +178,7 @@ export function useRemoveSink() {
 export function useTestSinkConnection() {
   return useMutation({
     mutationFn: (sink: Partial<SinkConfig>) =>
-      api.post<TestConnectionResponse>(ENDPOINTS.sinksTest, { sink }),
+      api.post<TestConnectionResponse>(ENDPOINTS.testSink, { sink }),
   });
 }
 
@@ -138,7 +187,7 @@ export function useDiscoverSinkTables(sinkId: string) {
   return useQuery({
     queryKey: managerKeys.sinkTables(sinkId),
     queryFn: () =>
-      api.get<DiscoverTablesResponse>(ENDPOINTS.sinkTables(sinkId)),
+      api.get<DiscoverTablesResponse>(ENDPOINTS.discoverSinkTables(sinkId)),
     enabled: !!sinkId,
   });
 }
@@ -185,6 +234,7 @@ export function useCreateFlow() {
         batch_size?: number;
         flush_interval_ms?: number;
         filter_expression?: string;
+        partition_count?: number;
       };
     }) => api.post<{ flow_id: string; status: string }>(ENDPOINTS.flows, payload),
     onSuccess: () => qc.invalidateQueries({ queryKey: managerKeys.flows }),
@@ -211,6 +261,7 @@ export function useUpdateFlow() {
         batch_size?: number;
         flush_interval_ms?: number;
         filter_expression?: string;
+        partition_count?: number;
       };
     }) =>
       api.put<{ flow: FlowConfig }>(
@@ -262,12 +313,12 @@ export function useFlowStats(flowId: string) {
   });
 }
 
-/** Fetches per-table sync progress for a single flow. */
+/** Fetches table sync progress for a single flow. */
 export function useFlowProgress(flowId: string) {
   return useQuery({
     queryKey: managerKeys.flowProgress(flowId),
     queryFn: () =>
-      api.get<GetFlowTableProgressResponse>(ENDPOINTS.flowTables(flowId)),
+      api.get<GetFlowProgressResponse>(ENDPOINTS.flowProgress(flowId)),
     enabled: !!flowId,
     refetchInterval: POLLING.FLOW_STATS,
   });

@@ -6,6 +6,10 @@ import { cn } from '@/lib/utils';
 /** Route-to-label mapping for breadcrumb display. */
 const SEGMENT_LABELS: Record<string, string> = {
   explorer: 'nav.explorer',
+  topics: 'nav.topics',
+  partitions: 'explorer.partitions',
+  consumers: 'nav.consumers',
+  dlq: 'nav.dlq',
   manager: 'nav.manager',
   sources: 'nav.sources',
   sinks: 'nav.sinks',
@@ -37,7 +41,11 @@ export function Breadcrumb() {
       </Link>
 
       {segments.map((segment, i) => {
-        const path = '/' + segments.slice(0, i + 1).join('/');
+        const isPartitionGroup =
+          segments[0] === 'explorer' && segments[1] === 'topics' && segment === 'partitions';
+        const path = isPartitionGroup
+          ? '/' + segments.slice(0, 3).join('/')
+          : '/' + segments.slice(0, i + 1).join('/');
         const isLast = i === segments.length - 1;
         const labelKey = SEGMENT_LABELS[segment];
         const label = labelKey ? t(labelKey) : decodeURIComponent(segment);

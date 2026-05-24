@@ -4,64 +4,57 @@ package cdc.v1;
 
 option go_package = "github.com/foden/cdc/api/proto/v1;cdcpb";
 
-// Redis-specific settings for a sink connector.
-message RedisSettings {
-  string command = 1;      // set, hset, sadd, bf_add
-  string key_template = 2; // CEL template
-  repeated string value_fields = 3;
-  int32 ttl = 4;           // seconds
-}
-
 // Configuration for a CDC sink connector.
+// Connection-level fields only — no topic routing, field mappings, or CEL transformations.
 message SinkConfig {
   string type = 1;
-  repeated string url = 2;
-  optional string username = 3;
-  optional string password = 4;
-  optional string index_prefix = 5;
-  optional string index = 6;
-  map<string, string> index_mapping = 7;
-  optional int32 batch_size = 8;
-  optional int32 flush_interval_ms = 9;
-  optional int32 max_retries = 10;
-  optional int32 retry_base_ms = 11;
-  optional string api_key = 12;
-  string instance_id = 13; // Unique ID for sink
-  optional string name = 14;        // Display name
-  optional string topic = 15;       // Routing topic
-  map<string, string> field_mapping = 16;
-  RedisSettings redis = 17;
-  optional string host = 18;
-  optional int32 port = 19;
-  optional string database = 20;
+  optional string host = 2;
+  optional int32 port = 3;
+  optional string username = 4;
+  optional string password = 5;
+  optional string database = 6;
+  string instance_id = 7;
+  optional string name = 8;
+  repeated string url = 9;
+  optional string api_key = 10;
+  optional string index_prefix = 11;
+  optional int32 max_retries = 12;
 }
 
-// Request to add a new sink.
-message AddSinkRequest {
+// Request to create a new sink.
+message CreateSinkRequest {
   SinkConfig sink = 1;
 }
 
-// Response after adding a sink.
-message AddSinkResponse {
+// Response after creating a sink.
+message CreateSinkResponse {
   string instance_id = 1;
 }
 
-// Request to remove an existing sink.
-message RemoveSinkRequest {
+// Request to get a sink by instance_id.
+message GetSinkRequest {
   string instance_id = 1;
 }
 
-// Response after removing a sink.
-message RemoveSinkResponse {
-  bool success = 1;
-}
-
-// Request to update an existing sink.
-message UpdateSinkRequest {
+// Response containing a sink configuration.
+message GetSinkResponse {
   SinkConfig sink = 1;
 }
 
-// Response after updating a sink.
-message UpdateSinkResponse {
+// Request to list all sinks.
+message ListSinksRequest {}
+
+// Response containing all sink configurations.
+message ListSinksResponse {
+  repeated SinkConfig sinks = 1;
+}
+
+// Request to delete an existing sink.
+message DeleteSinkRequest {
+  string instance_id = 1;
+}
+
+// Response after deleting a sink.
+message DeleteSinkResponse {
   bool success = 1;
 }

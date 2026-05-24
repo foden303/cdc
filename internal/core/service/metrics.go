@@ -127,6 +127,7 @@ func (s *MetricsService) Performance(
 			srcThroughput = flowStats.EventsPerSecond
 			sinkThroughput = flowStats.EventsPerSecond
 			sinkLatency = float64(flowStats.ReplicationLagMs)
+			activeWorkers += flowStats.RunningWorkers
 		}
 
 		if sp, ok := sourcePerf[flow.SourceID]; ok {
@@ -141,7 +142,6 @@ func (s *MetricsService) Performance(
 		totalThroughput += srcThroughput
 		totalLatency += sinkLatency
 		totalErrorRate += srcErrorRate
-		activeWorkers += dashboardWorkerCount(flow)
 	}
 
 	var avgLatency, avgErrorRate float64

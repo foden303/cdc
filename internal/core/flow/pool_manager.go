@@ -21,11 +21,12 @@ const (
 
 // PoolMetrics holds runtime metrics for a single flow's pool.
 type PoolMetrics struct {
-	FlowID         string     `json:"flow_id"`
-	RunningWorkers int        `json:"running_workers"`
-	WaitingTasks   int        `json:"waiting_tasks"`
-	PoolCapacity   int        `json:"pool_capacity"`
-	Health         PoolHealth `json:"health"`
+	FlowID             string     `json:"flow_id"`
+	RunningWorkers     int        `json:"running_workers"`
+	WaitingTasks       int        `json:"waiting_tasks"`
+	PoolCapacity       int        `json:"pool_capacity"`
+	UtilizationPercent float64    `json:"utilization_percent"`
+	Health             PoolHealth `json:"health"`
 }
 
 // PoolManager manages the lifecycle of all flow worker pools.
@@ -85,11 +86,12 @@ func (pm *PoolManager) GetMetrics(flowID string) *PoolMetrics {
 	}
 
 	return &PoolMetrics{
-		FlowID:         flowID,
-		RunningWorkers: pool.Running(),
-		WaitingTasks:   pool.Waiting(),
-		PoolCapacity:   pool.Cap(),
-		Health:         calculateHealth(pool),
+		FlowID:             flowID,
+		RunningWorkers:     pool.Running(),
+		WaitingTasks:       pool.Waiting(),
+		PoolCapacity:       pool.Cap(),
+		UtilizationPercent: calculateUtilization(pool),
+		Health:             calculateHealth(pool),
 	}
 }
 
@@ -101,11 +103,12 @@ func (pm *PoolManager) GetAllMetrics() []*PoolMetrics {
 	metrics := make([]*PoolMetrics, 0, len(pm.pools))
 	for flowID, pool := range pm.pools {
 		metrics = append(metrics, &PoolMetrics{
-			FlowID:         flowID,
-			RunningWorkers: pool.Running(),
-			WaitingTasks:   pool.Waiting(),
-			PoolCapacity:   pool.Cap(),
-			Health:         calculateHealth(pool),
+			FlowID:             flowID,
+			RunningWorkers:     pool.Running(),
+			WaitingTasks:       pool.Waiting(),
+			PoolCapacity:       pool.Cap(),
+			UtilizationPercent: calculateUtilization(pool),
+			Health:             calculateHealth(pool),
 		})
 	}
 	return metrics
@@ -147,12 +150,7 @@ func (pm *PoolManager) ActiveCount() int {
 // calculateHealth determines pool health based on utilization percentage.
 // idle: <10%, active: 10-80%, saturated: >80%
 func calculateHealth(pool *ants.Pool) PoolHealth {
-	cap := pool.Cap()
-	if cap == 0 {
-		return PoolHealthIdle
-	}
-
-	utilization := float64(pool.Running()) / float64(cap) * 100
+	utilization := calculateUtilization(pool)
 
 	switch {
 	case utilization > 80:
@@ -162,4 +160,12 @@ func calculateHealth(pool *ants.Pool) PoolHealth {
 	default:
 		return PoolHealthIdle
 	}
+}
+
+func calculateUtilization(pool *ants.Pool) float64 {
+	capacity := pool.Cap()
+	if capacity == 0 {
+		return 0
+	}
+	return float64(pool.Running()) / float64(capacity) * 100
 }

@@ -7,6 +7,10 @@ import {
   Database,
   HardDrive,
   GitBranch,
+  MessageSquareText,
+  RadioTower,
+  Inbox,
+  Layers,
   ChevronLeft,
   ChevronRight,
   ChevronDown,
@@ -32,8 +36,12 @@ const ICON_MAP = {
   GitBranch,
 } as const;
 
-/** Sub-navigation icon map for manager children. */
+/** Sub-navigation icon map. */
 const SUB_ICON_MAP: Record<string, React.ElementType> = {
+  topics: Layers,
+  consumers: RadioTower,
+  messages: MessageSquareText,
+  dlq: Inbox,
   sources: Database,
   sinks: HardDrive,
   flows: GitBranch,
@@ -45,9 +53,14 @@ export function Sidebar() {
   const collapsed = useSidebarStore((s) => s.collapsed);
   const toggle = useSidebarStore((s) => s.toggle);
   const location = useLocation();
-  const [managerOpen, setManagerOpen] = useState(
-    location.pathname.startsWith('/manager'),
-  );
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
+    explorer: location.pathname.startsWith('/explorer'),
+    manager: location.pathname.startsWith('/manager'),
+  });
+
+  const toggleGroup = (key: string) => {
+    setOpenGroups((current) => ({ ...current, [key]: !current[key] }));
+  };
 
   return (
     <aside
@@ -73,13 +86,14 @@ export function Sidebar() {
         {NAV_ITEMS.map((item) => {
           const Icon = ICON_MAP[item.icon];
 
-          // Items with children (Manager)
+          // Items with children
           if ('children' in item && item.children) {
-            const isActive = location.pathname.startsWith('/manager');
+            const isActive = location.pathname.startsWith(`/${item.key}`);
+            const isOpen = openGroups[item.key] ?? false;
             return (
               <div key={item.key}>
                 <button
-                  onClick={() => setManagerOpen(!managerOpen)}
+                  onClick={() => toggleGroup(item.key)}
                   className={cn(
                     'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors cursor-pointer',
                     isActive
@@ -101,7 +115,7 @@ export function Sidebar() {
                       <ChevronDown
                         className={cn(
                           'h-4 w-4 transition-transform',
-                          managerOpen && 'rotate-180',
+                          isOpen && 'rotate-180',
                         )}
                       />
                     </>
@@ -109,7 +123,7 @@ export function Sidebar() {
                 </button>
 
                 {/* Sub items */}
-                {managerOpen && !collapsed && (
+                {isOpen && !collapsed && (
                   <div className="ml-4 mt-1 space-y-0.5 border-l border-border pl-3">
                     {item.children.map((child) => {
                       const SubIcon = SUB_ICON_MAP[child.key] || Settings;

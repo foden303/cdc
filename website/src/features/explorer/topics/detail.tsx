@@ -12,6 +12,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -42,6 +43,7 @@ function partitionPath(topic: string, partition: string) {
 }
 
 export default function ExplorerTopicDetailPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const params = useParams();
   const topic = decodeURIComponent(params.topic ?? '');
@@ -51,13 +53,13 @@ export default function ExplorerTopicDetailPage() {
 
   const copyTopic = async () => {
     await navigator.clipboard.writeText(topic);
-    toast.success('Topic copied');
+    toast.success(t('explorer.topicCopied'));
   };
 
   if (!topic) {
     return (
       <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-        Missing topic.
+        {t('explorer.missingTopic')}
       </div>
     );
   }
@@ -73,14 +75,14 @@ export default function ExplorerTopicDetailPage() {
             onClick={() => navigate(ROUTES.EXPLORER_TOPICS)}
           >
             <ArrowLeft className="h-4 w-4" />
-            Topics
+            {t('explorer.topics')}
           </Button>
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-2xl font-semibold tracking-tight text-foreground">
               {parsed.shortName}
             </h1>
-            <Badge variant="outline" className="border-sky-500/25 bg-sky-500/10 text-sky-300">
-              Topic
+            <Badge variant="outline" className="border-sky-500/25 bg-sky-500/10 text-sky-700 dark:text-sky-300">
+              {t('explorer.topic')}
             </Badge>
           </div>
           <p className="mt-1 max-w-4xl truncate font-mono text-xs text-muted-foreground">
@@ -90,35 +92,35 @@ export default function ExplorerTopicDetailPage() {
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={copyTopic}>
             <Copy className="h-4 w-4" />
-            Copy
+            {t('explorer.copy')}
           </Button>
           <Button variant="outline" size="sm" onClick={() => refetch()}>
             <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
-            Refresh
+            {t('explorer.refresh')}
           </Button>
         </div>
       </div>
 
       <div className="grid gap-3 md:grid-cols-4">
-        <Metric label="Source" value={parsed.sourceId || '-'} icon={<Database className="h-4 w-4" />} />
-        <Metric label="Schema" value={parsed.schema || '-'} icon={<GitBranch className="h-4 w-4" />} />
-        <Metric label="Table" value={parsed.table || '-'} icon={<Database className="h-4 w-4" />} />
-        <Metric label="Partitions" value={String(partitions.length)} icon={<GitBranch className="h-4 w-4" />} />
+        <Metric label={t('explorer.source')} value={parsed.sourceId || '-'} icon={<Database className="h-4 w-4" />} />
+        <Metric label={t('explorer.schema')} value={parsed.schema || '-'} icon={<GitBranch className="h-4 w-4" />} />
+        <Metric label={t('explorer.table')} value={parsed.table || '-'} icon={<Database className="h-4 w-4" />} />
+        <Metric label={t('explorer.partitions')} value={String(partitions.length)} icon={<GitBranch className="h-4 w-4" />} />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
         <Card className="overflow-hidden">
           <CardHeader>
-            <CardTitle>Partitions</CardTitle>
-            <CardDescription>Pick a partition to inspect ordered CDC messages.</CardDescription>
+            <CardTitle>{t('explorer.partitions')}</CardTitle>
+            <CardDescription>{t('explorer.pickPartitionDesc')}</CardDescription>
           </CardHeader>
           <CardContent className="p-0">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Partition</TableHead>
-                  <TableHead className="text-right">Messages</TableHead>
-                  <TableHead className="w-20 text-right">Open</TableHead>
+                  <TableHead>{t('explorer.partitionId')}</TableHead>
+                  <TableHead className="text-right">{t('explorer.messages')}</TableHead>
+                  <TableHead className="w-20 text-right">{t('explorer.open')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -133,7 +135,7 @@ export default function ExplorerTopicDetailPage() {
                 ) : partitions.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={3} className="h-36 text-center text-sm text-muted-foreground">
-                      No partitions found for this topic.
+                      {t('explorer.noPartitions')}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -145,7 +147,7 @@ export default function ExplorerTopicDetailPage() {
                     >
                       <TableCell>
                         <div className="font-mono text-sm font-semibold text-foreground">
-                          Partition {partition.id}
+                          {t('explorer.partitionLabel', { partition: partition.id })}
                         </div>
                         <div className="mt-1 font-mono text-[11px] text-muted-foreground">
                           {topic}.{partition.id}
@@ -166,14 +168,14 @@ export default function ExplorerTopicDetailPage() {
         <div className="space-y-3">
           <ContextLink
             icon={<RadioTower className="h-4 w-4" />}
-            title="Related consumers"
-            description="Flow workers currently reading this topic."
+            title={t('explorer.relatedConsumers')}
+            description={t('explorer.relatedConsumersDesc')}
             to={`${ROUTES.EXPLORER_CONSUMERS}?topic=${encodeURIComponent(topic)}`}
           />
           <ContextLink
             icon={<AlertTriangle className="h-4 w-4" />}
-            title="Topic DLQ"
-            description="Failed messages whose original subject belongs to this topic."
+            title={t('explorer.topicDlq')}
+            description={t('explorer.topicDlqDesc')}
             to={`${ROUTES.EXPLORER_DLQ}?topic=${encodeURIComponent(topic)}`}
           />
         </div>
@@ -211,7 +213,7 @@ function ContextLink({
       className="block rounded-lg border border-border bg-card p-4 transition-colors hover:border-sky-500/40 hover:bg-muted/30"
     >
       <div className="flex items-start gap-3">
-        <div className="rounded-md border border-sky-500/20 bg-sky-500/10 p-2 text-sky-300">
+        <div className="rounded-md border border-sky-500/20 bg-sky-500/10 p-2 text-sky-700 dark:text-sky-300">
           {icon}
         </div>
         <div className="min-w-0">

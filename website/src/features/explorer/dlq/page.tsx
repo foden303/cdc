@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Inbox, RefreshCw, RotateCcw, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -18,6 +19,7 @@ import { MessageDetailSheet } from '../components/MessageDetailSheet';
 import { formatBytes, formatTime, messageSize, StatusBadge } from '../shared';
 
 export default function ExplorerDLQPage() {
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const topicFilter = searchParams.get('topic') || '';
   const [selectedMessage, setSelectedMessage] = useState<DLQMessage | null>(null);
@@ -36,10 +38,10 @@ export default function ExplorerDLQPage() {
   const reprocessAll = async () => {
     try {
       const result = await reprocessMutation.mutateAsync();
-      toast.success(`Reprocessed ${result.count || 0} DLQ messages`);
+      toast.success(t('explorer.reprocessedCount', { count: result.count || 0 }));
       refetch();
     } catch (error: any) {
-      toast.error(error.message || 'Failed to reprocess DLQ');
+      toast.error(error.message || t('explorer.reprocessDlqFailed'));
     }
   };
 
@@ -47,15 +49,17 @@ export default function ExplorerDLQPage() {
     <div className="flex h-full flex-col gap-5">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">DLQ</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+            {t('explorer.dlq')}
+          </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Global failed-message inbox with original subjects, reasons, and reprocessing controls.
+            {t('explorer.dlqDesc')}
           </p>
           {topicFilter ? (
             <button
               type="button"
               onClick={() => setSearchParams({})}
-              className="mt-3 inline-flex max-w-full cursor-pointer items-center gap-2 rounded-full border border-rose-500/25 bg-rose-500/10 px-3 py-1 text-xs text-rose-300 transition-colors hover:bg-rose-500/15"
+              className="mt-3 inline-flex max-w-full cursor-pointer items-center gap-2 rounded-full border border-rose-500/25 bg-rose-500/10 px-3 py-1 text-xs text-rose-700 transition-colors hover:bg-rose-500/15 dark:text-rose-300"
             >
               <span className="truncate font-mono">{topicFilter}</span>
               <X className="h-3.5 w-3.5" />
@@ -68,27 +72,27 @@ export default function ExplorerDLQPage() {
           </Button>
           <Button size="sm" onClick={reprocessAll} disabled={reprocessMutation.isPending}>
             <RotateCcw className={`h-4 w-4 ${reprocessMutation.isPending ? 'animate-spin' : ''}`} />
-            Reprocess all
+            {t('explorer.reprocessAll')}
           </Button>
         </div>
       </div>
 
       <div className="grid gap-3 md:grid-cols-3">
-        <Metric label="Failed messages" value={messages.length.toLocaleString()} />
-        <Metric label="Current page" value={String(data?.pagination?.page ?? 1)} />
-        <Metric label="Page size" value={String(data?.pagination?.limit ?? 100)} />
+        <Metric label={t('explorer.failedMessages')} value={messages.length.toLocaleString()} />
+        <Metric label={t('explorer.currentPage')} value={String(data?.pagination?.page ?? 1)} />
+        <Metric label={t('explorer.pageSize')} value={String(data?.pagination?.limit ?? 100)} />
       </div>
 
       <div className="overflow-hidden rounded-lg border border-border bg-card">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Failed At</TableHead>
-              <TableHead>Original Subject</TableHead>
-              <TableHead>Reason</TableHead>
-              <TableHead className="text-right">Sequence</TableHead>
-              <TableHead className="text-right">Size</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead>{t('explorer.failedAt')}</TableHead>
+              <TableHead>{t('explorer.originalSubject')}</TableHead>
+              <TableHead>{t('explorer.reason')}</TableHead>
+              <TableHead className="text-right">{t('explorer.sequence')}</TableHead>
+              <TableHead className="text-right">{t('explorer.size')}</TableHead>
+              <TableHead>{t('dashboard.status')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -104,7 +108,7 @@ export default function ExplorerDLQPage() {
               <TableRow>
                 <TableCell colSpan={6} className="h-40 text-center text-sm text-muted-foreground">
                   <Inbox className="mx-auto mb-3 h-8 w-8 opacity-50" />
-                  DLQ is clean.
+                  {t('explorer.dlqClean')}
                 </TableCell>
               </TableRow>
             ) : (
