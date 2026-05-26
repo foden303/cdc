@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package cdc.v1;
+
+option go_package = "github.com/foden/cdc/api/proto/v1;cdcpb";
+
+// Sort order direction.
+enum SortOrder {
+  SORT_ORDER_UNSPECIFIED = 0;
+  SORT_ORDER_ASC = 1;
+  SORT_ORDER_DESC = 2;
+}
+
+// Sort specification for a single field.
+message Sort {
+  string field = 1;
+  SortOrder order = 2;
+}
+
+// Offset-based pagination request parameters.
+message OffsetPaginationRequest {
+  uint32 limit = 1;
+  uint32 page = 2;
+  repeated Sort sort = 3;
+}
+
+// Offset-based pagination response metadata.
+message OffsetPaginationResponse {
+  uint64 total_rows = 1;
+  uint32 limit = 2;
+  uint32 page = 3;
+  bool has_next = 4;
+  bool has_prev = 5;
+  repeated Sort sort = 6;
+}

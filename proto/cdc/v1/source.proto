@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+package cdc.v1;
+
+option go_package = "github.com/foden/cdc/api/proto/v1;cdcpb";
+
+// Configuration for a CDC source connector.
+// Connection-level fields only — no table lists, topic routing, or field mappings.
+message SourceConfig {
+  reserved 7, 8;
+  reserved "slot_name", "publication_name";
+
+  string type = 1;
+  string host = 2;
+  int32 port = 3;
+  optional string username = 4;
+  optional string password = 5;
+  string database = 6;
+  string instance_id = 9;
+  optional string name = 10;
+}
+
+// Request to create a new source.
+message CreateSourceRequest {
+  SourceConfig source = 1;
+}
+
+// Response after creating a source.
+message CreateSourceResponse {
+  string instance_id = 1;
+}
+
+// Request to get a source by instance_id.
+message GetSourceRequest {
+  string instance_id = 1;
+}
+
+// Response containing a source configuration.
+message GetSourceResponse {
+  SourceConfig source = 1;
+}
+
+// Request to list all sources.
+message ListSourcesRequest {}
+
+// Response containing all source configurations.
+message ListSourcesResponse {
+  repeated SourceConfig sources = 1;
+}
+
+// Request to delete an existing source.
+message DeleteSourceRequest {
+  string instance_id = 1;
+}
+
+// Response after deleting a source.
+message DeleteSourceResponse {
+  bool success = 1;
+}

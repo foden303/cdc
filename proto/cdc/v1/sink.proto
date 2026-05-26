@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+package cdc.v1;
+
+option go_package = "github.com/foden/cdc/api/proto/v1;cdcpb";
+
+// Configuration for a CDC sink connector.
+// Connection-level fields only — no topic routing, field mappings, or CEL transformations.
+message SinkConfig {
+  string type = 1;
+  optional string host = 2;
+  optional int32 port = 3;
+  optional string username = 4;
+  optional string password = 5;
+  optional string database = 6;
+  string instance_id = 7;
+  optional string name = 8;
+  repeated string url = 9;
+  optional string api_key = 10;
+  optional string index_prefix = 11;
+}
+
+// Request to create a new sink.
+message CreateSinkRequest {
+  SinkConfig sink = 1;
+}
+
+// Response after creating a sink.
+message CreateSinkResponse {
+  string instance_id = 1;
+}
+
+// Request to get a sink by instance_id.
+message GetSinkRequest {
+  string instance_id = 1;
+}
+
+// Response containing a sink configuration.
+message GetSinkResponse {
+  SinkConfig sink = 1;
+}
+
+// Request to list all sinks.
+message ListSinksRequest {}
+
+// Response containing all sink configurations.
+message ListSinksResponse {
+  repeated SinkConfig sinks = 1;
+}
+
+// Request to delete an existing sink.
+message DeleteSinkRequest {
+  string instance_id = 1;
+}
+
+// Response after deleting a sink.
+message DeleteSinkResponse {
+  bool success = 1;
+}

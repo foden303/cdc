@@ -1,0 +1,33 @@
+# CDC System Configuration
+# Only server-level settings. All sources, sinks, and flows are managed via API.
+
+# NATS JetStream connection
+nats:
+  url: "nats://127.0.0.1:4222"       # NATS server URL (env: NATS_URL)
+  stream_name: "CDC_EVENTS"           # JetStream stream name for CDC events
+  retention_days: 7                   # How long to retain events in stream
+  max_reconnects: -1                  # -1 = unlimited reconnect attempts
+  reconnect_wait_ms: 2000             # Wait between reconnect attempts
+  reconnect_buffer_size_mb: 64        # Buffer size during disconnection
+  max_ack_pending: 1000               # Max unacked messages per durable consumer
+  ack_wait_ms: 30000                  # Redelivery wait after an unacked message
+  max_deliver: 5                      # Delivery attempts before CDC moves the event to DLQ
+
+# Server ports
+server:
+  grpc_port: 9090                     # gRPC API port (env: GRPC_PORT)
+  http_port: 9091                     # REST gateway + metrics port (env: HTTP_PORT)
+
+# Prometheus query API for dashboard percentile metrics.
+# Use "http://prometheus:9090" when the app runs inside the docker network.
+prometheus:
+  url: "http://127.0.0.1:9095"        # Prometheus URL (env: PROMETHEUS_URL)
+  query_window: "5m"                  # PromQL rate window (env: PROMETHEUS_QUERY_WINDOW)
+
+# Logging
+log:
+  mode: "text"                        # "text" for dev, "json" for production (env: LOG_MODE)
+  level: "info"                       # "debug", "info", "warn", "error" (env: LOG_LEVEL)
+  # file_path: "/var/log/cdc/app.log" # Optional: enable file logging with rotation
+  # max_size_mb: 100                  # Max log file size before rotation
+  # max_backups: 5                    # Number of rotated files to keep
