@@ -946,7 +946,11 @@ func (m *Manager) startWorker(flow *ports.FlowConfig, sink ports.Sink) {
 	// Wrap ports.Sink as FlowSink
 	fs := &sinkAdapter{sink: sink}
 
-	worker := StartFlowWorker(context.Background(), flow, fs, m.poolManager, m.store, m.natsClient, m.maxDeliver, m.runtimeMetrics)
+	worker, err := StartFlowWorker(context.Background(), flow, fs, m.poolManager, m.store, m.natsClient, m.maxDeliver, m.runtimeMetrics)
+	if err != nil {
+		m.log.Error("failed to start flow worker", "flow_id", flow.FlowID, "err", err)
+		return
+	}
 	m.workers[flow.FlowID] = worker
 	m.log.Info("flow worker started", "flow_id", flow.FlowID, "sink_id", flow.SinkID)
 }

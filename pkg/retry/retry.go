@@ -67,10 +67,14 @@ func Do(ctx context.Context, cfg Config, fn func() error) error {
 		jitteredDelay := delay + jitter(delay)
 
 		// Wait or cancel
+		timer := time.NewTimer(jitteredDelay)
 		select {
 		case <-ctx.Done():
+			if !timer.Stop() {
+				<-timer.C
+			}
 			return ctx.Err()
-		case <-time.After(jitteredDelay):
+		case <-timer.C:
 		}
 
 		// Exponential backoff

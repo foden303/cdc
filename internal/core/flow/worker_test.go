@@ -2,6 +2,7 @@ package flow
 
 import (
 	"context"
+	"errors"
 	"io"
 	"log/slog"
 	"testing"
@@ -9,8 +10,10 @@ import (
 
 	"github.com/foden/cdc/internal/core/domain"
 	"github.com/foden/cdc/internal/core/ports"
+	coreruntime "github.com/foden/cdc/internal/core/runtime"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
+	"github.com/panjf2000/ants/v2"
 )
 
 type workerTestMsg struct {
@@ -34,6 +37,14 @@ func (m *workerTestMsg) TermWithReason(string) error               { return nil 
 type workerTestNATS struct {
 	dlqMoves int
 }
+
+type failingPoolManager struct{}
+
+func (f *failingPoolManager) CreatePool(string, int) (*ants.Pool, error) {
+	return nil, errors.New("shared pool rejected")
+}
+
+func (f *failingPoolManager) ReleasePool(string) {}
 
 func (n *workerTestNATS) PublishBatch(context.Context, func(*domain.Event) string, []*domain.Event) error {
 	return nil
@@ -65,6 +76,31 @@ func (n *workerTestNATS) CreateStream(context.Context, []string) error { return 
 func (n *workerTestNATS) CreateDLQStream(context.Context) error        { return nil }
 func (n *workerTestNATS) Health(context.Context) error                 { return nil }
 func (n *workerTestNATS) Close()                                       {}
+
+func TestStartFlowWorkerReturnsErrorWhenFallbackPoolCreationFails(t *testing.T) {
+	originalNewAntsPool := newAntsPool
+	newAntsPool = func(int, ...ants.Option) (*ants.Pool, error) {
+		return nil, errors.New("isolated pool failed")
+	}
+	t.Cleanup(func() { newAntsPool = originalNewAntsPool })
+
+	worker, err := StartFlowWorker(
+		context.Background(),
+		&FlowConfig{FlowID: "flow-1", SourceTable: "public.users", SinkTable: "public.users"},
+		nil,
+		&failingPoolManager{},
+		nil,
+		&workerTestNATS{},
+		3,
+		&coreruntime.Metrics{},
+	)
+	if err == nil {
+		t.Fatal("expected pool creation error")
+	}
+	if worker != nil {
+		t.Fatal("worker should be nil when pool creation fails")
+	}
+}
 
 func TestHandleFailureUsesConfiguredMaxDeliver(t *testing.T) {
 	natsClient := &workerTestNATS{}

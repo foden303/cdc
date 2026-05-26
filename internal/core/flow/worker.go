@@ -28,14 +28,21 @@ const defaultPoolSize = 4
 // defaultMaxDeliver matches the config package default for NATS max_deliver.
 const defaultMaxDeliver = 5
 
+var newAntsPool = ants.NewPool
+
 // FlowWorker processes events for a single flow using a dedicated ants pool.
 // Each FlowWorker owns a NATS durable consumer filtered to its source table
 // and submits batch processing tasks to its ants pool.
+type flowPoolManager interface {
+	CreatePool(flowID string, size int) (*ants.Pool, error)
+	ReleasePool(flowID string)
+}
+
 type FlowWorker struct {
 	flow           *FlowConfig
 	sink           FlowSink
 	pool           *ants.Pool
-	poolManager    *PoolManager
+	poolManager    flowPoolManager
 	store          ports.Store
 	natsClient     ports.NATSClient
 	runtimeMetrics *coreruntime.Metrics
@@ -53,12 +60,12 @@ func StartFlowWorker(
 	ctx context.Context,
 	flow *FlowConfig,
 	sink FlowSink,
-	poolManager *PoolManager,
+	poolManager flowPoolManager,
 	store ports.Store,
 	natsClient ports.NATSClient,
 	maxDeliver int,
 	runtimeMetrics *coreruntime.Metrics,
-) *FlowWorker {
+) (*FlowWorker, error) {
 	ctx, cancel := context.WithCancel(ctx)
 
 	// Create component-scoped logger with flow context
@@ -100,7 +107,11 @@ func StartFlowWorker(
 			"pool_size", poolSize,
 			"err", err)
 		// Keep the worker isolated if the shared pool manager rejects this flow.
-		antsPool, _ = ants.NewPool(poolSize)
+		antsPool, err = newAntsPool(poolSize)
+		if err != nil {
+			cancel()
+			return nil, fmt.Errorf("create isolated ants pool: %w", err)
+		}
 	}
 
 	w := &FlowWorker{
@@ -120,7 +131,7 @@ func StartFlowWorker(
 	}
 
 	go w.run(ctx)
-	return w
+	return w, nil
 }
 
 // flowConsumerName returns the NATS durable consumer name for this flow.
