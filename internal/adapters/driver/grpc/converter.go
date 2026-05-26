@@ -83,9 +83,6 @@ func protoToSinkConfig(pb *cdcpb.SinkConfig) *ports.SinkConfig {
 	if pb.IndexPrefix != nil {
 		cfg.IndexPrefix = *pb.IndexPrefix
 	}
-	if pb.MaxRetries != nil {
-		cfg.MaxRetries = *pb.MaxRetries
-	}
 	cfg.URL = pb.Url
 	return cfg
 }
@@ -123,9 +120,6 @@ func sinkConfigToProto(cfg *ports.SinkConfig) *cdcpb.SinkConfig {
 	}
 	if cfg.IndexPrefix != "" {
 		pb.IndexPrefix = &cfg.IndexPrefix
-	}
-	if cfg.MaxRetries != 0 {
-		pb.MaxRetries = &cfg.MaxRetries
 	}
 	return pb
 }

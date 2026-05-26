@@ -5,39 +5,16 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/foden/cdc/internal/core/domain"
 	"github.com/google/cel-go/cel"
 )
 
 // Filter evaluates a filter expression against event data.
-// It supports two modes:
-//   - CEL expression evaluation against JSON data payload via Evaluate(data []byte)
-//   - Simple metadata field matching via Match(ev *domain.Event) (legacy)
-//
 // CEL expressions receive a "data" variable which is the event's after/before payload as a map.
 // Example expressions: `data.status == "active"`, `data.amount > 100`
 // Empty expression always returns true (pass all).
 type Filter struct {
 	expression string
-	// CEL compiled program (nil means pass-all)
-	program cel.Program
-	// Legacy simple condition (nil means pass-all)
-	cond *condition
-}
-
-// operator represents a comparison operator for legacy simple expressions.
-type operator int
-
-const (
-	opEq operator = iota
-	opNe
-)
-
-// condition is a compiled legacy filter condition.
-type condition struct {
-	field string
-	op    operator
-	value string
+	program    cel.Program
 }
 
 // NewFilter parses a filter expression and returns a compiled Filter.
@@ -50,19 +27,9 @@ func NewFilter(expression string) (*Filter, error) {
 		return &Filter{expression: ""}, nil
 	}
 
-	// Try to parse as a CEL expression first
 	program, err := compileCEL(expr)
 	if err != nil {
-		// Fall back to legacy simple expression parsing for backward compatibility
-		cond, legacyErr := parseExpression(expr)
-		if legacyErr != nil {
-			// Return the CEL error as it's the primary engine
-			return nil, fmt.Errorf("filter: invalid expression %q: %w", expr, err)
-		}
-		return &Filter{
-			expression: expr,
-			cond:       cond,
-		}, nil
+		return nil, fmt.Errorf("filter: invalid CEL expression %q: %w", expr, err)
 	}
 
 	return &Filter{
@@ -98,7 +65,7 @@ func compileCEL(expr string) (cel.Program, error) {
 // A nil filter or empty expression always returns true (pass all).
 // If data is nil or empty, and a filter expression is set, returns false.
 func (f *Filter) Evaluate(data []byte) bool {
-	if f == nil || (f.program == nil && f.cond == nil) {
+	if f == nil || f.program == nil {
 		return true
 	}
 
@@ -106,14 +73,7 @@ func (f *Filter) Evaluate(data []byte) bool {
 		return false
 	}
 
-	// If we have a CEL program, evaluate it
-	if f.program != nil {
-		return f.evaluateCEL(data)
-	}
-
-	// Legacy mode: can't evaluate simple conditions against raw data
-	// Simple conditions only work with Match(ev)
-	return true
+	return f.evaluateCEL(data)
 }
 
 // evaluateCEL evaluates the CEL program against JSON data.
@@ -143,125 +103,10 @@ func (f *Filter) evaluateCEL(data []byte) bool {
 	return result
 }
 
-// Match evaluates the filter against an event's metadata fields (legacy mode).
-// Returns true if the event passes the filter (should be processed).
-// A nil filter or empty expression always returns true.
-func (f *Filter) Match(ev *domain.Event) bool {
-	if f == nil || (f.cond == nil && f.program == nil) {
-		return true
-	}
-
-	// If we have a legacy condition, use it
-	if f.cond != nil {
-		if ev == nil {
-			return false
-		}
-		fieldValue := getEventField(ev, f.cond.field)
-		switch f.cond.op {
-		case opEq:
-			return fieldValue == f.cond.value
-		case opNe:
-			return fieldValue != f.cond.value
-		default:
-			return true
-		}
-	}
-
-	// If we have a CEL program but no legacy condition, try evaluating against event data
-	if f.program != nil && ev != nil {
-		return f.Evaluate(ev.Data)
-	}
-
-	return true
-}
-
 // Expression returns the original filter expression string.
 func (f *Filter) Expression() string {
 	if f == nil {
 		return ""
 	}
 	return f.expression
-}
-
-// parseExpression parses a "field op value" expression into a condition (legacy).
-func parseExpression(expr string) (*condition, error) {
-	// Try != first (longer operator) to avoid matching == inside !=
-	if idx := strings.Index(expr, "!="); idx >= 0 {
-		field := strings.TrimSpace(expr[:idx])
-		value := strings.TrimSpace(expr[idx+2:])
-		if field == "" {
-			return nil, fmt.Errorf("filter: empty field name in expression %q", expr)
-		}
-		if err := validateField(field); err != nil {
-			return nil, err
-		}
-		return &condition{
-			field: field,
-			op:    opNe,
-			value: stripQuotes(value),
-		}, nil
-	}
-
-	if idx := strings.Index(expr, "=="); idx >= 0 {
-		field := strings.TrimSpace(expr[:idx])
-		value := strings.TrimSpace(expr[idx+2:])
-		if field == "" {
-			return nil, fmt.Errorf("filter: empty field name in expression %q", expr)
-		}
-		if err := validateField(field); err != nil {
-			return nil, err
-		}
-		return &condition{
-			field: field,
-			op:    opEq,
-			value: stripQuotes(value),
-		}, nil
-	}
-
-	return nil, fmt.Errorf("filter: unsupported expression syntax %q, expected \"field == value\" or \"field != value\"", expr)
-}
-
-// supportedFields lists the event metadata fields that can be filtered on (legacy mode).
-var supportedFields = map[string]bool{
-	"op":          true,
-	"table":       true,
-	"schema":      true,
-	"instance_id": true,
-}
-
-// validateField checks that the field name is a supported filter field (legacy mode).
-func validateField(field string) error {
-	if !supportedFields[field] {
-		return fmt.Errorf("filter: unsupported field %q, supported fields: op, table, schema, instance_id", field)
-	}
-	return nil
-}
-
-// getEventField extracts the value of a metadata field from an event.
-func getEventField(ev *domain.Event, field string) string {
-	if ev == nil {
-		return ""
-	}
-	switch field {
-	case "op":
-		return string(ev.Op)
-	case "table":
-		return ev.Table
-	case "schema":
-		return ev.Schema
-	case "instance_id":
-		return ev.InstanceID
-	default:
-		return ""
-	}
-}
-
-// stripQuotes removes surrounding single or double quotes from a value string.
-func stripQuotes(s string) string {
-	if len(s) >= 2 {
-		if (s[0] == '"' && s[len(s)-1] == '"') || (s[0] == '\'' && s[len(s)-1] == '\'') {
-			return s[1 : len(s)-1]
-		}
-	}
-	return s
 }

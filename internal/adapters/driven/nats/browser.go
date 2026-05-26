@@ -145,7 +145,7 @@ func (c *Client) ListTopics(ctx context.Context, limit int, page int) ([]string,
 				topics = append(topics, topic)
 			}
 		} else {
-			// Fallback for non-partitioned subjects
+			// Keep short subjects visible as standalone topics.
 			if !uniqueTopics[s] {
 				uniqueTopics[s] = true
 				topics = append(topics, s)

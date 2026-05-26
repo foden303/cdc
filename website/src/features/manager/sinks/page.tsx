@@ -14,9 +14,11 @@ import { SinkForm } from './SinkForm';
 import { formatNumber } from '@/lib/format';
 import type { SinkConfig } from '@/types/api';
 import { ConnectorCard } from '../components/ConnectorCard';
+import { DeleteConfirmDialog } from '../components/DeleteConfirmDialog';
 
 function sinkTypeLabel(type: SinkConfig['type']) {
   if (type === 'postgres') return 'PostgreSQL';
+  if (type === 'mysql') return 'MySQL';
   if (type === 'elasticsearch') return 'Elasticsearch';
   if (type === 'clickhouse') return 'ClickHouse';
   return String(type).toUpperCase();
@@ -37,6 +39,7 @@ export default function SinksPage() {
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingSink, setEditingSink] = useState<SinkConfig | null>(null);
+  const [deleteSinkId, setDeleteSinkId] = useState<string | null>(null);
 
   const { data, isLoading, refetch, isFetching } = useSinks();
   const { data: flowsData } = useFlows();
@@ -61,14 +64,14 @@ export default function SinksPage() {
     setFormOpen(true);
   };
 
-  const handleDeleteClick = async (instanceId: string) => {
-    if (confirm(t('manager.sinks.confirm.delete', { id: instanceId }))) {
-      try {
-        await removeMutation.mutateAsync(instanceId);
-        toast.success(t('manager.sinks.toast.deleted'));
-      } catch (err: any) {
-        toast.error(err.message || t('manager.sinks.toast.deleteFailed'));
-      }
+  const handleDeleteConfirm = async () => {
+    if (!deleteSinkId) return;
+    try {
+      await removeMutation.mutateAsync(deleteSinkId);
+      toast.success(t('manager.sinks.toast.deleted'));
+      setDeleteSinkId(null);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('manager.sinks.toast.deleteFailed'));
     }
   };
 
@@ -135,10 +138,10 @@ export default function SinksPage() {
           {sinks.map((sink) => {
             const usageCount = usageBySink.get(sink.instance_id) ?? 0;
             const stats = statsData?.sink_stats?.[sink.instance_id];
-            const written = stats?.success_count ?? 0;
+            const activeFlows = stats?.active_flows ?? usageCount;
+            const throughput = stats?.throughput ?? 0;
             const errors = stats?.failure_count ?? 0;
-            const total = written + errors;
-            const errorRate = total > 0 ? (errors / total) * 100 : 0;
+            const errorRate = stats?.error_rate ?? 0;
 
             return (
               <ConnectorCard
@@ -152,16 +155,16 @@ export default function SinksPage() {
                 metrics={[
                   {
                     label: t('manager.cards.usage', { defaultValue: 'Usage' }),
-                    value: usageCount > 0
+                    value: activeFlows > 0
                       ? t('manager.cards.usedByFlows', {
                           defaultValue: '{{count}} flows',
-                          count: usageCount,
+                          count: activeFlows,
                         })
                       : t('manager.cards.unused', { defaultValue: 'Unused' }),
                   },
                   {
-                    label: t('manager.cards.written', { defaultValue: 'Written' }),
-                    value: formatNumber(written),
+                    label: t('manager.cards.throughput', { defaultValue: 'Rate' }),
+                    value: `${formatNumber(throughput)}/s`,
                   },
                   {
                     label: t('manager.cards.errors', { defaultValue: 'Errors' }),
@@ -173,7 +176,7 @@ export default function SinksPage() {
                 deleteLabel={t('manager.sinks.card.deleteTooltip')}
                 deleteDisabled={removeMutation.isPending}
                 onEdit={() => handleEditClick(sink)}
-                onDelete={() => handleDeleteClick(sink.instance_id)}
+                onDelete={() => setDeleteSinkId(sink.instance_id)}
               />
             );
           })}
@@ -184,6 +187,16 @@ export default function SinksPage() {
         open={formOpen}
         onOpenChange={setFormOpen}
         sinkToEdit={editingSink}
+      />
+      <DeleteConfirmDialog
+        open={deleteSinkId !== null}
+        title={t('manager.sinks.delete')}
+        description={t('manager.sinks.confirm.delete', { id: deleteSinkId ?? '' })}
+        confirmLabel={t('common.delete')}
+        cancelLabel={t('common.cancel')}
+        loading={removeMutation.isPending}
+        onOpenChange={(open) => !open && setDeleteSinkId(null)}
+        onConfirm={handleDeleteConfirm}
       />
     </div>
   );

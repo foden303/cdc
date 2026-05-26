@@ -3,10 +3,12 @@ package flow
 import (
 	"context"
 	"errors"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/foden/cdc/internal/core/constant"
 	"github.com/foden/cdc/internal/core/domain"
 	"github.com/foden/cdc/internal/core/ports"
 	"github.com/nats-io/nats.go/jetstream"
@@ -17,18 +19,20 @@ import (
 
 // mockStore is a simple in-memory store implementing ports.Store.
 type mockStore struct {
-	sources map[string]*ports.SourceConfig
-	sinks   map[string]*ports.SinkConfig
-	flows   map[string]*ports.FlowConfig
-	offsets map[string]string
+	sources       map[string]*ports.SourceConfig
+	sinks         map[string]*ports.SinkConfig
+	flows         map[string]*ports.FlowConfig
+	offsets       map[string]string
+	sourceOffsets map[string]string
 }
 
 func newMockStore() *mockStore {
 	return &mockStore{
-		sources: make(map[string]*ports.SourceConfig),
-		sinks:   make(map[string]*ports.SinkConfig),
-		flows:   make(map[string]*ports.FlowConfig),
-		offsets: make(map[string]string),
+		sources:       make(map[string]*ports.SourceConfig),
+		sinks:         make(map[string]*ports.SinkConfig),
+		flows:         make(map[string]*ports.FlowConfig),
+		offsets:       make(map[string]string),
+		sourceOffsets: make(map[string]string),
 	}
 }
 
@@ -93,6 +97,13 @@ func (s *mockStore) SaveOffset(_ context.Context, flowID string, offset string) 
 func (s *mockStore) GetOffset(_ context.Context, flowID string) (string, error) {
 	return s.offsets[flowID], nil
 }
+func (s *mockStore) SaveSourceOffset(_ context.Context, sourceID string, offset string) error {
+	s.sourceOffsets[sourceID] = offset
+	return nil
+}
+func (s *mockStore) GetSourceOffset(_ context.Context, sourceID string) (string, error) {
+	return s.sourceOffsets[sourceID], nil
+}
 
 // mockRegistry implements ports.Registry for testing.
 type mockRegistry struct {
@@ -129,11 +140,15 @@ type mockNATSClient struct {
 }
 
 func (n *mockNATSClient) PublishBatch(_ context.Context, _ func(*domain.Event) string, events []*domain.Event) error {
+	clones := make([]*domain.Event, 0, len(events))
+	for _, ev := range events {
+		clones = append(clones, ev.DeepClone())
+	}
 	n.mu.Lock()
-	n.published = append(n.published, events...)
+	n.published = append(n.published, clones...)
 	n.mu.Unlock()
 	if n.publishCh != nil {
-		n.publishCh <- events
+		n.publishCh <- clones
 	}
 	return nil
 }
@@ -167,12 +182,15 @@ func (n *mockNATSClient) Health(_ context.Context) error                   { ret
 func (n *mockNATSClient) Close()                                           {}
 
 type mockSource struct {
-	started chan struct{}
-	stopCh  chan struct{}
-	events  []*domain.Event
+	started       chan struct{}
+	stopCh        chan struct{}
+	events        []*domain.Event
+	initialOffset string
+	syncedTables  []ports.SourceTableRef
 }
 
-func (s *mockSource) Start(events chan<- *domain.Event, _ <-chan uint64, _ string) error {
+func (s *mockSource) Start(events chan<- *domain.Event, _ <-chan ports.SourceAck, initialOffset string) error {
+	s.initialOffset = initialOffset
 	if s.started != nil {
 		close(s.started)
 	}
@@ -187,9 +205,11 @@ func (s *mockSource) Stop() error {
 	}
 	return nil
 }
-func (s *mockSource) InstanceID() string               { return "src-1" }
-func (s *mockSource) RegisterTable(_, _ string, _ int) {}
-func (s *mockSource) UnregisterTable(_, _ string)      {}
+func (s *mockSource) InstanceID() string { return "src-1" }
+func (s *mockSource) SyncSourceTables(_ context.Context, tables []ports.SourceTableRef) error {
+	s.syncedTables = append([]ports.SourceTableRef(nil), tables...)
+	return nil
+}
 
 // mockConsumer implements jetstream.Consumer for testing.
 type mockConsumer struct{}
@@ -299,6 +319,222 @@ func TestCreateFlowStartsSourceAndPublishesEvents(t *testing.T) {
 		}
 	case <-time.After(time.Second):
 		t.Fatal("source event was not published to NATS")
+	}
+}
+
+func TestEnsureSourceRunningUsesStoredSourceOffset(t *testing.T) {
+	store := newMockStore()
+	store.sources["src-1"] = &ports.SourceConfig{InstanceID: "src-1", Type: constant.SourceTypeMySQL.String()}
+	store.sourceOffsets["src-1"] = "mysql-bin.000001:42"
+	src := &mockSource{}
+	reg := &mockRegistry{source: src}
+	mgr := NewManager(store, NewPoolManager(), reg, &mockNATSClient{}, &mockDiscovery{})
+
+	err := mgr.ensureSourceRunning(context.Background(), store.sources["src-1"])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if src.initialOffset != "mysql-bin.000001:42" {
+		t.Fatalf("initial offset = %q", src.initialOffset)
+	}
+	mgr.Stop()
+}
+
+func TestPublishSourceEventsSavesSourceOffsetAndAcks(t *testing.T) {
+	store := newMockStore()
+	runtime := &sourceRuntime{
+		events: make(chan *domain.Event, 1),
+		acks:   make(chan ports.SourceAck, 1),
+		done:   make(chan struct{}),
+	}
+	mgr := NewManager(store, NewPoolManager(), &mockRegistry{}, &mockNATSClient{}, &mockDiscovery{})
+	mgr.sourceRuns["src-1"] = runtime
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go mgr.publishSourceEvents(ctx, "src-1", runtime.events, runtime.done)
+	runtime.events <- &domain.Event{Subject: "cdc.src.public.users.0", InstanceID: "src-1", Offset: "mysql-bin.000001:99", LSN: 99}
+	close(runtime.events)
+	<-runtime.done
+
+	if got := store.sourceOffsets["src-1"]; got != "mysql-bin.000001:99" {
+		t.Fatalf("source offset = %q", got)
+	}
+	ack := <-runtime.acks
+	if ack.Offset != "mysql-bin.000001:99" || ack.LSN != 99 {
+		t.Fatalf("ack = %+v", ack)
+	}
+}
+
+func TestDesiredSourceTablesIncludesRunningFlowsOnly(t *testing.T) {
+	store := newMockStore()
+	store.flows["running"] = &ports.FlowConfig{FlowID: "running", SourceID: "src-1", SourceTable: "public.users", Status: ports.FlowStatusRunning}
+	store.flows["paused"] = &ports.FlowConfig{FlowID: "paused", SourceID: "src-1", SourceTable: "audit_logs", Status: ports.FlowStatusPaused}
+	mgr := NewManager(store, NewPoolManager(), &mockRegistry{}, &mockNATSClient{}, &mockDiscovery{})
+
+	tables, err := mgr.desiredSourceTables(context.Background(), "src-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(tables) != 1 {
+		t.Fatalf("tables = %+v", tables)
+	}
+	seen := map[string]bool{}
+	for _, table := range tables {
+		seen[table.Schema+"."+table.Table] = true
+	}
+	if !seen["public.users"] || seen["public.audit_logs"] {
+		t.Fatalf("tables = %+v", tables)
+	}
+}
+
+func TestPauseFlowStopsSourceWhenNoRunningTablesRemain(t *testing.T) {
+	store := newMockStore()
+	store.sources["src-1"] = &ports.SourceConfig{InstanceID: "src-1", Type: constant.SourceTypePostgres.String()}
+	store.sinks["sink-1"] = &ports.SinkConfig{InstanceID: "sink-1", Type: constant.SinkTypePostgres.String()}
+	store.flows["flow-1"] = &ports.FlowConfig{
+		FlowID:      "flow-1",
+		SourceID:    "src-1",
+		SinkID:      "sink-1",
+		SourceTable: "public.users",
+		SinkTable:   "public.users",
+		Status:      ports.FlowStatusRunning,
+	}
+
+	src := &mockSource{stopCh: make(chan struct{})}
+	mgr := NewManager(store, NewPoolManager(), &mockRegistry{source: src}, &mockNATSClient{}, &mockDiscovery{})
+	mgr.startWorker(store.flows["flow-1"], &mockSink{})
+	if err := mgr.ensureSourceRunning(context.Background(), store.sources["src-1"]); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := mgr.PauseFlow(context.Background(), "flow-1"); err != nil {
+		t.Fatalf("PauseFlow failed: %v", err)
+	}
+	select {
+	case <-src.stopCh:
+	case <-time.After(time.Second):
+		t.Fatal("source was not stopped after the last running table was paused")
+	}
+	if _, ok := mgr.sourceRuns["src-1"]; ok {
+		t.Fatal("source runtime still registered")
+	}
+	if len(src.syncedTables) != 0 {
+		t.Fatalf("synced tables = %+v, want empty source table selection", src.syncedTables)
+	}
+}
+
+func TestCreateFlowGeneratesNameWhenMissing(t *testing.T) {
+	store := newMockStore()
+	store.sources["src-1"] = &ports.SourceConfig{
+		InstanceID: "src-1",
+		Name:       "Source DB",
+		Type:       "postgres",
+	}
+	store.sinks["sink-1"] = &ports.SinkConfig{
+		InstanceID: "sink-1",
+		Name:       "Sink DB",
+		Type:       "postgres",
+	}
+
+	mgr := NewManager(store, NewPoolManager(), &mockRegistry{}, &mockNATSClient{}, &mockDiscovery{})
+	defer mgr.Stop()
+
+	flow, err := mgr.CreateFlow(context.Background(), &ports.FlowConfig{
+		SourceID:    "src-1",
+		SinkID:      "sink-1",
+		SourceTable: "public.orders",
+		SinkTable:   "warehouse.orders",
+	})
+	if err != nil {
+		t.Fatalf("CreateFlow failed: %v", err)
+	}
+	if flow.Name != "sync-source-db-orders-to-sink-db-orders" {
+		t.Fatalf("generated name = %q", flow.Name)
+	}
+}
+
+func TestCreateFlowRejectsDuplicateTableMapping(t *testing.T) {
+	store := newMockStore()
+	store.sources["src-1"] = &ports.SourceConfig{InstanceID: "src-1", Type: "postgres"}
+	store.sinks["sink-1"] = &ports.SinkConfig{InstanceID: "sink-1", Type: "postgres"}
+	store.flows["existing"] = &ports.FlowConfig{
+		FlowID:      "existing",
+		SourceID:    "src-1",
+		SinkID:      "sink-1",
+		SourceTable: "public.users",
+		SinkTable:   "warehouse.users",
+		Status:      ports.FlowStatusPaused,
+	}
+	mgr := NewManager(store, NewPoolManager(), &mockRegistry{}, &mockNATSClient{}, &mockDiscovery{})
+
+	_, err := mgr.CreateFlow(context.Background(), &ports.FlowConfig{
+		SourceID:    "src-1",
+		SinkID:      "sink-1",
+		SourceTable: " public.users ",
+		SinkTable:   " warehouse.users ",
+	})
+
+	if err == nil || !strings.Contains(err.Error(), "flow mapping") {
+		t.Fatalf("err = %v", err)
+	}
+}
+
+func TestUpdateFlowRejectsDuplicateTableMapping(t *testing.T) {
+	store := newMockStore()
+	store.sources["src-1"] = &ports.SourceConfig{InstanceID: "src-1", Type: "postgres"}
+	store.sinks["sink-1"] = &ports.SinkConfig{InstanceID: "sink-1", Type: "postgres"}
+	store.flows["existing"] = &ports.FlowConfig{
+		FlowID:      "existing",
+		SourceID:    "src-1",
+		SinkID:      "sink-1",
+		SourceTable: "public.users",
+		SinkTable:   "warehouse.users",
+		Status:      ports.FlowStatusPaused,
+	}
+	store.flows["target"] = &ports.FlowConfig{
+		FlowID:      "target",
+		SourceID:    "src-1",
+		SinkID:      "sink-1",
+		SourceTable: "public.orders",
+		SinkTable:   "warehouse.orders",
+		Status:      ports.FlowStatusPaused,
+	}
+	mgr := NewManager(store, NewPoolManager(), &mockRegistry{}, &mockNATSClient{}, &mockDiscovery{})
+
+	_, err := mgr.UpdateFlow(context.Background(), &ports.FlowConfig{
+		FlowID:      "target",
+		SourceTable: "public.users",
+		SinkTable:   "warehouse.users",
+	})
+
+	if err == nil || !strings.Contains(err.Error(), "flow mapping") {
+		t.Fatalf("err = %v", err)
+	}
+}
+
+func TestUpdateFlowAllowsSameTableMappingForSameFlow(t *testing.T) {
+	store := newMockStore()
+	store.sources["src-1"] = &ports.SourceConfig{InstanceID: "src-1", Type: "postgres"}
+	store.sinks["sink-1"] = &ports.SinkConfig{InstanceID: "sink-1", Type: "postgres"}
+	store.flows["target"] = &ports.FlowConfig{
+		FlowID:      "target",
+		SourceID:    "src-1",
+		SinkID:      "sink-1",
+		SourceTable: "public.users",
+		SinkTable:   "warehouse.users",
+		Status:      ports.FlowStatusPaused,
+	}
+	mgr := NewManager(store, NewPoolManager(), &mockRegistry{}, &mockNATSClient{}, &mockDiscovery{})
+
+	_, err := mgr.UpdateFlow(context.Background(), &ports.FlowConfig{
+		FlowID:      "target",
+		SourceTable: " public.users ",
+		SinkTable:   " warehouse.users ",
+	})
+
+	if err != nil {
+		t.Fatalf("UpdateFlow failed: %v", err)
 	}
 }
 

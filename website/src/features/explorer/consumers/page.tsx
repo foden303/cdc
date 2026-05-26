@@ -13,7 +13,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useConsumers } from '@/lib/query/explorer';
-import { StatusBadge } from '../shared';
+import { formatCount, StatusBadge } from '../shared';
 
 export default function ExplorerConsumersPage() {
   const { t } = useTranslation();
@@ -24,7 +24,7 @@ export default function ExplorerConsumersPage() {
     const rows = data?.data ?? [];
     if (!topicFilter) return rows;
     return rows.filter((consumer) =>
-      consumer.filter_subjects.some((subject) => subject.startsWith(topicFilter)),
+      (consumer.filter_subjects ?? []).some((subject) => subject.startsWith(topicFilter)),
     );
   }, [data, topicFilter]);
 
@@ -85,23 +85,25 @@ export default function ExplorerConsumersPage() {
               </TableRow>
             ) : (
               consumers.map((consumer) => {
-                const lagging = consumer.num_pending > 0 || consumer.num_ack_pending > 0;
+                const pending = consumer.num_pending ?? 0;
+                const ackPending = consumer.num_ack_pending ?? 0;
+                const lagging = pending > 0 || ackPending > 0;
                 return (
                   <TableRow key={consumer.name}>
                     <TableCell className="font-mono text-xs font-semibold">{consumer.name}</TableCell>
                     <TableCell>
                       <div className="space-y-1">
-                        {consumer.filter_subjects.map((subject) => (
+                        {(consumer.filter_subjects ?? []).map((subject) => (
                           <div key={subject} className="font-mono text-[11px] text-muted-foreground">
                             {subject}
                           </div>
                         ))}
                       </div>
                     </TableCell>
-                    <TableCell className="text-right">{consumer.num_pending.toLocaleString()}</TableCell>
-                    <TableCell className="text-right">{consumer.num_ack_pending.toLocaleString()}</TableCell>
-                    <TableCell className="text-right font-mono text-xs">{consumer.delivered_stream_seq}</TableCell>
-                    <TableCell className="text-right font-mono text-xs">{consumer.ack_floor_stream_seq}</TableCell>
+                    <TableCell className="text-right">{formatCount(pending)}</TableCell>
+                    <TableCell className="text-right">{formatCount(ackPending)}</TableCell>
+                    <TableCell className="text-right font-mono text-xs">{formatCount(consumer.delivered_stream_seq)}</TableCell>
+                    <TableCell className="text-right font-mono text-xs">{formatCount(consumer.ack_floor_stream_seq)}</TableCell>
                     <TableCell>
                       <StatusBadge status={lagging ? 'lagging' : 'active'} />
                     </TableCell>

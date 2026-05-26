@@ -81,8 +81,6 @@ func (r *Registry) SinkNames() []string {
 	return names
 }
 
-// --- Package-level functions for backward compatibility with init() registrations ---
-
 // defaultRegistry is the global registry used by package-level functions.
 var defaultRegistry = NewRegistry()
 

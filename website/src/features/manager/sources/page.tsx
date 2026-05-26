@@ -14,6 +14,7 @@ import { SourceForm } from './SourceForm';
 import { formatNumber } from '@/lib/format';
 import type { SourceConfig } from '@/types/api';
 import { ConnectorCard } from '../components/ConnectorCard';
+import { DeleteConfirmDialog } from '../components/DeleteConfirmDialog';
 
 function sourceTypeLabel(type: SourceConfig['type']) {
   return type === 'postgres' ? 'PostgreSQL' : type.toUpperCase();
@@ -28,6 +29,7 @@ export default function SourcesPage() {
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingSource, setEditingSource] = useState<SourceConfig | null>(null);
+  const [deleteSourceId, setDeleteSourceId] = useState<string | null>(null);
 
   const { data, isLoading, refetch, isFetching } = useSources();
   const { data: flowsData } = useFlows();
@@ -52,14 +54,14 @@ export default function SourcesPage() {
     setFormOpen(true);
   };
 
-  const handleDeleteClick = async (instanceId: string) => {
-    if (confirm(t('manager.sources.confirm.delete', { id: instanceId }))) {
-      try {
-        await removeMutation.mutateAsync(instanceId);
-        toast.success(t('manager.sources.toast.deleted'));
-      } catch (err: any) {
-        toast.error(err.message || t('manager.sources.toast.deleteFailed'));
-      }
+  const handleDeleteConfirm = async () => {
+    if (!deleteSourceId) return;
+    try {
+      await removeMutation.mutateAsync(deleteSourceId);
+      toast.success(t('manager.sources.toast.deleted'));
+      setDeleteSourceId(null);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('manager.sources.toast.deleteFailed'));
     }
   };
 
@@ -126,8 +128,9 @@ export default function SourcesPage() {
           {sources.map((source) => {
             const usageCount = usageBySource.get(source.instance_id) ?? 0;
             const stats = statsData?.source_stats?.[source.instance_id];
+            const activeFlows = stats?.active_flows ?? usageCount;
             const errorCount = stats?.failure_count ?? 0;
-            const eventCount = stats?.success_count ?? 0;
+            const throughput = stats?.throughput ?? 0;
 
             return (
               <ConnectorCard
@@ -141,16 +144,16 @@ export default function SourcesPage() {
                 metrics={[
                   {
                     label: t('manager.cards.usage', { defaultValue: 'Usage' }),
-                    value: usageCount > 0
+                    value: activeFlows > 0
                       ? t('manager.cards.usedByFlows', {
                           defaultValue: '{{count}} flows',
-                          count: usageCount,
+                          count: activeFlows,
                         })
                       : t('manager.cards.unused', { defaultValue: 'Unused' }),
                   },
                   {
-                    label: t('manager.cards.events', { defaultValue: 'Events' }),
-                    value: formatNumber(eventCount),
+                    label: t('manager.cards.throughput', { defaultValue: 'Rate' }),
+                    value: `${formatNumber(throughput)}/s`,
                   },
                   {
                     label: t('manager.cards.errors', { defaultValue: 'Errors' }),
@@ -162,7 +165,7 @@ export default function SourcesPage() {
                 deleteLabel={t('manager.sources.card.deleteTooltip')}
                 deleteDisabled={removeMutation.isPending}
                 onEdit={() => handleEditClick(source)}
-                onDelete={() => handleDeleteClick(source.instance_id)}
+                onDelete={() => setDeleteSourceId(source.instance_id)}
               />
             );
           })}
@@ -173,6 +176,16 @@ export default function SourcesPage() {
         open={formOpen}
         onOpenChange={setFormOpen}
         sourceToEdit={editingSource}
+      />
+      <DeleteConfirmDialog
+        open={deleteSourceId !== null}
+        title={t('manager.sources.delete')}
+        description={t('manager.sources.confirm.delete', { id: deleteSourceId ?? '' })}
+        confirmLabel={t('common.delete')}
+        cancelLabel={t('common.cancel')}
+        loading={removeMutation.isPending}
+        onOpenChange={(open) => !open && setDeleteSourceId(null)}
+        onConfirm={handleDeleteConfirm}
       />
     </div>
   );

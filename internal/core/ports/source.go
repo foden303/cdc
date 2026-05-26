@@ -1,6 +1,24 @@
 package ports
 
-import "github.com/foden/cdc/internal/core/domain"
+import (
+	"context"
+
+	"github.com/foden/cdc/internal/core/domain"
+)
+
+type SourceAck struct {
+	LSN    uint64
+	Offset string
+}
+
+type SourceTableRef struct {
+	Schema string
+	Table  string
+}
+
+type SourceTableSyncer interface {
+	SyncSourceTables(ctx context.Context, tables []SourceTableRef) error
+}
 
 // Source defines a connection to a database that emits change events.
 // Implementations are responsible for:
@@ -14,24 +32,14 @@ import "github.com/foden/cdc/internal/core/domain"
 type Source interface {
 	// Start begins streaming CDC events into the provided channel.
 	// initialOffset allows resuming from a previously checkpointed position.
-	// ackCh receives LSN/position acknowledgements from downstream consumers.
-	Start(events chan<- *domain.Event, ackCh <-chan uint64, initialOffset string) error
+	// ackCh receives source-position acknowledgements after durable publish.
+	Start(events chan<- *domain.Event, ackCh <-chan SourceAck, initialOffset string) error
 
 	// Stop gracefully shuts down the source, flushing in-flight events.
 	Stop() error
 
 	// InstanceID returns the unique identifier for this source instance.
 	InstanceID() string
-
-	// RegisterTable registers a table that a flow is interested in.
-	// partitionCount determines how many partitions to hash primary keys into.
-	// If the table is already registered, the refCount is incremented and
-	// partitionCount is updated to the maximum of existing and new values.
-	RegisterTable(schema, table string, partitionCount int)
-
-	// UnregisterTable decrements the reference count for a table.
-	// When refCount reaches zero, the table is removed from the registry.
-	UnregisterTable(schema, table string)
 }
 
 // SourceConfig holds connection-level fields for a CDC source.

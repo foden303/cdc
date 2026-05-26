@@ -34,5 +34,3 @@ type ResumeFlowResponse struct {
 type GetFlowStatsResponse struct {
 	Stats *ports.FlowStats
 }
-
-type GetFlowTableProgressResponse struct{}

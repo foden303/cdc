@@ -38,6 +38,12 @@ export function formatBytes(value: number) {
   return `${(value / 1024 / 1024).toFixed(1)} MB`;
 }
 
+export function formatCount(value: number | string | null | undefined) {
+  const numeric = typeof value === 'string' ? Number(value) : (value ?? 0);
+  if (!Number.isFinite(numeric)) return '0';
+  return numeric.toLocaleString();
+}
+
 export function messageSize(data: string) {
   if (!data) return 0;
   return decodePayload(data).length;

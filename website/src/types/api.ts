@@ -7,7 +7,7 @@
 
 export interface HealthCheckResponse {
   status: string;
-  uptime?: number; // seconds since start
+  uptime?: number | string; // seconds since start; int64 may be encoded as string by gRPC gateway
   version?: string;
 }
 
@@ -31,7 +31,7 @@ export interface ListSourcesResponse {
 // ─── Sink ────────────────────────────────────────────────────────────
 
 export interface SinkConfig {
-  type: 'postgres' | 'elasticsearch' | 'clickhouse';
+  type: 'postgres' | 'mysql' | 'elasticsearch' | 'clickhouse';
   host?: string;
   port?: number;
   username?: string;
@@ -42,7 +42,6 @@ export interface SinkConfig {
   url?: string[];       // elasticsearch
   api_key?: string;     // elasticsearch
   index_prefix?: string; // elasticsearch
-  max_retries?: number;
 }
 
 export interface ListSinksResponse {
@@ -87,7 +86,7 @@ export interface ListFlowsResponse {
 }
 
 export interface CreateFlowRequest {
-  name: string;
+  name?: string;
   source_id: string;
   sink_id: string;
   source_table: string;
@@ -104,33 +103,14 @@ export interface CreateFlowResponse {
 export interface GetFlowStatsResponse {
   events_per_second: number;
   replication_lag_ms: number;
-  last_synced_at: number;
   total_events_processed: number;
-}
-
-// ─── Performance ─────────────────────────────────────────────────────
-
-/** Per-source performance metrics returned within the global performance response. */
-export interface SourcePerformance {
-  source_id: string;
-  throughput: number;
-  error_rate: number;
-}
-
-/** Per-sink performance metrics returned within the global performance response. */
-export interface SinkPerformance {
-  sink_id: string;
-  throughput: number;
-  avg_latency: number;
-}
-
-export interface GetPerformanceMetricsResponse {
-  throughput: number;
-  latency_p99: number;
-  active_workers: number;
-  error_rate: number;
-  sources: Record<string, SourcePerformance>;
-  sinks: Record<string, SinkPerformance>;
+  running_workers: number;
+  pool_capacity: number;
+  worker_utilization: number;
+  failure_count: number;
+  dlq_count: number;
+  filtered_count: number;
+  last_error: string;
 }
 
 // ─── Dashboard Aggregates ────────────────────────────────────────────
@@ -152,13 +132,9 @@ export interface DashboardLiveTelemetryResponse {
   failure_count: number;
 }
 
-export interface DashboardThroughputPoint {
-  timestamp: number;
-  throughput: number;
-}
-
-export interface DashboardThroughputOverTimeResponse {
-  points: DashboardThroughputPoint[];
+export interface DashboardSummaryResponse {
+  inventory?: DashboardSystemInventoryResponse;
+  telemetry?: DashboardLiveTelemetryResponse;
 }
 
 // ─── Component Stats ─────────────────────────────────────────────────
@@ -169,28 +145,17 @@ export interface ComponentStats {
   failure_count: number;
   last_error: string;
   partition_lag: Record<number, number>;
+  last_event_at: number;
+  active_flows: number;
+  throughput: number;
+  error_rate: number;
+  avg_latency_ms: number;
 }
 
 /** Aggregated stats response keyed by component instance ID. */
 export interface GetStatsResponse {
   source_stats: Record<string, ComponentStats>;
   sink_stats: Record<string, ComponentStats>;
-}
-
-// ─── Flow Progress ───────────────────────────────────────────────────
-
-/** Sync progress for a single table within a flow. */
-export interface FlowTableProgress {
-  table_name: string;
-  state: string;
-  rows_synced: number;
-  last_offset?: string;
-  error_message?: string;
-}
-
-/** Response for GET /api/v1/flows/:id/progress. */
-export interface GetFlowProgressResponse {
-  tables: FlowTableProgress[];
 }
 
 // ─── Connection Testing ──────────────────────────────────────────────
@@ -231,13 +196,13 @@ export interface ReprocessDLQResponse {
 
 export interface TopicSummary {
   name: string;
-  message_count: number;
-  partition_count: number;
+  message_count?: number;
+  partition_count?: number;
 }
 
 export interface PartitionSummary {
   id: string;
-  message_count: number;
+  message_count?: number;
   topic: string;
 }
 
@@ -256,11 +221,11 @@ export interface DLQMessage extends MessageItem {
 
 export interface ConsumerSummary {
   name: string;
-  filter_subjects: string[];
-  num_pending: number;
-  num_ack_pending: number;
-  delivered_stream_seq: number;
-  ack_floor_stream_seq: number;
+  filter_subjects?: string[];
+  num_pending?: number;
+  num_ack_pending?: number;
+  delivered_stream_seq?: number;
+  ack_floor_stream_seq?: number;
 }
 
 export interface OffsetPaginationResponse {

@@ -22,6 +22,7 @@ import (
 	"github.com/foden/cdc/internal/core/constant"
 	"github.com/foden/cdc/internal/core/domain"
 	"github.com/foden/cdc/internal/core/ports"
+	coreruntime "github.com/foden/cdc/internal/core/runtime"
 	"github.com/foden/cdc/pkg/retry"
 	"github.com/foden/cdc/pkg/utils"
 )
@@ -66,19 +67,24 @@ type MySQLSource struct {
 	// Single worker for strict ordering
 	taskChan chan *mysqlTask
 	wg       sync.WaitGroup
+
+	runtimeRegistry *coreruntime.Registry
+	runtimeMetrics  *coreruntime.Metrics
 }
 
 // New creates a MySQLSource.
 func New(cfg *ports.SourceConfig) (*MySQLSource, error) {
 	return &MySQLSource{
-		cfg:      cfg,
-		stop:     make(chan struct{}),
-		taskChan: make(chan *mysqlTask, 8192),
+		cfg:             cfg,
+		stop:            make(chan struct{}),
+		taskChan:        make(chan *mysqlTask, 8192),
+		runtimeRegistry: coreruntime.DefaultRegistry(),
+		runtimeMetrics:  coreruntime.DefaultMetrics(),
 	}, nil
 }
 
 // Start initializes the canal and begins streaming events.
-func (s *MySQLSource) Start(events chan<- *domain.Event, ackCh <-chan uint64, initialOffset string) error {
+func (s *MySQLSource) Start(events chan<- *domain.Event, ackCh <-chan ports.SourceAck, initialOffset string) error {
 	s.events = events
 
 	// Start exactly ONE worker to guarantee 100% order
@@ -186,28 +192,26 @@ func (s *MySQLSource) InstanceID() string {
 	return s.cfg.InstanceID
 }
 
-// RegisterTable registers a table that a flow is interested in.
-func (s *MySQLSource) RegisterTable(schema, table string, partitionCount int) {
-	registry.GlobalTableRegistry.Register(s.cfg.InstanceID, schema, table, partitionCount)
+func (s *MySQLSource) SyncSourceTables(_ context.Context, tables []ports.SourceTableRef) error {
+	slog.Info("mysql source tables reconciled", "instance", s.cfg.InstanceID, "tables", len(tables))
+	return nil
 }
 
-// UnregisterTable decrements the reference count for a table.
-func (s *MySQLSource) UnregisterTable(schema, table string) {
-	registry.GlobalTableRegistry.Unregister(s.cfg.InstanceID, schema, table)
-}
-
-func (s *MySQLSource) ackLoop(ackCh <-chan uint64) {
+func (s *MySQLSource) ackLoop(ackCh <-chan ports.SourceAck) {
 	for {
 		select {
 		case <-s.stop:
 			return
-		case _, ok := <-ackCh:
+		case ack, ok := <-ackCh:
 			if !ok {
 				return
 			}
-			// In MySQL, binlog positions are handled differently,
-			// typically using gtid or file+pos. For this MVP,
-			// we don't persist positions yet.
+			if ack.Offset != "" {
+				slog.Debug("mysql source checkpoint acknowledged",
+					"instance", s.cfg.InstanceID,
+					"offset", ack.Offset,
+					"lsn", ack.LSN)
+			}
 		}
 	}
 }
@@ -218,11 +222,11 @@ type eventHandler struct {
 }
 
 func (h *eventHandler) OnRow(e *canal.RowsEvent) error {
-	// Check global table registry before processing
-	partitionCount, active := registry.GlobalTableRegistry.Lookup(h.source.cfg.InstanceID, e.Table.Schema, e.Table.Name)
+	interest, active := h.source.runtimeRegistry.LookupTable(h.source.cfg.InstanceID, e.Table.Schema, e.Table.Name)
 	if !active {
 		return nil // No flow needs this table
 	}
+	partitionCount := int(interest.PartitionCount)
 
 	changeIdx := 0
 	for i := 0; i < len(e.Rows); {
@@ -345,6 +349,9 @@ func (s *MySQLSource) processTask(t *mysqlTask) {
 	)
 
 	s.events <- ev
+	if s.runtimeMetrics != nil {
+		s.runtimeMetrics.RecordSourceProduced(s.cfg.InstanceID, t.db, t.table.Name, 1, t.ts)
+	}
 	metrics.EventsProducedTotal.WithLabelValues(s.cfg.InstanceID, "success").Inc()
 }
 
@@ -352,13 +359,13 @@ func (s *MySQLSource) processTask(t *mysqlTask) {
 func (s *MySQLSource) calculatePartition(t *mysqlTask) int {
 	partitionCount := t.partitionCount
 	if partitionCount <= 0 {
-		partitionCount = 4 // fallback default
+		partitionCount = 4
 	}
 
 	var pkValues []string
 
 	if t.table == nil || len(t.table.PKColumns) == 0 {
-		return 0 // No PK defined, fallback to partition 0
+		return 0
 	}
 
 	// Extract values for PK columns
@@ -374,8 +381,7 @@ func (s *MySQLSource) calculatePartition(t *mysqlTask) int {
 
 	for _, pkIdx := range t.table.PKColumns {
 		if pkIdx < len(targetRow) {
-			val := fmt.Sprintf("%v", targetRow[pkIdx])
-			pkValues = append(pkValues, val)
+			pkValues = append(pkValues, formatPKValue(targetRow[pkIdx]))
 		}
 	}
 
@@ -405,6 +411,37 @@ func (s *MySQLSource) releaseMap(m map[string]interface{}) {
 		delete(m, k)
 	}
 	columnPool.Put(m)
+}
+
+func formatPKValue(val interface{}) string {
+	switch v := val.(type) {
+	case int:
+		return strconv.Itoa(v)
+	case int8:
+		return strconv.FormatInt(int64(v), 10)
+	case int16:
+		return strconv.FormatInt(int64(v), 10)
+	case int32:
+		return strconv.FormatInt(int64(v), 10)
+	case int64:
+		return strconv.FormatInt(v, 10)
+	case uint:
+		return strconv.FormatUint(uint64(v), 10)
+	case uint8:
+		return strconv.FormatUint(uint64(v), 10)
+	case uint16:
+		return strconv.FormatUint(uint64(v), 10)
+	case uint32:
+		return strconv.FormatUint(uint64(v), 10)
+	case uint64:
+		return strconv.FormatUint(v, 10)
+	case string:
+		return v
+	case []byte:
+		return string(v)
+	default:
+		return fmt.Sprintf("%v", v)
+	}
 }
 
 func formatValue(val interface{}) interface{} {

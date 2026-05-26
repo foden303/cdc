@@ -22,6 +22,9 @@ var (
 	// ErrSinkConfigRequired is returned when a sink API request has no sink config.
 	ErrSinkConfigRequired = errors.New("sink config is required")
 
+	// ErrDuplicateConfig is returned when a source, sink, or flow would duplicate an existing config.
+	ErrDuplicateConfig = errors.New("duplicate config")
+
 	// ErrNonRetryable wraps errors that should not be retried.
 	// Retry frameworks should check IsNonRetryable() and fail fast.
 	ErrNonRetryable = errors.New("non-retryable error")

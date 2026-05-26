@@ -12,6 +12,7 @@ import "explorer.proto";
 import "metrics.proto";
 import "dlq.proto";
 import "flow.proto";
+import "dashboard.proto";
 
 // CDC Service — gRPC API for the CDC system.
 service CDCService {
@@ -29,9 +30,9 @@ service CDCService {
     };
   }
 
-  rpc GetPerformanceMetrics(GetPerformanceMetricsRequest) returns (GetPerformanceMetricsResponse) {
+  rpc GetDashboardSummary(GetDashboardSummaryRequest) returns (GetDashboardSummaryResponse) {
     option (google.api.http) = {
-      get : "/api/v1/metrics/performance"
+      get : "/api/v1/dashboard"
     };
   }
 
@@ -149,12 +150,6 @@ service CDCService {
   rpc GetFlowStats(GetFlowStatsRequest) returns (GetFlowStatsResponse) {
     option (google.api.http) = {
       get : "/api/v1/flows/{flow_id}/stats"
-    };
-  }
-
-  rpc GetFlowTableProgress(GetFlowTableProgressRequest) returns (GetFlowTableProgressResponse) {
-    option (google.api.http) = {
-      get : "/api/v1/flows/{flow_id}/progress"
     };
   }
 

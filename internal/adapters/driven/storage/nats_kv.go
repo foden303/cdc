@@ -266,6 +266,26 @@ func (s *NATSKVStore) GetOffset(ctx context.Context, flowID string) (string, err
 	return string(entry.Value()), nil
 }
 
+func (s *NATSKVStore) SaveSourceOffset(ctx context.Context, sourceID string, offset string) error {
+	key := PrefixSourceOffsets + sourceID
+	if _, err := s.bucket.Put(ctx, key, []byte(offset)); err != nil {
+		return fmt.Errorf("storage: save source offset for source %q: %w", sourceID, err)
+	}
+	return nil
+}
+
+func (s *NATSKVStore) GetSourceOffset(ctx context.Context, sourceID string) (string, error) {
+	key := PrefixSourceOffsets + sourceID
+	entry, err := s.bucket.Get(ctx, key)
+	if err != nil {
+		if errors.Is(err, jetstream.ErrKeyNotFound) {
+			return "", nil
+		}
+		return "", fmt.Errorf("storage: get source offset for source %q: %w", sourceID, err)
+	}
+	return string(entry.Value()), nil
+}
+
 // --- Revision-based operations for optimistic concurrency control ---
 
 // PutSourceWithRevision persists a source config only if the current revision matches.

@@ -14,12 +14,12 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/foden/cdc/config"
 	drivergrpc "github.com/foden/cdc/internal/adapters/driver/grpc"
 	"github.com/foden/cdc/internal/core/ports"
-	"github.com/foden/cdc/internal/core/service"
 	"github.com/foden/cdc/internal/di"
 )
 
@@ -31,7 +31,6 @@ type AppServer struct {
 	flowManager ports.FlowManager
 	natsClient  ports.NATSClient
 	cdcService  *drivergrpc.CDCService
-	dashboard   *service.DashboardService
 }
 
 // NewAppServer creates a new combined gRPC + HTTP server.
@@ -44,7 +43,6 @@ func NewAppServer(
 		flowManager: container.FlowManager,
 		natsClient:  container.NATSClient,
 		cdcService:  container.CDCService,
-		dashboard:   container.DashboardService,
 	}
 }
 
@@ -73,16 +71,12 @@ func (s *AppServer) Start() error {
 	// 2. HTTP server: /metrics + /health + grpc-gateway (future)
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhttp.Handler())
-	mux.HandleFunc("/health", s.handleHealth)
-	mux.HandleFunc("/api/v1/health", s.handleHealth)
-	mux.HandleFunc("/api/v1/dashboard/system-inventory", s.handleDashboardSystemInventory)
-	mux.HandleFunc("/api/v1/dashboard/live-telemetry", s.handleDashboardLiveTelemetry)
-	mux.HandleFunc("/api/v1/dashboard/throughput-overtime", s.handleDashboardThroughputOverTime)
 
 	gwMux := runtime.NewServeMux(
 		runtime.WithMarshalerOption(runtime.MIMEWildcard, &runtime.JSONPb{
 			MarshalOptions: protojson.MarshalOptions{
-				UseProtoNames: true,
+				UseProtoNames:   true,
+				EmitUnpopulated: true,
 			},
 			UnmarshalOptions: protojson.UnmarshalOptions{
 				DiscardUnknown: true,
@@ -177,6 +171,7 @@ func requestIDInterceptor() grpc.UnaryServerInterceptor {
 		info *grpc.UnaryServerInfo,
 		handler grpc.UnaryHandler,
 	) (interface{}, error) {
+		start := time.Now()
 		requestID := uuid.New().String()
 
 		// Check if client sent a request_id in metadata
@@ -189,12 +184,23 @@ func requestIDInterceptor() grpc.UnaryServerInterceptor {
 		// Add request_id to outgoing metadata
 		ctx = metadata.AppendToOutgoingContext(ctx, "x-request-id", requestID)
 
-		// Add to logger context
-		logger := slog.Default().With("request_id", requestID, "method", info.FullMethod)
 		ctx = context.WithValue(ctx, requestIDKey{}, requestID)
-		_ = logger // logger is available via context for handlers
 
-		return handler(ctx, req)
+		resp, err := handler(ctx, req)
+		code := status.Code(err)
+		attrs := []any{
+			"request_id", requestID,
+			"method", info.FullMethod,
+			"code", code.String(),
+			"duration_ms", time.Since(start).Milliseconds(),
+		}
+		if err != nil {
+			slog.Warn("grpc request failed", append(attrs, "err", err)...)
+		} else {
+			slog.Info("grpc request completed", attrs...)
+		}
+
+		return resp, err
 	}
 }
 

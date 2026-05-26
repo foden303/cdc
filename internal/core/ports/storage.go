@@ -22,4 +22,6 @@ type Store interface {
 	// Offset
 	SaveOffset(ctx context.Context, flowID string, offset string) error
 	GetOffset(ctx context.Context, flowID string) (string, error)
+	SaveSourceOffset(ctx context.Context, sourceID string, offset string) error
+	GetSourceOffset(ctx context.Context, sourceID string) (string, error)
 }

@@ -21,6 +21,24 @@ export const TypeCompatibilityMatrix: Record<string, Record<string, string[]>> =
     json: ['json', 'jsonb', 'text'],
     bytea: ['bytea', 'text'],
   },
+  mysql: {
+    integer: ['int', 'bigint', 'decimal', 'varchar', 'text'],
+    bigint: ['bigint', 'decimal', 'varchar', 'text'],
+    smallint: ['smallint', 'int', 'bigint', 'decimal', 'varchar', 'text'],
+    numeric: ['decimal', 'varchar', 'text'],
+    real: ['float', 'double', 'decimal', 'varchar', 'text'],
+    'double precision': ['double', 'decimal', 'varchar', 'text'],
+    boolean: ['boolean', 'tinyint', 'varchar', 'text'],
+    text: ['text', 'varchar'],
+    'character varying': ['varchar', 'text'],
+    uuid: ['char', 'varchar', 'text'],
+    'timestamp without time zone': ['datetime', 'timestamp', 'varchar', 'text'],
+    'timestamp with time zone': ['datetime', 'timestamp', 'varchar', 'text'],
+    date: ['date', 'datetime', 'varchar', 'text'],
+    jsonb: ['json', 'text'],
+    json: ['json', 'text'],
+    bytea: ['blob', 'varbinary'],
+  },
   clickhouse: {
     integer: ['Int32', 'Int64', 'UInt32', 'Float64', 'String'],
     bigint: ['Int64', 'UInt64', 'Float64', 'String'],
@@ -52,8 +70,8 @@ export function isTypeCompatible(
   // Normalize connector names to lowercase
   const conn = sinkTypeConnector.toLowerCase();
   
-  // Pass-through sinks accept all types (anything other than postgres & clickhouse is pass-through)
-  if (conn !== 'postgres' && conn !== 'clickhouse') {
+  // Pass-through sinks accept all types (anything other than SQL/typed sinks is pass-through)
+  if (conn !== 'postgres' && conn !== 'mysql' && conn !== 'clickhouse') {
     return true;
   }
 

@@ -1,17 +1,14 @@
 package flow
 
-// SinkType identifies the sink connector type for compatibility lookups.
-type SinkType string
-
-const (
-	SinkTypePostgres   SinkType = "postgres"
-	SinkTypeClickhouse SinkType = "clickhouse"
+import (
+	"github.com/foden/cdc/internal/core/constant"
+	"github.com/foden/cdc/internal/core/ports"
 )
 
 // TypeCompatibilityMatrix defines which source types can map to which sink types.
 // Key: sink connector type -> map[source_type] -> list of compatible sink_types
-var TypeCompatibilityMatrix = map[SinkType]map[string][]string{
-	SinkTypePostgres: {
+var TypeCompatibilityMatrix = map[constant.SinkType]map[string][]string{
+	constant.SinkTypePostgres: {
 		"integer":                     {"integer", "bigint", "numeric", "text"},
 		"bigint":                      {"bigint", "numeric", "text"},
 		"smallint":                    {"smallint", "integer", "bigint", "numeric", "text"},
@@ -29,7 +26,25 @@ var TypeCompatibilityMatrix = map[SinkType]map[string][]string{
 		"json":                        {"json", "jsonb", "text"},
 		"bytea":                       {"bytea", "text"},
 	},
-	SinkTypeClickhouse: {
+	constant.SinkTypeMySQL: {
+		"integer":                     {"int", "bigint", "decimal", "varchar", "text"},
+		"bigint":                      {"bigint", "decimal", "varchar", "text"},
+		"smallint":                    {"smallint", "int", "bigint", "decimal", "varchar", "text"},
+		"numeric":                     {"decimal", "varchar", "text"},
+		"real":                        {"float", "double", "decimal", "varchar", "text"},
+		"double precision":            {"double", "decimal", "varchar", "text"},
+		"boolean":                     {"boolean", "tinyint", "varchar", "text"},
+		"text":                        {"text", "varchar"},
+		"character varying":           {"varchar", "text"},
+		"uuid":                        {"char", "varchar", "text"},
+		"timestamp without time zone": {"datetime", "timestamp", "varchar", "text"},
+		"timestamp with time zone":    {"datetime", "timestamp", "varchar", "text"},
+		"date":                        {"date", "datetime", "varchar", "text"},
+		"jsonb":                       {"json", "text"},
+		"json":                        {"json", "text"},
+		"bytea":                       {"blob", "varbinary"},
+	},
+	constant.SinkTypeClickhouse: {
 		"integer":                     {"Int32", "Int64", "UInt32", "Float64", "String"},
 		"bigint":                      {"Int64", "UInt64", "Float64", "String"},
 		"smallint":                    {"Int16", "Int32", "Int64", "String"},
@@ -49,11 +64,11 @@ var TypeCompatibilityMatrix = map[SinkType]map[string][]string{
 }
 
 // PassThroughSinks are sink types where all type mappings are compatible.
-var PassThroughSinks = map[SinkType]bool{}
+var PassThroughSinks = map[constant.SinkType]bool{}
 
 // IsTypeCompatible checks if a source type can be mapped to a sink type
 // for the given sink connector type.
-func IsTypeCompatible(sinkConnectorType SinkType, sourceType, sinkType string) bool {
+func IsTypeCompatible(sinkConnectorType constant.SinkType, sourceType, sinkType string) bool {
 	// Pass-through sinks accept all types
 	if PassThroughSinks[sinkConnectorType] {
 		return true
@@ -87,7 +102,7 @@ type IncompatibleMapping struct {
 
 // ValidateColumnMappings checks all enabled mappings for type compatibility.
 // Returns nil if all are compatible, or a list of incompatible mappings.
-func ValidateColumnMappings(mappings []ColumnMapping, sinkConnectorType SinkType) []IncompatibleMapping {
+func ValidateColumnMappings(mappings []ports.ColumnMapping, sinkConnectorType constant.SinkType) []IncompatibleMapping {
 	var incompatible []IncompatibleMapping
 	for _, m := range mappings {
 		if !m.Enabled {

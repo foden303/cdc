@@ -7,9 +7,6 @@ import (
 	"github.com/foden/cdc/internal/core/ports"
 )
 
-// ColumnMapping is a type alias for ports.ColumnMapping to maintain backward compatibility.
-type ColumnMapping = ports.ColumnMapping
-
 // ApplyColumnMappings transforms a raw event payload according to the column mappings.
 // It returns a new JSON payload with the following rules:
 //  1. For each enabled mapping: rename source_column key to sink_column key
@@ -56,11 +53,6 @@ func ApplyColumnMappings(data []byte, mappings []ports.ColumnMapping) ([]byte, e
 	}
 
 	return sonic.Marshal(result)
-}
-
-// ApplyColumnMapping is a backward-compatible alias for ApplyColumnMappings.
-func ApplyColumnMapping(data []byte, mappings []ColumnMapping) ([]byte, error) {
-	return ApplyColumnMappings(data, mappings)
 }
 
 // AutoGenerateMappings generates column mappings by matching source and sink column

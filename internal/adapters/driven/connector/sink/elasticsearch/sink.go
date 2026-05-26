@@ -8,6 +8,7 @@ import (
 	"io"
 	"log/slog"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/bytedance/sonic"
@@ -19,7 +20,6 @@ import (
 	"github.com/foden/cdc/internal/core/constant"
 	"github.com/foden/cdc/internal/core/domain"
 	"github.com/foden/cdc/internal/core/ports"
-	"github.com/foden/cdc/pkg/retry"
 )
 
 func init() {
@@ -30,8 +30,10 @@ func init() {
 
 // ElasticSink writes CDC events to Elasticsearch via the Bulk API.
 type ElasticSink struct {
-	client *elasticsearch.Client
-	cfg    *ports.SinkConfig
+	client     *elasticsearch.Client
+	cfg        *ports.SinkConfig
+	bufPool    sync.Pool
+	indexCache sync.Map
 }
 
 // Internal structures for parsing Bulk API responses
@@ -59,37 +61,39 @@ func New(cfg *ports.SinkConfig) (*ElasticSink, error) {
 		return nil, err
 	}
 
-	return &ElasticSink{client: client, cfg: cfg}, nil
+	return &ElasticSink{
+		client: client,
+		cfg:    cfg,
+		bufPool: sync.Pool{New: func() interface{} {
+			return bytes.NewBuffer(make([]byte, 0, 64*1024))
+		}},
+	}, nil
 }
 
 // WriteBatch writes events to Elasticsearch using the Bulk API.
 func (s *ElasticSink) WriteBatch(events []*domain.Event) error {
-	var buf bytes.Buffer
+	buf := s.bufPool.Get().(*bytes.Buffer)
+	buf.Reset()
+	defer s.bufPool.Put(buf)
 
 	for _, event := range events {
-		var node ast.Node
-		var err error
-
-		if event.Op == constant.OpDelete {
-			node, err = sonic.Get(event.Data, "before")
-		} else {
-			node, err = sonic.Get(event.Data, "after")
+		node, ok, err := rowNode(event)
+		if err != nil {
+			return err
 		}
-
-		if err != nil || !node.Exists() {
+		if !ok {
 			continue
 		}
 
 		s.sanitizeNode(&node)
-
+		docID := extractIDFromNode(&node)
 		docBytes, _ := node.MarshalJSON()
 		index := s.indexName(event.InstanceID, event.Table)
-		docID := extractIDFast(docBytes)
 
 		if event.Op == constant.OpDelete {
-			writeDeleteAction(&buf, index, docID)
+			writeDeleteAction(buf, index, docID)
 		} else {
-			writeIndexAction(&buf, index, docID, docBytes)
+			writeIndexAction(buf, index, docID, docBytes)
 		}
 	}
 
@@ -97,31 +101,16 @@ func (s *ElasticSink) WriteBatch(events []*domain.Event) error {
 		return nil
 	}
 
-	data := buf.Bytes()
-	var res *esapi.Response
-
-	err := retry.Do(context.Background(), retry.Config{
-		MaxAttempts: int(s.cfg.MaxRetries) + 1,
-		BaseDelay:   100 * time.Millisecond,
-		MaxDelay:    5 * time.Second,
-		Multiplier:  2.0,
-	}, func() error {
-		req := esapi.BulkRequest{Body: bytes.NewReader(data)}
-		var reqErr error
-		res, reqErr = req.Do(context.Background(), s.client)
-		if reqErr != nil {
-			return reqErr
-		}
-		if res.IsError() {
-			body, _ := io.ReadAll(res.Body)
-			res.Body.Close()
-			return fmt.Errorf("bulk request failed: status %d, body: %s", res.StatusCode, string(body))
-		}
-		return nil
-	})
-
+	data := append([]byte(nil), buf.Bytes()...)
+	req := esapi.BulkRequest{Body: bytes.NewReader(data)}
+	res, err := req.Do(context.Background(), s.client)
 	if err != nil {
-		return fmt.Errorf("bulk request failed after retries: %w", err)
+		return fmt.Errorf("bulk request failed: %w", err)
+	}
+	if res.IsError() {
+		body, _ := io.ReadAll(res.Body)
+		res.Body.Close()
+		return fmt.Errorf("bulk request failed: status %d, body: %s", res.StatusCode, string(body))
 	}
 	defer res.Body.Close()
 
@@ -189,38 +178,61 @@ func newClient(cfg *ports.SinkConfig) (*elasticsearch.Client, error) {
 
 // indexName builds the target index name from prefix + instance + table.
 func (s *ElasticSink) indexName(instanceID, table string) string {
+	key := instanceID + "." + table
+	if cached, ok := s.indexCache.Load(key); ok {
+		return cached.(string)
+	}
 	safeTable := strings.ReplaceAll(table, ".", "_")
-	return fmt.Sprintf("%s%s_%s", s.cfg.IndexPrefix, instanceID, safeTable)
+	index := s.cfg.IndexPrefix + instanceID + "_" + safeTable
+	actual, _ := s.indexCache.LoadOrStore(key, index)
+	return actual.(string)
 }
 
-// extractIDFast tries to pull a document ID from the raw JSON payload quickly using sonic.Get.
-func extractIDFast(doc []byte) string {
-	for _, k := range []string{"id", "ID", "uuid", "uid", "guid"} {
-		if node, err := sonic.Get(doc, k); err == nil {
-			switch node.TypeSafe() {
-			case ast.V_ARRAY:
-				l, _ := node.Len()
-				if l == 16 {
-					b := make([]byte, 16)
-					for i := 0; i < 16; i++ {
-						v, _ := node.Index(i).Int64()
-						b[i] = byte(v)
-					}
-					return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
+func rowNode(event *domain.Event) (ast.Node, bool, error) {
+	field := "after"
+	if event.Op == constant.OpDelete {
+		field = "before"
+	}
+	node, err := sonic.Get(event.Data, field)
+	if err != nil {
+		return ast.Node{}, false, err
+	}
+	if !node.Exists() || node.TypeSafe() == ast.V_NULL {
+		return ast.Node{}, false, nil
+	}
+	return node, true, nil
+}
+
+// extractIDFromNode pulls a document ID directly from an already parsed AST node.
+func extractIDFromNode(node *ast.Node) string {
+	for _, key := range []string{"id", "ID", "uuid", "uid", "guid"} {
+		field := node.Get(key)
+		if !field.Exists() {
+			continue
+		}
+		switch field.TypeSafe() {
+		case ast.V_ARRAY:
+			l, _ := field.Len()
+			if l == 16 {
+				b := make([]byte, 16)
+				for i := 0; i < 16; i++ {
+					v, _ := field.Index(i).Int64()
+					b[i] = byte(v)
 				}
-				var b []byte
-				for i := 0; i < l; i++ {
-					v, _ := node.Index(i).Int64()
-					b = append(b, byte(v))
-				}
-				return fmt.Sprintf("%x", b)
-			case ast.V_STRING:
-				val, _ := node.String()
-				return val
-			default:
-				val, _ := node.Raw()
-				return strings.Trim(val, "\"")
+				return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
 			}
+			b := make([]byte, 0, l)
+			for i := 0; i < l; i++ {
+				v, _ := field.Index(i).Int64()
+				b = append(b, byte(v))
+			}
+			return fmt.Sprintf("%x", b)
+		case ast.V_STRING:
+			val, _ := field.String()
+			return val
+		default:
+			val, _ := field.Raw()
+			return strings.Trim(val, "\"")
 		}
 	}
 	return ""
@@ -231,17 +243,23 @@ func writeDeleteAction(buf *bytes.Buffer, index, docID string) {
 	if docID == "" {
 		return
 	}
-	buf.WriteString(fmt.Sprintf(`{"delete":{"_index":"%s","_id":"%s"}}`, index, docID))
+	buf.WriteString(`{"delete":{"_index":"`)
+	buf.WriteString(index)
+	buf.WriteString(`","_id":"`)
+	buf.WriteString(docID)
+	buf.WriteString(`"}}`)
 	buf.WriteByte('\n')
 }
 
 // writeIndexAction appends a bulk index (upsert) line.
 func writeIndexAction(buf *bytes.Buffer, index, docID string, doc []byte) {
+	buf.WriteString(`{"index":{"_index":"`)
+	buf.WriteString(index)
 	if docID != "" {
-		buf.WriteString(fmt.Sprintf(`{"index":{"_index":"%s","_id":"%s"}}`, index, docID))
-	} else {
-		buf.WriteString(fmt.Sprintf(`{"index":{"_index":"%s"}}`, index))
+		buf.WriteString(`","_id":"`)
+		buf.WriteString(docID)
 	}
+	buf.WriteString(`"}}`)
 	buf.WriteByte('\n')
 	buf.Write(doc)
 	buf.WriteByte('\n')
@@ -249,14 +267,20 @@ func writeIndexAction(buf *bytes.Buffer, index, docID string, doc []byte) {
 
 // parseFlexTime parses various Postgres time formats.
 func parseFlexTime(val string) (time.Time, error) {
-	layouts := []string{
-		"2006-01-02 15:04:05.999999-07",
-		"2006-01-02 15:04:05.999999+00",
-		"2006-01-02T15:04:05.999999Z",
-		time.RFC3339,
-		"2006-01-02 15:04:05",
+	if strings.ContainsRune(val, 'T') {
+		return parseTimeLayouts(val, "2006-01-02T15:04:05.999999Z", time.RFC3339)
 	}
+	if strings.ContainsRune(val, ' ') {
+		return parseTimeLayouts(val,
+			"2006-01-02 15:04:05.999999-07",
+			"2006-01-02 15:04:05.999999+00",
+			"2006-01-02 15:04:05",
+		)
+	}
+	return parseTimeLayouts(val, time.RFC3339)
+}
 
+func parseTimeLayouts(val string, layouts ...string) (time.Time, error) {
 	var lastErr error
 	for _, layout := range layouts {
 		t, err := time.Parse(layout, val)

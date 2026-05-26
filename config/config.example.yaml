@@ -18,6 +18,12 @@ server:
   grpc_port: 9090                     # gRPC API port (env: GRPC_PORT)
   http_port: 9091                     # REST gateway + metrics port (env: HTTP_PORT)
 
+# Prometheus query API for dashboard percentile metrics.
+# Use "http://prometheus:9090" when the app runs inside the docker network.
+prometheus:
+  url: "http://127.0.0.1:9095"        # Prometheus URL (env: PROMETHEUS_URL)
+  query_window: "5m"                  # PromQL rate window (env: PROMETHEUS_QUERY_WINDOW)
+
 # Logging
 log:
   mode: "text"                        # "text" for dev, "json" for production (env: LOG_MODE)

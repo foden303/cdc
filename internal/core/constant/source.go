@@ -11,7 +11,3 @@ const (
 func (s SourceType) String() string {
 	return string(s)
 }
-
-const (
-	DefaultTxBufferSize = 128
-)

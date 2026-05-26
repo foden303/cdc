@@ -31,7 +31,3 @@ type ResumeFlowRequest struct {
 type GetFlowStatsRequest struct {
 	FlowID string
 }
-
-type GetFlowTableProgressRequest struct {
-	FlowID string
-}

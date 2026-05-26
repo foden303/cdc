@@ -43,6 +43,9 @@ func (s *CDCService) CreateFlow(ctx context.Context, req *cdcpb.CreateFlowReques
 	}
 
 	result, err := s.flowService.Create(ctx, request.CreateFlowRequest{Flow: cfg})
+	if grpcErr := invalidArgumentIfRequired(err); grpcErr != nil {
+		return nil, grpcErr
+	}
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to create flow: %v", err)
 	}
@@ -109,6 +112,9 @@ func (s *CDCService) UpdateFlow(ctx context.Context, req *cdcpb.UpdateFlowReques
 	}
 
 	result, err := s.flowService.Update(ctx, request.UpdateFlowRequest{Flow: cfg})
+	if grpcErr := invalidArgumentIfRequired(err); grpcErr != nil {
+		return nil, grpcErr
+	}
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to update flow: %v", err)
 	}
@@ -156,15 +162,13 @@ func (s *CDCService) GetFlowStats(ctx context.Context, req *cdcpb.GetFlowStatsRe
 	return &cdcpb.GetFlowStatsResponse{
 		EventsPerSecond:      stats.EventsPerSecond,
 		ReplicationLagMs:     stats.ReplicationLagMs,
-		LastSyncedAt:         stats.LastSyncedAt,
 		TotalEventsProcessed: stats.TotalEventsProcessed,
+		RunningWorkers:       stats.RunningWorkers,
+		PoolCapacity:         stats.PoolCapacity,
+		WorkerUtilization:    stats.WorkerUtilization,
+		FailureCount:         stats.FailureCount,
+		DlqCount:             stats.DLQCount,
+		FilteredCount:        stats.FilteredCount,
+		LastError:            stats.LastError,
 	}, nil
-}
-
-func (s *CDCService) GetFlowTableProgress(ctx context.Context, req *cdcpb.GetFlowTableProgressRequest) (*cdcpb.GetFlowTableProgressResponse, error) {
-	_, err := s.flowService.TableProgress(ctx, request.GetFlowTableProgressRequest{FlowID: req.FlowId})
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to get flow table progress: %v", err)
-	}
-	return &cdcpb.GetFlowTableProgressResponse{}, nil
 }

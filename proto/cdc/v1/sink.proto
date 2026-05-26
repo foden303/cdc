@@ -18,7 +18,6 @@ message SinkConfig {
   repeated string url = 9;
   optional string api_key = 10;
   optional string index_prefix = 11;
-  optional int32 max_retries = 12;
 }
 
 // Request to create a new sink.

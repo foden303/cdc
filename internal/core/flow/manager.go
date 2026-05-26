@@ -6,13 +6,17 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/foden/cdc/internal/adapters/driven/registry"
 	"github.com/foden/cdc/internal/core/domain"
 	"github.com/foden/cdc/internal/core/ports"
+	coreruntime "github.com/foden/cdc/internal/core/runtime"
+	cdcerrors "github.com/foden/cdc/pkg/errors"
+	"github.com/foden/cdc/pkg/pool"
+	"github.com/foden/cdc/pkg/retry"
 	"github.com/google/uuid"
 )
 
@@ -58,24 +62,27 @@ var _ ports.FlowManager = (*Manager)(nil)
 // Manager orchestrates flow lifecycle with Pool Manager integration.
 // It implements ports.FlowManager.
 type Manager struct {
-	store       ports.Store
-	poolManager *PoolManager
-	sinkPool    *SinkPoolManager
-	registry    ports.Registry
-	natsClient  ports.NATSClient
-	discovery   ports.Discovery
-	maxDeliver  int
-	mu          sync.RWMutex
-	workers     map[string]*FlowWorker
-	sources     map[string]ports.Source // source_id → running source instance
-	sourceRuns  map[string]*sourceRuntime
-	log         *slog.Logger
+	store           ports.Store
+	poolManager     *PoolManager
+	sinkPool        *SinkPoolManager
+	registry        ports.Registry
+	natsClient      ports.NATSClient
+	discovery       ports.Discovery
+	runtimeRegistry *coreruntime.Registry
+	runtimeMetrics  *coreruntime.Metrics
+	runtimeView     *coreruntime.View
+	maxDeliver      int
+	mu              sync.RWMutex
+	workers         map[string]*FlowWorker
+	sources         map[string]ports.Source // source_id → running source instance
+	sourceRuns      map[string]*sourceRuntime
+	log             *slog.Logger
 }
 
 type sourceRuntime struct {
 	source ports.Source
 	events chan *domain.Event
-	acks   chan uint64
+	acks   chan ports.SourceAck
 	cancel context.CancelFunc
 	done   chan struct{}
 }
@@ -105,6 +112,15 @@ func NewManager(
 	for _, option := range options {
 		option(m)
 	}
+	if m.runtimeRegistry == nil {
+		m.runtimeRegistry = coreruntime.DefaultRegistry()
+	}
+	if m.runtimeMetrics == nil {
+		m.runtimeMetrics = coreruntime.DefaultMetrics()
+	}
+	if m.runtimeView == nil {
+		m.runtimeView = coreruntime.NewView(m.runtimeRegistry, m.runtimeMetrics, runtimePoolMetricsProvider{poolManager: m.poolManager})
+	}
 	if m.maxDeliver <= 0 {
 		m.maxDeliver = defaultMaxDeliver
 	}
@@ -112,6 +128,41 @@ func NewManager(
 }
 
 type ManagerOption func(*Manager)
+
+func WithRuntime(
+	registry *coreruntime.Registry,
+	metrics *coreruntime.Metrics,
+	view *coreruntime.View,
+) ManagerOption {
+	return func(m *Manager) {
+		m.runtimeRegistry = registry
+		m.runtimeMetrics = metrics
+		m.runtimeView = view
+	}
+}
+
+type runtimePoolMetricsProvider struct {
+	poolManager *PoolManager
+}
+
+func NewRuntimePoolMetricsProvider(poolManager *PoolManager) coreruntime.PoolSnapshotProvider {
+	return runtimePoolMetricsProvider{poolManager: poolManager}
+}
+
+func (p runtimePoolMetricsProvider) GetMetrics(flowID string) *coreruntime.PoolMetricsSnapshot {
+	if p.poolManager == nil {
+		return nil
+	}
+	metrics := p.poolManager.GetMetrics(flowID)
+	if metrics == nil {
+		return nil
+	}
+	return &coreruntime.PoolMetricsSnapshot{
+		RunningWorkers:     metrics.RunningWorkers,
+		PoolCapacity:       metrics.PoolCapacity,
+		UtilizationPercent: metrics.UtilizationPercent,
+	}
+}
 
 func WithMaxDeliver(maxDeliver int) ManagerOption {
 	return func(m *Manager) {
@@ -124,9 +175,6 @@ func WithMaxDeliver(maxDeliver int) ManagerOption {
 // CreateFlow validates refs, persists config, starts worker with ants pool.
 func (m *Manager) CreateFlow(ctx context.Context, cfg *ports.FlowConfig) (*ports.FlowConfig, error) {
 	// Validate required fields
-	if cfg.Name == "" {
-		return nil, fmt.Errorf("flow name is required")
-	}
 	if cfg.SourceID == "" {
 		return nil, fmt.Errorf("source_id is required")
 	}
@@ -139,6 +187,10 @@ func (m *Manager) CreateFlow(ctx context.Context, cfg *ports.FlowConfig) (*ports
 	if cfg.SinkTable == "" {
 		return nil, fmt.Errorf("sink_table is required")
 	}
+	cfg.SourceID = strings.TrimSpace(cfg.SourceID)
+	cfg.SinkID = strings.TrimSpace(cfg.SinkID)
+	cfg.SourceTable = strings.TrimSpace(cfg.SourceTable)
+	cfg.SinkTable = strings.TrimSpace(cfg.SinkTable)
 
 	// Validate source_id exists
 	srcCfg, err := m.store.GetSource(ctx, cfg.SourceID)
@@ -156,6 +208,14 @@ func (m *Manager) CreateFlow(ctx context.Context, cfg *ports.FlowConfig) (*ports
 	}
 	if sinkCfg == nil {
 		return nil, fmt.Errorf("sink %q not found", cfg.SinkID)
+	}
+	if strings.TrimSpace(cfg.Name) == "" {
+		cfg.Name = GenerateFlowName(srcCfg, sinkCfg, cfg.SourceTable, cfg.SinkTable)
+	} else {
+		cfg.Name = strings.TrimSpace(cfg.Name)
+	}
+	if err := m.validateUniqueFlowMapping(ctx, "", cfg.SourceID, cfg.SinkID, cfg.SourceTable, cfg.SinkTable); err != nil {
+		return nil, err
 	}
 
 	// Set default FlowOptions
@@ -198,6 +258,14 @@ func (m *Manager) CreateFlow(ctx context.Context, cfg *ports.FlowConfig) (*ports
 		return nil, fmt.Errorf("failed to persist flow config: %w", err)
 	}
 
+	if err := m.reconcileSourceTables(ctx, srcCfg); err != nil {
+		m.log.Error("failed to reconcile source tables",
+			"flow_id", flowID,
+			"source_id", cfg.SourceID,
+			"err", err)
+		return cfg, nil
+	}
+
 	// Acquire shared sink instance from SinkPoolManager
 	sink, err := m.sinkPool.Acquire(ctx, cfg.SinkID)
 	if err != nil {
@@ -223,6 +291,74 @@ func (m *Manager) CreateFlow(ctx context.Context, cfg *ports.FlowConfig) (*ports
 	)
 
 	return cfg, nil
+}
+
+var flowNameSanitizer = regexp.MustCompile(`[^a-zA-Z0-9]+`)
+
+func GenerateFlowName(src *ports.SourceConfig, sink *ports.SinkConfig, sourceTable, sinkTable string) string {
+	sourceName := componentName(src.Name, src.InstanceID, src.Type, "source")
+	sinkName := componentName(sink.Name, sink.InstanceID, sink.Type, "sink")
+	sourceTableName := tableName(sourceTable)
+	sinkTableName := tableName(sinkTable)
+
+	name := fmt.Sprintf("sync-%s-%s-to-%s-%s", sourceName, sourceTableName, sinkName, sinkTableName)
+	name = flowNameSanitizer.ReplaceAllString(strings.ToLower(name), "-")
+	name = strings.Trim(name, "-")
+	if len(name) > 80 {
+		name = strings.TrimRight(name[:80], "-")
+	}
+	if name == "" {
+		return "sync-flow"
+	}
+	return name
+}
+
+func componentName(name, instanceID, connectorType, fallback string) string {
+	for _, candidate := range []string{name, instanceID, connectorType, fallback} {
+		if trimmed := strings.TrimSpace(candidate); trimmed != "" {
+			return trimmed
+		}
+	}
+	return fallback
+}
+
+func tableName(table string) string {
+	table = strings.TrimSpace(table)
+	if table == "" {
+		return "table"
+	}
+	parts := strings.Split(table, ".")
+	return parts[len(parts)-1]
+}
+
+func (m *Manager) validateUniqueFlowMapping(ctx context.Context, currentFlowID, sourceID, sinkID, sourceTable, sinkTable string) error {
+	flows, err := m.store.ListFlows(ctx)
+	if err != nil {
+		return err
+	}
+	candidate := flowMappingKey(sourceID, sinkID, sourceTable, sinkTable)
+	for _, flow := range flows {
+		if flow == nil || flow.FlowID == currentFlowID {
+			continue
+		}
+		if flowMappingKey(flow.SourceID, flow.SinkID, flow.SourceTable, flow.SinkTable) == candidate {
+			return fmt.Errorf("%w: flow mapping already exists for source %q table %q to sink %q table %q", cdcerrors.ErrDuplicateConfig, sourceID, sourceTable, sinkID, sinkTable)
+		}
+	}
+	return nil
+}
+
+func flowMappingKey(sourceID, sinkID, sourceTable, sinkTable string) string {
+	return strings.Join([]string{
+		normalizeFlowToken(sourceID),
+		normalizeFlowToken(sinkID),
+		normalizeFlowToken(sourceTable),
+		normalizeFlowToken(sinkTable),
+	}, "|")
+}
+
+func normalizeFlowToken(value string) string {
+	return strings.ToLower(strings.TrimSpace(value))
 }
 
 // GetFlow retrieves a single flow config from the store.
@@ -266,16 +402,19 @@ func (m *Manager) UpdateFlow(ctx context.Context, cfg *ports.FlowConfig) (*ports
 		existing.Name = cfg.Name
 	}
 	if cfg.SourceTable != "" {
-		existing.SourceTable = cfg.SourceTable
+		existing.SourceTable = strings.TrimSpace(cfg.SourceTable)
 	}
 	if cfg.SinkTable != "" {
-		existing.SinkTable = cfg.SinkTable
+		existing.SinkTable = strings.TrimSpace(cfg.SinkTable)
 	}
 	if cfg.ColumnMappings != nil {
 		existing.ColumnMappings = cfg.ColumnMappings
 	}
 	if cfg.Options != nil {
 		existing.Options = cfg.Options
+	}
+	if err := m.validateUniqueFlowMapping(ctx, existing.FlowID, existing.SourceID, existing.SinkID, existing.SourceTable, existing.SinkTable); err != nil {
+		return nil, err
 	}
 	existing.UpdatedAt = time.Now().UnixMilli()
 
@@ -294,6 +433,9 @@ func (m *Manager) UpdateFlow(ctx context.Context, cfg *ports.FlowConfig) (*ports
 		if err == nil {
 			m.startWorker(existing, sink)
 			if srcCfg, getErr := m.store.GetSource(ctx, existing.SourceID); getErr == nil && srcCfg != nil {
+				if syncErr := m.reconcileSourceTables(ctx, srcCfg); syncErr != nil {
+					m.log.Error("failed to reconcile source tables on update", "flow_id", existing.FlowID, "err", syncErr)
+				}
 				if startErr := m.ensureSourceRunning(ctx, srcCfg); startErr != nil {
 					m.log.Error("failed to start source on update", "flow_id", existing.FlowID, "err", startErr)
 				}
@@ -342,6 +484,11 @@ func (m *Manager) PauseFlow(ctx context.Context, flowID string) (*ports.FlowConf
 	if err := m.store.PutFlow(ctx, flow); err != nil {
 		return nil, fmt.Errorf("failed to persist paused flow config: %w", err)
 	}
+	if srcCfg, err := m.store.GetSource(ctx, flow.SourceID); err == nil && srcCfg != nil {
+		if syncErr := m.reconcileSourceTables(ctx, srcCfg); syncErr != nil {
+			m.log.Error("failed to reconcile source tables on pause", "flow_id", flow.FlowID, "err", syncErr)
+		}
+	}
 
 	m.log.Info("flow paused", "flow_id", flowID)
 	return flow, nil
@@ -366,6 +513,12 @@ func (m *Manager) ResumeFlow(ctx context.Context, flowID string) (*ports.FlowCon
 		return nil, ErrInvalidStateTransition
 	}
 
+	flow.Status = ports.FlowStatusRunning
+	flow.UpdatedAt = time.Now().UnixMilli()
+	if err := m.store.PutFlow(ctx, flow); err != nil {
+		return nil, fmt.Errorf("failed to persist resumed flow config: %w", err)
+	}
+
 	// Acquire shared sink instance from SinkPoolManager
 	sink, err := m.sinkPool.Acquire(ctx, flow.SinkID)
 	if err != nil {
@@ -375,17 +528,12 @@ func (m *Manager) ResumeFlow(ctx context.Context, flowID string) (*ports.FlowCon
 	// Start new FlowWorker (resumes from last offset via store.GetOffset)
 	m.startWorker(flow, sink)
 	if srcCfg, err := m.store.GetSource(ctx, flow.SourceID); err == nil && srcCfg != nil {
+		if err := m.reconcileSourceTables(ctx, srcCfg); err != nil {
+			m.log.Error("failed to reconcile source tables on resume", "flow_id", flow.FlowID, "err", err)
+		}
 		if err := m.ensureSourceRunning(ctx, srcCfg); err != nil {
 			m.log.Error("failed to start source on resume", "flow_id", flow.FlowID, "err", err)
 		}
-	}
-
-	// Update status
-	flow.Status = ports.FlowStatusRunning
-	flow.UpdatedAt = time.Now().UnixMilli()
-
-	if err := m.store.PutFlow(ctx, flow); err != nil {
-		return nil, fmt.Errorf("failed to persist resumed flow config: %w", err)
 	}
 
 	m.log.Info("flow resumed", "flow_id", flowID)
@@ -419,6 +567,11 @@ func (m *Manager) DeleteFlow(ctx context.Context, flowID string) error {
 	if err := m.store.DeleteFlow(ctx, flowID); err != nil {
 		return fmt.Errorf("failed to delete flow from store: %w", err)
 	}
+	if srcCfg, err := m.store.GetSource(ctx, flow.SourceID); err == nil && srcCfg != nil {
+		if syncErr := m.reconcileSourceTables(ctx, srcCfg); syncErr != nil {
+			m.log.Error("failed to reconcile source tables on delete", "flow_id", flowID, "err", syncErr)
+		}
+	}
 
 	// Delete offset from store (save empty to clear)
 	_ = m.store.SaveOffset(ctx, flowID, "")
@@ -441,27 +594,14 @@ func (m *Manager) GetFlowStats(ctx context.Context, flowID string) (*ports.FlowS
 		return nil, ErrFlowNotFound
 	}
 
-	stats := &ports.FlowStats{
-		LastSyncedAt: flow.UpdatedAt,
+	stats := &ports.FlowStats{}
+	if runtimeStats, ok := m.runtimeView.FlowStats(flowID); ok {
+		stats = &runtimeStats
 	}
 
 	// If flow is paused, return zeroed stats (no active pool)
 	if flow.Status == ports.FlowStatusPaused {
 		return stats, nil
-	}
-
-	// Get pool metrics for running flows
-	metrics := m.poolManager.GetMetrics(flowID)
-	if metrics != nil {
-		// Pool metrics provide capacity and utilization info.
-		// TotalEventsProcessed and EventsPerSecond would ideally come from
-		// a dedicated metrics collector; for now we expose pool state.
-		stats.TotalEventsProcessed = 0
-		stats.ReplicationLagMs = 0
-		stats.EventsPerSecond = 0
-		stats.RunningWorkers = uint32(metrics.RunningWorkers)
-		stats.PoolCapacity = uint32(metrics.PoolCapacity)
-		stats.WorkerUtilization = metrics.UtilizationPercent
 	}
 
 	return stats, nil
@@ -490,6 +630,9 @@ func (m *Manager) RestoreFlows(ctx context.Context) error {
 
 			m.startWorker(flow, sink)
 			if srcCfg, getErr := m.store.GetSource(ctx, flow.SourceID); getErr == nil && srcCfg != nil {
+				if syncErr := m.reconcileSourceTables(ctx, srcCfg); syncErr != nil {
+					m.log.Error("failed to reconcile source tables on restore", "flow_id", flow.FlowID, "err", syncErr)
+				}
 				if startErr := m.ensureSourceRunning(ctx, srcCfg); startErr != nil {
 					m.log.Error("failed to start source on restore", "flow_id", flow.FlowID, "err", startErr)
 				}
@@ -536,8 +679,6 @@ func (m *Manager) Stop() {
 // --- Internal helpers ---
 
 // RegisterSource registers a running source instance with the flow manager.
-// This allows the flow manager to call RegisterTable/UnregisterTable on sources
-// when flows start/stop.
 func (m *Manager) RegisterSource(sourceID string, src ports.Source) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -549,6 +690,82 @@ func (m *Manager) UnregisterSource(sourceID string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	delete(m.sources, sourceID)
+}
+
+func (m *Manager) desiredSourceTables(ctx context.Context, sourceID string) ([]ports.SourceTableRef, error) {
+	flows, err := m.store.ListFlows(ctx)
+	if err != nil {
+		return nil, err
+	}
+	seen := make(map[string]ports.SourceTableRef)
+	for _, flow := range flows {
+		if flow == nil || flow.SourceID != sourceID || flow.Status != ports.FlowStatusRunning || strings.TrimSpace(flow.SourceTable) == "" {
+			continue
+		}
+		schema, table := parseSourceTable(flow.SourceTable)
+		if schema == "" {
+			schema = "public"
+		}
+		ref := ports.SourceTableRef{Schema: schema, Table: table}
+		seen[schema+"."+table] = ref
+	}
+	tables := make([]ports.SourceTableRef, 0, len(seen))
+	for _, table := range seen {
+		tables = append(tables, table)
+	}
+	return tables, nil
+}
+
+// reconcileSourceTables updates the source-side table selection from RUNNING flows.
+// It is a source lifecycle hook, not FlowWorker event filtering.
+func (m *Manager) reconcileSourceTables(ctx context.Context, cfg *ports.SourceConfig) error {
+	if cfg == nil {
+		return nil
+	}
+	tables, err := m.desiredSourceTables(ctx, cfg.InstanceID)
+	if err != nil {
+		return err
+	}
+	if len(tables) == 0 {
+		m.stopSourceRuntime(cfg.InstanceID)
+	}
+
+	m.mu.RLock()
+	runtime := m.sourceRuns[cfg.InstanceID]
+	m.mu.RUnlock()
+
+	var src ports.Source
+	if runtime != nil {
+		src = runtime.source
+	} else {
+		created, err := m.registry.CreateSource(cfg)
+		if err != nil {
+			return err
+		}
+		src = created
+	}
+	syncer, ok := src.(ports.SourceTableSyncer)
+	if !ok {
+		return nil
+	}
+	return syncer.SyncSourceTables(ctx, tables)
+}
+
+func (m *Manager) stopSourceRuntime(sourceID string) {
+	m.mu.Lock()
+	runtime := m.sourceRuns[sourceID]
+	if runtime == nil {
+		m.mu.Unlock()
+		return
+	}
+	delete(m.sourceRuns, sourceID)
+	delete(m.sources, sourceID)
+	m.mu.Unlock()
+
+	runtime.cancel()
+	_ = runtime.source.Stop()
+	<-runtime.done
+	m.log.Info("source stopped because no running flow needs it", "source_id", sourceID)
 }
 
 func (m *Manager) ensureSourceRunning(ctx context.Context, cfg *ports.SourceConfig) error {
@@ -572,7 +789,7 @@ func (m *Manager) ensureSourceRunning(ctx context.Context, cfg *ports.SourceConf
 	runtime := &sourceRuntime{
 		source: src,
 		events: make(chan *domain.Event, 8192),
-		acks:   make(chan uint64, 1024),
+		acks:   make(chan ports.SourceAck, 1024),
 		cancel: cancel,
 		done:   make(chan struct{}),
 	}
@@ -589,7 +806,18 @@ func (m *Manager) ensureSourceRunning(ctx context.Context, cfg *ports.SourceConf
 
 	go m.publishSourceEvents(runCtx, cfg.InstanceID, runtime.events, runtime.done)
 
-	if err := src.Start(runtime.events, runtime.acks, ""); err != nil {
+	initialOffset, err := m.store.GetSourceOffset(ctx, cfg.InstanceID)
+	if err != nil {
+		cancel()
+		<-runtime.done
+		m.mu.Lock()
+		delete(m.sourceRuns, cfg.InstanceID)
+		delete(m.sources, cfg.InstanceID)
+		m.mu.Unlock()
+		return fmt.Errorf("failed to load source offset for %q: %w", cfg.InstanceID, err)
+	}
+
+	if err := src.Start(runtime.events, runtime.acks, initialOffset); err != nil {
 		cancel()
 		<-runtime.done
 		m.mu.Lock()
@@ -616,10 +844,55 @@ func (m *Manager) publishSourceEvents(ctx context.Context, sourceID string, even
 		}
 		toPublish := append([]*domain.Event(nil), batch...)
 		batch = batch[:0]
-		if err := m.natsClient.PublishBatch(ctx, func(ev *domain.Event) string {
-			return ev.Subject
-		}, toPublish); err != nil {
-			m.log.Error("failed to publish source events", "source_id", sourceID, "count", len(toPublish), "err", err)
+
+		for {
+			publishErr := retry.Do(ctx, retry.DefaultConfig(), func() error {
+				return m.natsClient.PublishBatch(ctx, func(ev *domain.Event) string {
+					return ev.Subject
+				}, toPublish)
+			})
+			if publishErr == nil {
+				break
+			}
+			m.log.Error("failed to publish source events, retrying batch", "source_id", sourceID, "count", len(toPublish), "err", publishErr)
+			if ctx.Err() != nil {
+				for _, ev := range toPublish {
+					pool.PutEvent(ev)
+				}
+				return
+			}
+		}
+
+		var ack ports.SourceAck
+		for i := len(toPublish) - 1; i >= 0; i-- {
+			ev := toPublish[i]
+			if ev == nil || ev.Offset == "" {
+				continue
+			}
+			ack = ports.SourceAck{LSN: ev.LSN, Offset: ev.Offset}
+			break
+		}
+
+		if ack.Offset != "" {
+			if err := m.store.SaveSourceOffset(ctx, sourceID, ack.Offset); err != nil {
+				m.log.Error("failed to save source offset", "source_id", sourceID, "offset", ack.Offset, "err", err)
+			} else {
+				m.mu.RLock()
+				runtime := m.sourceRuns[sourceID]
+				m.mu.RUnlock()
+				if runtime != nil {
+					select {
+					case runtime.acks <- ack:
+					default:
+						m.log.Warn("source ack channel full", "source_id", sourceID, "offset", ack.Offset, "lsn", ack.LSN)
+					}
+				}
+			}
+		}
+
+		// Return events to the pool to avoid memory leaks
+		for _, ev := range toPublish {
+			pool.PutEvent(ev)
 		}
 	}
 
@@ -665,18 +938,15 @@ func (m *Manager) startWorker(flow *ports.FlowConfig, sink ports.Sink) {
 		delete(m.workers, flow.FlowID)
 	}
 
-	// Register table in global table registry
-	schema, table := parseSourceTable(flow.SourceTable)
-	partitionCount := 4
-	if flow.Options != nil && flow.Options.PartitionCount > 0 {
-		partitionCount = flow.Options.PartitionCount
+	if err := m.runtimeRegistry.RegisterFlow(flow); err != nil {
+		m.log.Error("failed to register flow runtime", "flow_id", flow.FlowID, "err", err)
+		return
 	}
-	registry.GlobalTableRegistry.Register(flow.SourceID, schema, table, partitionCount)
 
 	// Wrap ports.Sink as FlowSink
 	fs := &sinkAdapter{sink: sink}
 
-	worker := StartFlowWorker(context.Background(), flow, fs, m.poolManager, m.store, m.natsClient, m.maxDeliver)
+	worker := StartFlowWorker(context.Background(), flow, fs, m.poolManager, m.store, m.natsClient, m.maxDeliver, m.runtimeMetrics)
 	m.workers[flow.FlowID] = worker
 	m.log.Info("flow worker started", "flow_id", flow.FlowID, "sink_id", flow.SinkID)
 }
@@ -687,10 +957,9 @@ func (m *Manager) stopWorker(flowID string) {
 	defer m.mu.Unlock()
 
 	if worker, ok := m.workers[flowID]; ok {
-		// Unregister table from global table registry
 		flow := worker.flow
-		schema, table := parseSourceTable(flow.SourceTable)
-		registry.GlobalTableRegistry.Unregister(flow.SourceID, schema, table)
+		m.runtimeRegistry.UnregisterFlow(flow.FlowID)
+		m.runtimeMetrics.RecordFlowStopped(flow.FlowID)
 
 		worker.Stop()
 		delete(m.workers, flowID)

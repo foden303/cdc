@@ -12,7 +12,6 @@ import type {
   ListFlowsResponse,
   FlowConfig,
   GetFlowStatsResponse,
-  GetFlowProgressResponse,
   GetStatsResponse,
 } from '@/types/api';
 
@@ -24,7 +23,6 @@ export const managerKeys = {
   flows: ['flows'] as const,
   flow: (id: string) => ['flow', id] as const,
   flowStats: (id: string) => ['flowStats', id] as const,
-  flowProgress: (id: string) => ['flowProgress', id] as const,
   stats: ['stats'] as const,
   sourceTables: (id: string) => ['sourceTables', id] as const,
   sinkTables: (id: string) => ['sinkTables', id] as const,
@@ -44,7 +42,7 @@ export function useConfig() {
         flows: flowsQuery.data?.flows ?? [],
       },
       available_sources: ['postgres', 'mysql'],
-      available_sinks: ['postgres', 'elasticsearch', 'clickhouse'],
+      available_sinks: ['postgres', 'mysql', 'elasticsearch', 'clickhouse'],
     },
     isLoading:
       sourcesQuery.isLoading || sinksQuery.isLoading || flowsQuery.isLoading,
@@ -218,7 +216,7 @@ export function useCreateFlow() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (payload: {
-      name: string;
+      name?: string;
       source_id: string;
       sink_id: string;
       source_table: string;
@@ -308,17 +306,6 @@ export function useFlowStats(flowId: string) {
     queryKey: managerKeys.flowStats(flowId),
     queryFn: () =>
       api.get<GetFlowStatsResponse>(ENDPOINTS.flowStats(flowId)),
-    enabled: !!flowId,
-    refetchInterval: POLLING.FLOW_STATS,
-  });
-}
-
-/** Fetches table sync progress for a single flow. */
-export function useFlowProgress(flowId: string) {
-  return useQuery({
-    queryKey: managerKeys.flowProgress(flowId),
-    queryFn: () =>
-      api.get<GetFlowProgressResponse>(ENDPOINTS.flowProgress(flowId)),
     enabled: !!flowId,
     refetchInterval: POLLING.FLOW_STATS,
   });

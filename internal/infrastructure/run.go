@@ -10,7 +10,9 @@ import (
 	"time"
 
 	drivendiscovery "github.com/foden/cdc/internal/adapters/driven/discovery"
+	drivenmetrics "github.com/foden/cdc/internal/adapters/driven/metrics"
 	"github.com/foden/cdc/internal/core/flow"
+	coreruntime "github.com/foden/cdc/internal/core/runtime"
 	"github.com/foden/cdc/internal/di"
 )
 
@@ -43,8 +45,21 @@ func Run() error {
 
 	reg := SetupRegistry()
 	poolManager := flow.NewPoolManager()
+	runtimeRegistry := coreruntime.NewRegistry()
+	runtimeMetrics := coreruntime.NewMetrics()
+	runtimeView := coreruntime.NewView(runtimeRegistry, runtimeMetrics, flow.NewRuntimePoolMetricsProvider(poolManager))
+	coreruntime.SetDefaults(runtimeRegistry, runtimeMetrics, runtimeView)
 	disc := drivendiscovery.NewService()
-	flowManager := flow.NewManager(store, poolManager, reg, natsClient, disc, flow.WithMaxDeliver(cfg.NATS.MaxDeliver))
+	metricsReader := drivenmetrics.NewPrometheusClient(cfg.Prometheus.URL)
+	flowManager := flow.NewManager(
+		store,
+		poolManager,
+		reg,
+		natsClient,
+		disc,
+		flow.WithMaxDeliver(cfg.NATS.MaxDeliver),
+		flow.WithRuntime(runtimeRegistry, runtimeMetrics, runtimeView),
+	)
 
 	restoreCtx, restoreCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer restoreCancel()
@@ -58,6 +73,9 @@ func Run() error {
 		Registry:    reg,
 		Discovery:   disc,
 		NATSClient:  natsClient,
+		Metrics:     metricsReader,
+		RuntimeView: runtimeView,
+		P99Window:   cfg.Prometheus.QueryWindow,
 	})
 
 	appServer := NewAppServer(cfg.Server, container)

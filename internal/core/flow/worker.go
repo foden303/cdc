@@ -8,10 +8,13 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/bytedance/sonic"
+
 	"github.com/foden/cdc/internal/adapters/driven/metrics"
 	"github.com/foden/cdc/internal/core/constant"
 	"github.com/foden/cdc/internal/core/domain"
 	"github.com/foden/cdc/internal/core/ports"
+	coreruntime "github.com/foden/cdc/internal/core/runtime"
 	cdcerrors "github.com/foden/cdc/pkg/errors"
 	"github.com/foden/cdc/pkg/pool"
 	"github.com/foden/cdc/pkg/retry"
@@ -29,18 +32,19 @@ const defaultMaxDeliver = 5
 // Each FlowWorker owns a NATS durable consumer filtered to its source table
 // and submits batch processing tasks to its ants pool.
 type FlowWorker struct {
-	flow        *FlowConfig
-	sink        FlowSink
-	pool        *ants.Pool
-	poolManager *PoolManager
-	store       ports.Store
-	natsClient  ports.NATSClient
-	filter      *Filter
-	mappings    []ports.ColumnMapping
-	maxDeliver  int
-	log         *slog.Logger
-	cancel      context.CancelFunc
-	stopped     chan struct{}
+	flow           *FlowConfig
+	sink           FlowSink
+	pool           *ants.Pool
+	poolManager    *PoolManager
+	store          ports.Store
+	natsClient     ports.NATSClient
+	runtimeMetrics *coreruntime.Metrics
+	filter         *Filter
+	mappings       []ports.ColumnMapping
+	maxDeliver     int
+	log            *slog.Logger
+	cancel         context.CancelFunc
+	stopped        chan struct{}
 }
 
 // StartFlowWorker creates a NATS durable consumer and ants pool for the flow,
@@ -53,6 +57,7 @@ func StartFlowWorker(
 	store ports.Store,
 	natsClient ports.NATSClient,
 	maxDeliver int,
+	runtimeMetrics *coreruntime.Metrics,
 ) *FlowWorker {
 	ctx, cancel := context.WithCancel(ctx)
 
@@ -91,26 +96,27 @@ func StartFlowWorker(
 	// Get or create ants pool from PoolManager
 	antsPool, err := poolManager.CreatePool(flow.FlowID, poolSize)
 	if err != nil {
-		log.Error("failed to create ants pool, falling back to default",
+		log.Error("failed to create shared ants pool, using isolated pool",
 			"pool_size", poolSize,
 			"err", err)
-		// Create a standalone pool as fallback
+		// Keep the worker isolated if the shared pool manager rejects this flow.
 		antsPool, _ = ants.NewPool(poolSize)
 	}
 
 	w := &FlowWorker{
-		flow:        flow,
-		sink:        sink,
-		pool:        antsPool,
-		poolManager: poolManager,
-		store:       store,
-		natsClient:  natsClient,
-		filter:      filter,
-		mappings:    flow.ColumnMappings,
-		maxDeliver:  maxDeliver,
-		log:         log,
-		cancel:      cancel,
-		stopped:     make(chan struct{}),
+		flow:           flow,
+		sink:           sink,
+		pool:           antsPool,
+		poolManager:    poolManager,
+		store:          store,
+		natsClient:     natsClient,
+		runtimeMetrics: runtimeMetrics,
+		filter:         filter,
+		mappings:       flow.ColumnMappings,
+		maxDeliver:     maxDeliver,
+		log:            log,
+		cancel:         cancel,
+		stopped:        make(chan struct{}),
 	}
 
 	go w.run(ctx)
@@ -215,6 +221,7 @@ func (w *FlowWorker) run(ctx context.Context) {
 // processBatch handles a batch of NATS messages:
 // extract metadata → apply filter → apply column mapping → deep clone → write to sink → ACK/NAK.
 func (w *FlowWorker) processBatch(ctx context.Context, msgs []jetstream.Msg) {
+	batchStart := time.Now()
 	events := make([]*domain.Event, 0, len(msgs))
 	passedMsgs := make([]jetstream.Msg, 0, len(msgs))
 	poolEvents := make([]*domain.Event, 0, len(msgs))
@@ -224,8 +231,11 @@ func (w *FlowWorker) processBatch(ctx context.Context, msgs []jetstream.Msg) {
 		ev := w.parseEventFromMsg(msg)
 
 		// Apply filter — skip events that don't match
-		if w.filter != nil && !w.filter.Match(ev) {
+		if w.filter != nil && !w.filter.Evaluate(ev.Data) {
 			// Event filtered out — ACK it (consumed but not written)
+			if w.runtimeMetrics != nil {
+				w.runtimeMetrics.RecordFlowFiltered(w.flow.FlowID, 1)
+			}
 			_ = msg.Ack()
 			pool.PutEvent(ev)
 			continue
@@ -233,11 +243,21 @@ func (w *FlowWorker) processBatch(ctx context.Context, msgs []jetstream.Msg) {
 
 		// Apply column mapping to event data
 		if len(w.mappings) > 0 && len(ev.Data) > 0 {
-			mapped, err := ApplyColumnMapping(ev.Data, w.mappings)
+			mapped, err := ApplyColumnMappings(ev.Data, w.mappings)
 			if err != nil {
 				w.log.Warn("column mapping failed, moving event to DLQ",
 					"err", err,
 					"offset", ev.Offset)
+				if w.runtimeMetrics != nil {
+					w.runtimeMetrics.RecordFlowFailure(
+						w.flow.FlowID,
+						w.flow.SourceID,
+						w.flow.SinkID,
+						"mapping_error",
+						err.Error(),
+						1,
+					)
+				}
 				if dlqErr := w.natsClient.MoveToDLQ(ctx, msg, ports.DLQMoveOptions{
 					FlowID:     w.flow.FlowID,
 					SinkID:     w.flow.SinkID,
@@ -246,6 +266,8 @@ func (w *FlowWorker) processBatch(ctx context.Context, msgs []jetstream.Msg) {
 				}); dlqErr != nil {
 					w.log.Error("failed to move mapping error to DLQ", "err", dlqErr, "offset", ev.Offset)
 					_ = msg.Nak()
+				} else if w.runtimeMetrics != nil {
+					w.runtimeMetrics.RecordDLQ(w.flow.FlowID, w.flow.SinkID, cdcerrors.DLQErrorMapping, 1)
 				}
 				pool.PutEvent(ev)
 				continue
@@ -253,10 +275,8 @@ func (w *FlowWorker) processBatch(ctx context.Context, msgs []jetstream.Msg) {
 			ev.Data = mapped
 		}
 
-		// Deep clone event before passing to sink to prevent use-after-free
-		// when the original is returned to the pool.
-		clone := ev.DeepClone()
-		events = append(events, clone)
+		applySinkTable(ev, w.flow.SinkTable)
+		events = append(events, ev)
 		passedMsgs = append(passedMsgs, msg)
 		poolEvents = append(poolEvents, ev)
 	}
@@ -266,7 +286,6 @@ func (w *FlowWorker) processBatch(ctx context.Context, msgs []jetstream.Msg) {
 	}
 
 	// Write batch to sink with duration measurement
-	batchFetchTime := time.Now()
 	start := time.Now()
 	err := retry.Do(ctx, retry.DefaultConfig(), func() error {
 		return w.sink.WriteBatch(events)
@@ -279,6 +298,16 @@ func (w *FlowWorker) processBatch(ctx context.Context, msgs []jetstream.Msg) {
 			"batch_size", len(events),
 			"err", err)
 		metrics.FlowEventsProcessed.WithLabelValues(w.flow.FlowID, "failure").Add(float64(len(events)))
+		if w.runtimeMetrics != nil {
+			w.runtimeMetrics.RecordFlowFailure(
+				w.flow.FlowID,
+				w.flow.SourceID,
+				w.flow.SinkID,
+				"sink_write_failed",
+				err.Error(),
+				uint64(len(events)),
+			)
+		}
 		w.handleFailure(ctx, passedMsgs)
 		// Return original events to pool
 		for _, ev := range poolEvents {
@@ -290,9 +319,19 @@ func (w *FlowWorker) processBatch(ctx context.Context, msgs []jetstream.Msg) {
 	// Record per-flow metrics
 	metrics.FlowEventsProcessed.WithLabelValues(w.flow.FlowID, "success").Add(float64(len(events)))
 	metrics.FlowBatchSize.WithLabelValues(w.flow.FlowID).Observe(float64(len(events)))
+	metrics.FlowProcessingDuration.WithLabelValues(w.flow.FlowID).Observe(time.Since(batchStart).Seconds())
 
-	// Calculate replication lag from the time difference between now and when the batch was fetched
-	metrics.FlowReplicationLag.WithLabelValues(w.flow.FlowID).Set(float64(time.Since(batchFetchTime).Milliseconds()))
+	if w.runtimeMetrics != nil {
+		lastEvent := events[len(events)-1]
+		w.runtimeMetrics.RecordSinkWrite(
+			w.flow.FlowID,
+			w.flow.SourceID,
+			w.flow.SinkID,
+			uint64(len(events)),
+			duration.Milliseconds(),
+			eventTimestampMs(lastEvent),
+		)
+	}
 
 	// Success: ACK all messages
 	for _, msg := range passedMsgs {
@@ -317,6 +356,15 @@ func (w *FlowWorker) processBatch(ctx context.Context, msgs []jetstream.Msg) {
 	for _, ev := range poolEvents {
 		pool.PutEvent(ev)
 	}
+}
+
+func applySinkTable(event *domain.Event, sinkTable string) {
+	if event == nil || sinkTable == "" {
+		return
+	}
+	schema, table := parseSourceTable(sinkTable)
+	event.Schema = schema
+	event.Table = table
 }
 
 // handleFailure handles batch write failures by NAKing messages or routing to DLQ
@@ -347,6 +395,9 @@ func (w *FlowWorker) handleFailure(ctx context.Context, msgs []jetstream.Msg) {
 				_ = msg.Nak()
 			} else {
 				metrics.DLQEventsTotal.WithLabelValues(w.flow.FlowID, "max_retries_exceeded").Inc()
+				if w.runtimeMetrics != nil {
+					w.runtimeMetrics.RecordDLQ(w.flow.FlowID, w.flow.SinkID, "max_retries_exceeded", 1)
+				}
 				w.log.Warn("message moved to DLQ",
 					"delivery_count", metadata.NumDelivered,
 					"subject", msg.Subject())
@@ -356,6 +407,28 @@ func (w *FlowWorker) handleFailure(ctx context.Context, msgs []jetstream.Msg) {
 			_ = msg.Nak()
 		}
 	}
+}
+
+func eventTimestampMs(ev *domain.Event) int64 {
+	if ev == nil || ev.TimestampMS <= 0 {
+		return time.Now().UnixMilli()
+	}
+	return ev.TimestampMS
+}
+
+func timestampMSFromData(data []byte) int64 {
+	if len(data) == 0 {
+		return 0
+	}
+	node, err := sonic.Get(data, "ts_ms")
+	if err != nil || !node.Exists() {
+		return 0
+	}
+	ts, err := node.Int64()
+	if err != nil || ts <= 0 {
+		return 0
+	}
+	return ts
 }
 
 // parseEventFromMsg extracts event metadata from NATS message headers.
@@ -375,6 +448,7 @@ func (w *FlowWorker) parseEventFromMsg(msg jetstream.Msg) *domain.Event {
 	if lsnStr := headers.Get(constant.HeaderLSN); lsnStr != "" {
 		ev.LSN, _ = strconv.ParseUint(lsnStr, 10, 64)
 	}
+	ev.TimestampMS = timestampMSFromData(ev.Data)
 
 	return ev
 }

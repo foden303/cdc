@@ -9,6 +9,7 @@ import (
 	// Connector self-registration via init() functions.
 	_ "github.com/foden/cdc/internal/adapters/driven/connector/sink/clickhouse"
 	_ "github.com/foden/cdc/internal/adapters/driven/connector/sink/elasticsearch"
+	_ "github.com/foden/cdc/internal/adapters/driven/connector/sink/mysql"
 	_ "github.com/foden/cdc/internal/adapters/driven/connector/sink/postgres"
 	_ "github.com/foden/cdc/internal/adapters/driven/connector/source/mysql"
 	_ "github.com/foden/cdc/internal/adapters/driven/connector/source/postgres"

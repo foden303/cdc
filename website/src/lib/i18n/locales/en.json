@@ -278,13 +278,6 @@
         "indexPrefix": "cdc-prefix-",
         "apiKey": "Key details..."
       },
-      "tuning": {
-        "title": "Performance Tuning & Retries",
-        "batchSize": "Batch Size (messages)",
-        "flushInterval": "Flush Interval (ms)",
-        "maxRetries": "Max Retries",
-        "retryBase": "Retry Base Interval (ms)"
-      },
       "test": {
         "successTitle": "Sink Connected",
         "failedTitle": "Sink Connection Failed",
@@ -352,6 +345,7 @@
       },
       "desc": "Configure pipelines mapping active tables and database replication flows.",
       "createDesc": "Define a high-performance pipeline transferring CDC events from source to sink.",
+      "autoNameHint": "User Data Sync",
       "fields": {
         "selectSource": "Select Source Connector",
         "selectSink": "Select Sink Connector",
@@ -415,19 +409,13 @@
         "lag": "Replication Lag",
         "lagDesc": "Offset delay: {{lag}}ms",
         "eventsSynced": "Events Synced",
-        "eventsSyncedDesc": "Accumulated lifetime records",
-        "lastSynced": "Last Synced At",
-        "neverSynced": "Never Synced"
+        "eventsSyncedDesc": "Accumulated lifetime records"
       },
       "detail": {
-        "tableProgress": "Table Synchronization Progress",
-        "noProgress": "No active table synchronization progress reporting.",
-        "lastOffset": "Last Offset LSN: {{offset}}",
         "columnSchema": "Column Schema Mappings",
         "sourceColumn": "Source Column",
         "targetColumn": "Target Column",
         "enabled": "Enabled",
-        "rows": "{{count}} rows",
         "pipelineOverview": "Pipeline Overview",
         "pipelineOverviewSource": "Source Connector",
         "pipelineOverviewSink": "Sink Connector",
@@ -484,6 +472,7 @@
     "page": "Page {{page}}",
     "continue": "Continue",
     "saving": "Saving...",
+    "optional": "Optional",
     "yes": "Yes",
     "no": "No",
     "refresh": "Refresh config"

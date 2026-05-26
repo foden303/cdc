@@ -1,9 +1,8 @@
 package response
 
-type DashboardHealthResponse struct {
-	Status  string `json:"status"`
-	Version string `json:"version"`
-	Uptime  int64  `json:"uptime"`
+type DashboardSummaryResponse struct {
+	Inventory DashboardSystemInventoryResponse `json:"inventory"`
+	Telemetry DashboardLiveTelemetryResponse   `json:"telemetry"`
 }
 
 type DashboardSystemInventoryResponse struct {
@@ -21,13 +20,4 @@ type DashboardLiveTelemetryResponse struct {
 	ErrorRate          float64 `json:"error_rate"`
 	TotalSyncedEvents  uint64  `json:"total_synced_events"`
 	FailureCount       uint64  `json:"failure_count"`
-}
-
-type DashboardThroughputPoint struct {
-	Timestamp  int64   `json:"timestamp"`
-	Throughput float64 `json:"throughput"`
-}
-
-type DashboardThroughputOverTimeResponse struct {
-	Points []DashboardThroughputPoint `json:"points"`
 }

@@ -16,4 +16,7 @@ const (
 
 	// PrefixOffsets is the key prefix for flow consumer offsets.
 	PrefixOffsets = "offsets."
+
+	// PrefixSourceOffsets is the key prefix for source resume offsets.
+	PrefixSourceOffsets = "source_offsets."
 )

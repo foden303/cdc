@@ -3,54 +3,69 @@ package service
 import (
 	"context"
 	"log/slog"
-	"sync"
 	"time"
 
 	"github.com/foden/cdc/internal/core/dto/request"
 	"github.com/foden/cdc/internal/core/dto/response"
 	"github.com/foden/cdc/internal/core/ports"
-	"github.com/foden/cdc/version"
-)
-
-const (
-	throughputHistoryLimit = 60
+	coreruntime "github.com/foden/cdc/internal/core/runtime"
 )
 
 type DashboardService struct {
 	store       ports.Store
 	flowManager ports.FlowManager
 	natsClient  ports.NATSClient
+	metrics     ports.MetricsReader
+	runtimeView *coreruntime.View
+	p99Window   string
 	startTime   time.Time
-
-	throughputMu      sync.Mutex
-	throughputHistory []response.DashboardThroughputPoint
 }
 
 func NewDashboardService(
 	store ports.Store,
 	flowManager ports.FlowManager,
 	natsClient ports.NATSClient,
+	runtimeView *coreruntime.View,
+	metrics ports.MetricsReader,
+	p99Window string,
 ) *DashboardService {
+	if runtimeView == nil {
+		runtimeView = coreruntime.DefaultView()
+	}
+	if p99Window == "" {
+		p99Window = "5m"
+	}
 	return &DashboardService{
 		store:       store,
 		flowManager: flowManager,
 		natsClient:  natsClient,
+		metrics:     metrics,
+		runtimeView: runtimeView,
+		p99Window:   p99Window,
 		startTime:   time.Now(),
 	}
 }
 
-func (s *DashboardService) Health(_ context.Context, _ request.DashboardHealthRequest) response.DashboardHealthResponse {
-	return response.DashboardHealthResponse{
-		Status:  "healthy",
-		Version: version.Version,
-		Uptime:  int64(time.Since(s.startTime).Seconds()),
+func (s *DashboardService) Summary(
+	ctx context.Context,
+	_ request.DashboardSummaryRequest,
+) (response.DashboardSummaryResponse, error) {
+	inventory, err := s.systemInventory(ctx)
+	if err != nil {
+		return response.DashboardSummaryResponse{}, err
 	}
+	telemetry, err := s.liveTelemetry(ctx)
+	if err != nil {
+		return response.DashboardSummaryResponse{}, err
+	}
+
+	return response.DashboardSummaryResponse{
+		Inventory: inventory,
+		Telemetry: telemetry,
+	}, nil
 }
 
-func (s *DashboardService) SystemInventory(
-	ctx context.Context,
-	_ request.DashboardSystemInventoryRequest,
-) (response.DashboardSystemInventoryResponse, error) {
+func (s *DashboardService) systemInventory(ctx context.Context) (response.DashboardSystemInventoryResponse, error) {
 	sources, err := s.store.ListSources(ctx)
 	if err != nil {
 		return response.DashboardSystemInventoryResponse{}, err
@@ -71,94 +86,44 @@ func (s *DashboardService) SystemInventory(
 	}, nil
 }
 
-func (s *DashboardService) LiveTelemetry(
-	ctx context.Context,
-	_ request.DashboardLiveTelemetryRequest,
-) (response.DashboardLiveTelemetryResponse, error) {
-	flows, err := s.store.ListFlows(ctx)
-	if err != nil {
-		return response.DashboardLiveTelemetryResponse{}, err
-	}
-
-	var (
-		totalThroughput float64
-		totalLatency    float64
-		totalEvents     uint64
-		activeWorkers   uint32
-		channelUtil     float64
-		runningFlows    int
-	)
-
-	for _, flow := range flows {
-		if flow.Status != ports.FlowStatusRunning {
-			continue
-		}
-		runningFlows++
-
-		flowStats, statsErr := s.flowManager.GetFlowStats(ctx, flow.FlowID)
-		if statsErr != nil {
-			slog.Warn("dashboard telemetry: flow stats unavailable", "flow_id", flow.FlowID, "err", statsErr)
-			continue
-		}
-
-		totalThroughput += flowStats.EventsPerSecond
-		totalLatency += float64(flowStats.ReplicationLagMs)
-		totalEvents += flowStats.TotalEventsProcessed
-		activeWorkers += flowStats.RunningWorkers
-		if flowStats.WorkerUtilization > channelUtil {
-			channelUtil = flowStats.WorkerUtilization
-		}
-	}
-
-	var latencyP99 float64
-	if runningFlows > 0 {
-		latencyP99 = totalLatency / float64(runningFlows)
-	}
-
-	natsHealthy := false
-	if s.natsClient != nil {
-		healthCtx, cancel := context.WithTimeout(ctx, 750*time.Millisecond)
-		defer cancel()
-		if err := s.natsClient.Health(healthCtx); err != nil {
-			slog.Warn("dashboard telemetry: nats health unavailable", "err", err)
-		} else {
-			natsHealthy = true
-		}
-	}
+func (s *DashboardService) liveTelemetry(ctx context.Context) (response.DashboardLiveTelemetryResponse, error) {
+	snapshot := s.runtimeView.Dashboard()
 
 	return response.DashboardLiveTelemetryResponse{
-		Throughput:         totalThroughput,
-		LatencyP99:         latencyP99,
-		ActiveWorkers:      activeWorkers,
-		ChannelUtilization: channelUtil,
-		NATSHealthy:        natsHealthy,
-		ErrorRate:          0,
-		TotalSyncedEvents:  totalEvents,
-		FailureCount:       0,
+		Throughput:         snapshot.Throughput,
+		LatencyP99:         s.getLatencyP99(ctx, snapshot.LatencyP99),
+		ActiveWorkers:      snapshot.ActiveWorkers,
+		ChannelUtilization: snapshot.ChannelUtilization,
+		NATSHealthy:        s.isNATSHealthy(ctx),
+		ErrorRate:          snapshot.ErrorRate,
+		TotalSyncedEvents:  snapshot.TotalSyncedEvents,
+		FailureCount:       snapshot.FailureCount,
 	}, nil
 }
 
-func (s *DashboardService) ThroughputOverTime(
-	ctx context.Context,
-	_ request.DashboardThroughputOverTimeRequest,
-) (response.DashboardThroughputOverTimeResponse, error) {
-	telemetry, err := s.LiveTelemetry(ctx, request.DashboardLiveTelemetryRequest{})
+func (s *DashboardService) getLatencyP99(ctx context.Context, fallback float64) float64 {
+	if s.metrics == nil {
+		return fallback
+	}
+	queryCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+	value, err := s.metrics.FlowProcessingLatencyP99(queryCtx, s.p99Window)
 	if err != nil {
-		return response.DashboardThroughputOverTimeResponse{}, err
+		slog.Warn("dashboard telemetry: prometheus p99 unavailable", "err", err)
+		return fallback
 	}
+	return value
+}
 
-	point := response.DashboardThroughputPoint{
-		Timestamp:  time.Now().UnixMilli(),
-		Throughput: telemetry.Throughput,
+func (s *DashboardService) isNATSHealthy(ctx context.Context) bool {
+	if s.natsClient == nil {
+		return false
 	}
-
-	s.throughputMu.Lock()
-	s.throughputHistory = append(s.throughputHistory, point)
-	if len(s.throughputHistory) > throughputHistoryLimit {
-		s.throughputHistory = s.throughputHistory[len(s.throughputHistory)-throughputHistoryLimit:]
+	healthCtx, cancel := context.WithTimeout(ctx, 750*time.Millisecond)
+	defer cancel()
+	if err := s.natsClient.Health(healthCtx); err != nil {
+		slog.Warn("dashboard telemetry: nats health unavailable", "err", err)
+		return false
 	}
-	points := append([]response.DashboardThroughputPoint(nil), s.throughputHistory...)
-	s.throughputMu.Unlock()
-
-	return response.DashboardThroughputOverTimeResponse{Points: points}, nil
+	return true
 }

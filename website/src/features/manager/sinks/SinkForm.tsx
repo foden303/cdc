@@ -52,7 +52,7 @@ export function SinkForm({ open, onOpenChange, sinkToEdit }: SinkFormProps) {
 
   // Backend-supported sink connectors.
   const availableTypes = useMemo(() => {
-    const supportedTypes = ['postgres', 'elasticsearch', 'clickhouse'];
+    const supportedTypes = ['postgres', 'mysql', 'elasticsearch', 'clickhouse'];
     if (configData?.available_sinks && configData.available_sinks.length > 0) {
       return configData.available_sinks.filter((t) => supportedTypes.includes(t));
     }
@@ -70,7 +70,6 @@ export function SinkForm({ open, onOpenChange, sinkToEdit }: SinkFormProps) {
   const [urls, setUrls] = useState('');
   const [apiKey, setApiKey] = useState('');
   const [indexPrefix, setIndexPrefix] = useState('');
-  const [maxRetries, setMaxRetries] = useState(3);
 
   // Connection testing state
   const [testResult, setTestResult] = useState<TestConnectionResponse | null>(null);
@@ -81,14 +80,13 @@ export function SinkForm({ open, onOpenChange, sinkToEdit }: SinkFormProps) {
       setName(sinkToEdit.name || '');
       setType(sinkToEdit.type || 'postgres');
       setHost(sinkToEdit.host || '');
-      setPort(sinkToEdit.port || (sinkToEdit.type === 'clickhouse' ? 9000 : 5432));
+      setPort(sinkToEdit.port || (sinkToEdit.type === 'clickhouse' ? 9000 : sinkToEdit.type === 'mysql' ? 3306 : 5432));
       setUsername(sinkToEdit.username || '');
       setPassword(sinkToEdit.password || '');
       setDatabase(sinkToEdit.database || '');
       setUrls(sinkToEdit.url?.join(', ') || '');
       setApiKey(sinkToEdit.api_key || '');
       setIndexPrefix(sinkToEdit.index_prefix || '');
-      setMaxRetries(sinkToEdit.max_retries ?? 3);
     } else {
       resetForm();
     }
@@ -99,6 +97,7 @@ export function SinkForm({ open, onOpenChange, sinkToEdit }: SinkFormProps) {
   useEffect(() => {
     if (!isEdit) {
       if (type === 'postgres') setPort(5432);
+      else if (type === 'mysql') setPort(3306);
       else if (type === 'clickhouse') setPort(9000);
     }
     setTestResult(null);
@@ -115,7 +114,6 @@ export function SinkForm({ open, onOpenChange, sinkToEdit }: SinkFormProps) {
     setUrls('');
     setApiKey('');
     setIndexPrefix('');
-    setMaxRetries(3);
     setTestResult(null);
   };
 
@@ -129,7 +127,6 @@ export function SinkForm({ open, onOpenChange, sinkToEdit }: SinkFormProps) {
         .filter(Boolean);
       payload.api_key = apiKey || undefined;
       payload.index_prefix = indexPrefix || undefined;
-      payload.max_retries = Number(maxRetries);
     } else {
       payload.host = host;
       payload.port = Number(port);
@@ -242,6 +239,8 @@ export function SinkForm({ open, onOpenChange, sinkToEdit }: SinkFormProps) {
                     <SelectItem key={tName} value={tName} className="text-xs">
                       {tName === 'postgres'
                         ? 'PostgreSQL'
+                        : tName === 'mysql'
+                          ? 'MySQL'
                         : tName === 'elasticsearch'
                           ? 'Elasticsearch'
                           : 'ClickHouse'}
@@ -266,7 +265,7 @@ export function SinkForm({ open, onOpenChange, sinkToEdit }: SinkFormProps) {
                   required
                 />
               </div>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-[11px] font-semibold text-muted-foreground mb-1.5 block">
                     {t('manager.sinks.fields.indexPrefix')}
@@ -287,18 +286,6 @@ export function SinkForm({ open, onOpenChange, sinkToEdit }: SinkFormProps) {
                     value={apiKey}
                     onChange={(e) => setApiKey(e.target.value)}
                     placeholder={t('manager.sinks.placeholders.apiKey')}
-                    className="h-9 text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="text-[11px] font-semibold text-muted-foreground mb-1.5 block">
-                    {t('manager.sinks.tuning.maxRetries')}
-                  </label>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={maxRetries}
-                    onChange={(e) => setMaxRetries(Number(e.target.value))}
                     className="h-9 text-xs"
                   />
                 </div>
@@ -343,7 +330,7 @@ export function SinkForm({ open, onOpenChange, sinkToEdit }: SinkFormProps) {
                   <Input
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    placeholder={type === 'postgres' ? 'postgres' : 'default'}
+                    placeholder={type === 'postgres' ? 'postgres' : type === 'mysql' ? 'root' : 'default'}
                     className="h-9 text-xs"
                   />
                 </div>

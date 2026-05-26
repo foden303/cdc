@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"strings"
 
 	"github.com/foden/cdc/internal/core/dto/request"
 	"github.com/foden/cdc/internal/core/dto/response"
@@ -24,6 +25,19 @@ func (s *SinkService) Create(ctx context.Context, req request.CreateSinkRequest)
 	}
 	if req.Sink.InstanceID == "" {
 		req.Sink.InstanceID = defaultInstanceID()
+	}
+	req.Sink.InstanceID = strings.TrimSpace(req.Sink.InstanceID)
+	req.Sink.Name = strings.TrimSpace(req.Sink.Name)
+	req.Sink.Type = strings.TrimSpace(req.Sink.Type)
+	req.Sink.Host = strings.TrimSpace(req.Sink.Host)
+	req.Sink.Username = strings.TrimSpace(req.Sink.Username)
+	req.Sink.Database = strings.TrimSpace(req.Sink.Database)
+	req.Sink.IndexPrefix = strings.TrimSpace(req.Sink.IndexPrefix)
+	for i := range req.Sink.URL {
+		req.Sink.URL[i] = strings.TrimSpace(req.Sink.URL[i])
+	}
+	if err := validateUniqueSink(ctx, s.store, req.Sink); err != nil {
+		return response.CreateSinkResponse{}, err
 	}
 	if err := s.store.PutSink(ctx, req.Sink); err != nil {
 		return response.CreateSinkResponse{}, err

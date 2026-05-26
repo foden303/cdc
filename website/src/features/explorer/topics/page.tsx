@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/table';
 import { ROUTES } from '@/config/routes';
 import { useTopics } from '@/lib/query/explorer';
-import { parseSubject } from '../shared';
+import { formatCount, parseSubject } from '../shared';
 
 export default function ExplorerTopicsPage() {
   const { t } = useTranslation();
@@ -107,8 +107,8 @@ export default function ExplorerTopicsPage() {
                     <TableCell className="font-mono text-xs">{parsed.sourceId || '-'}</TableCell>
                     <TableCell>{parsed.schema || '-'}</TableCell>
                     <TableCell>{parsed.table || '-'}</TableCell>
-                    <TableCell className="text-right">{topic.partition_count}</TableCell>
-                    <TableCell className="text-right">{topic.message_count.toLocaleString()}</TableCell>
+                    <TableCell className="text-right">{formatCount(topic.partition_count)}</TableCell>
+                    <TableCell className="text-right">{formatCount(topic.message_count)}</TableCell>
                     <TableCell>
                       <div className="flex justify-end gap-1">
                         <Button variant="ghost" size="icon-sm" onClick={() => copy(topic.name)}>

@@ -278,13 +278,6 @@
         "indexPrefix": "cdc-prefix-",
         "apiKey": "Chi tiết khóa..."
       },
-      "tuning": {
-        "title": "Tối ưu hóa hiệu năng & Thử lại",
-        "batchSize": "Kích thước Batch (tin nhắn)",
-        "flushInterval": "Khoảng thời gian Flush (ms)",
-        "maxRetries": "Số lần thử lại tối đa",
-        "retryBase": "Khoảng thời gian cơ bản để thử lại (ms)"
-      },
       "test": {
         "successTitle": "Đã kết nối Đích",
         "failedTitle": "Kết nối Đích thất bại",
@@ -352,6 +345,7 @@
       },
       "desc": "Cấu hình các đường ống ánh xạ các bảng đang hoạt động và luồng sao chép cơ sở dữ liệu.",
       "createDesc": "Định nghĩa một đường ống hiệu năng cao để truyền các sự kiện CDC từ nguồn đến đích.",
+      "autoNameHint": "Đồng bộ dữ liệu người dùng",
       "fields": {
         "selectSource": "Chọn kết nối nguồn",
         "selectSink": "Chọn kết nối đích",
@@ -415,19 +409,13 @@
         "lag": "Độ trễ sao chép",
         "lagDesc": "Độ trễ offset: {{lag}}ms",
         "eventsSynced": "Sự kiện đã đồng bộ",
-        "eventsSyncedDesc": "Tích lũy hồ sơ trọn đời",
-        "lastSynced": "Đồng bộ lần cuối lúc",
-        "neverSynced": "Chưa bao giờ đồng bộ"
+        "eventsSyncedDesc": "Tích lũy hồ sơ trọn đời"
       },
       "detail": {
-        "tableProgress": "Tiến trình đồng bộ bảng",
-        "noProgress": "Không có báo cáo tiến trình đồng bộ bảng đang hoạt động.",
-        "lastOffset": "Offset LSN cuối cùng: {{offset}}",
         "columnSchema": "Sơ đồ ánh xạ cột",
         "sourceColumn": "Cột nguồn",
         "targetColumn": "Cột đích",
         "enabled": "Đang hoạt động",
-        "rows": "{{count}} dòng",
         "pipelineOverview": "Tổng quan đường ống",
         "pipelineOverviewSource": "Kết nối nguồn",
         "pipelineOverviewSink": "Kết nối đích",
@@ -484,6 +472,7 @@
     "page": "Trang {{page}}",
     "continue": "Tiếp tục",
     "saving": "Đang lưu...",
+    "optional": "Tùy chọn",
     "yes": "Có",
     "no": "Không",
     "refresh": "Làm mới cấu hình"

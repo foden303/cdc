@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"strings"
 
 	"github.com/foden/cdc/internal/core/dto/request"
 	"github.com/foden/cdc/internal/core/dto/response"
@@ -24,6 +25,15 @@ func (s *SourceService) Create(ctx context.Context, req request.CreateSourceRequ
 	}
 	if req.Source.InstanceID == "" {
 		req.Source.InstanceID = defaultInstanceID()
+	}
+	req.Source.InstanceID = strings.TrimSpace(req.Source.InstanceID)
+	req.Source.Name = strings.TrimSpace(req.Source.Name)
+	req.Source.Type = strings.TrimSpace(req.Source.Type)
+	req.Source.Host = strings.TrimSpace(req.Source.Host)
+	req.Source.Username = strings.TrimSpace(req.Source.Username)
+	req.Source.Database = strings.TrimSpace(req.Source.Database)
+	if err := validateUniqueSource(ctx, s.store, req.Source); err != nil {
+		return response.CreateSourceResponse{}, err
 	}
 	if err := s.store.PutSource(ctx, req.Source); err != nil {
 		return response.CreateSourceResponse{}, err

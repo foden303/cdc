@@ -278,13 +278,6 @@
         "indexPrefix": "cdc-prefix-",
         "apiKey": "Key 详情..."
       },
-      "tuning": {
-        "title": "性能调优和重试",
-        "batchSize": "批次大小（消息）",
-        "flushInterval": "刷新间隔（毫秒）",
-        "maxRetries": "最大重试次数",
-        "retryBase": "重试基础间隔（毫秒）"
-      },
       "test": {
         "successTitle": "目标端已连接",
         "failedTitle": "目标端连接失败",
@@ -352,6 +345,7 @@
       },
       "desc": "配置映射活动表和数据库复制流的管道。",
       "createDesc": "定义将 CDC 事件从源传输到目标的高性能管道。",
+      "autoNameHint": "用户数据同步",
       "fields": {
         "selectSource": "选择源端连接器",
         "selectSink": "选择目标端连接器",
@@ -415,19 +409,13 @@
         "lag": "复制延迟",
         "lagDesc": "偏移延迟: {{lag}}毫秒",
         "eventsSynced": "已同步事件数",
-        "eventsSyncedDesc": "累计同步记录数",
-        "lastSynced": "最后同步时间",
-        "neverSynced": "从未同步"
+        "eventsSyncedDesc": "累计同步记录数"
       },
       "detail": {
-        "tableProgress": "数据表同步进度",
-        "noProgress": "目前没有活跃的数据表同步进度报告。",
-        "lastOffset": "最后 LSN 偏移量: {{offset}}",
         "columnSchema": "字段映射架构",
         "sourceColumn": "源端字段",
         "targetColumn": "目标端字段",
         "enabled": "启用",
-        "rows": "{{count}} 行",
         "pipelineOverview": "管道总览",
         "pipelineOverviewSource": "源连接器",
         "pipelineOverviewSink": "目标连接器",
@@ -484,6 +472,7 @@
     "page": "第 {{page}} 页",
     "continue": "继续",
     "saving": "保存中...",
+    "optional": "可选",
     "yes": "是",
     "no": "否",
     "refresh": "刷新配置"

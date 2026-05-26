@@ -9,18 +9,18 @@ import (
 // Event represents a CDC event envelope for routing and transport.
 type Event struct {
 	// Metadata for routing and management
-	Topic      string      `json:"-"`
-	Subject    string      `json:"-"`
-	InstanceID string      `json:"instance_id"`
-	Schema     string      `json:"schema"`
-	Table      string      `json:"table"`
-	Op         constant.Op `json:"op"`
-	Offset     string      `json:"offset"`
-	LSN        uint64      `json:"lsn"`
+	Topic       string      `json:"-"`
+	Subject     string      `json:"-"`
+	InstanceID  string      `json:"instance_id"`
+	Schema      string      `json:"schema"`
+	Table       string      `json:"table"`
+	Op          constant.Op `json:"op"`
+	Offset      string      `json:"offset"`
+	LSN         uint64      `json:"lsn"`
+	TimestampMS int64       `json:"ts_ms"`
 	// Raw Debezium Payload
 	Data []byte `json:"-"`
 	// Optional explicit message identifier used by NATS deduplication.
-	// When empty, publisher falls back to the legacy InstanceID+Offset strategy.
 	MessageID string `json:"-"`
 	// Meta for partitioning
 	Partition int `json:"partition"`
@@ -52,16 +52,17 @@ type SourceMetadata struct {
 // NewEvent creates a new CDC event envelope.
 func NewEvent(topic, subject, instanceID, schema, table string, op constant.Op, lsn uint64, offset string, data []byte, partition int) *Event {
 	return &Event{
-		Topic:      topic,
-		Subject:    subject,
-		InstanceID: instanceID,
-		Schema:     schema,
-		Table:      table,
-		Op:         op,
-		LSN:        lsn,
-		Offset:     offset,
-		Data:       data,
-		Partition:  partition,
+		Topic:       topic,
+		Subject:     subject,
+		InstanceID:  instanceID,
+		Schema:      schema,
+		Table:       table,
+		Op:          op,
+		LSN:         lsn,
+		TimestampMS: 0,
+		Offset:      offset,
+		Data:        data,
+		Partition:   partition,
 	}
 }
 
@@ -75,6 +76,7 @@ func (e *Event) Reset() {
 	e.Op = ""
 	e.Offset = ""
 	e.LSN = 0
+	e.TimestampMS = 0
 	e.Data = nil
 	e.MessageID = ""
 	e.Partition = 0
@@ -85,16 +87,17 @@ func (e *Event) Reset() {
 // original is returned to the sync.Pool.
 func (e *Event) DeepClone() *Event {
 	clone := &Event{
-		Topic:      e.Topic,
-		Subject:    e.Subject,
-		InstanceID: e.InstanceID,
-		Schema:     e.Schema,
-		Table:      e.Table,
-		Op:         e.Op,
-		Offset:     e.Offset,
-		LSN:        e.LSN,
-		MessageID:  e.MessageID,
-		Partition:  e.Partition,
+		Topic:       e.Topic,
+		Subject:     e.Subject,
+		InstanceID:  e.InstanceID,
+		Schema:      e.Schema,
+		Table:       e.Table,
+		Op:          e.Op,
+		Offset:      e.Offset,
+		LSN:         e.LSN,
+		TimestampMS: e.TimestampMS,
+		MessageID:   e.MessageID,
+		Partition:   e.Partition,
 	}
 	if e.Data != nil {
 		clone.Data = make([]byte, len(e.Data))

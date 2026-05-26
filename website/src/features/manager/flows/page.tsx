@@ -31,6 +31,7 @@ import { StatusBadge, type Status } from '@/components/shared/StatusBadge';
 import { FlowWizard } from './FlowWizard';
 import { ROUTES } from '@/config/routes';
 import type { FlowConfig, FlowStatus } from '@/types/api';
+import { DeleteConfirmDialog } from '../components/DeleteConfirmDialog';
 
 function statusToBadge(status: FlowStatus): Status {
   if (status === 'FLOW_STATUS_RUNNING') return 'healthy';
@@ -54,6 +55,7 @@ export default function FlowsPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [deleteFlowId, setDeleteFlowId] = useState<string | null>(null);
 
   const {
     data: flowsData,
@@ -96,14 +98,14 @@ export default function FlowsPage() {
     }
   };
 
-  const handleDelete = async (flowId: string) => {
-    if (confirm(t('manager.flows.confirm.delete'))) {
-      try {
-        await deleteMutation.mutateAsync(flowId);
-        toast.success(t('manager.flows.toast.deleted'));
-      } catch {
-        toast.error(t('manager.flows.toast.deleteFailed'));
-      }
+  const handleDelete = async () => {
+    if (!deleteFlowId) return;
+    try {
+      await deleteMutation.mutateAsync(deleteFlowId);
+      toast.success(t('manager.flows.toast.deleted'));
+      setDeleteFlowId(null);
+    } catch {
+      toast.error(t('manager.flows.toast.deleteFailed'));
     }
   };
 
@@ -227,7 +229,7 @@ export default function FlowsPage() {
                           <ArrowUpRight className="h-3.5 w-3.5" />
                         </button>
                         <button
-                          onClick={() => handleDelete(flow.flow_id)}
+                          onClick={() => setDeleteFlowId(flow.flow_id)}
                           disabled={deleteMutation.isPending}
                           className="cursor-pointer rounded-md border border-border bg-background/60 p-1.5 text-muted-foreground transition-colors hover:border-destructive/30 hover:bg-destructive/10 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-50"
                           title={t('manager.flows.tooltips.delete')}
@@ -316,6 +318,16 @@ export default function FlowsPage() {
       )}
 
       <FlowWizard open={wizardOpen} onOpenChange={setWizardOpen} />
+      <DeleteConfirmDialog
+        open={deleteFlowId !== null}
+        title={t('manager.flows.delete')}
+        description={t('manager.flows.confirm.delete')}
+        confirmLabel={t('common.delete')}
+        cancelLabel={t('common.cancel')}
+        loading={deleteMutation.isPending}
+        onOpenChange={(open) => !open && setDeleteFlowId(null)}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }

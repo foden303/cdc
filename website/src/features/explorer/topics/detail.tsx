@@ -33,7 +33,7 @@ import {
 } from '@/components/ui/table';
 import { ROUTES } from '@/config/routes';
 import { usePartitions } from '@/lib/query/explorer';
-import { parseSubject } from '../shared';
+import { formatCount, parseSubject } from '../shared';
 
 function partitionPath(topic: string, partition: string) {
   return ROUTES.EXPLORER_TOPIC_PARTITION.replace(':topic', encodeURIComponent(topic)).replace(
@@ -153,7 +153,7 @@ export default function ExplorerTopicDetailPage() {
                           {topic}.{partition.id}
                         </div>
                       </TableCell>
-                      <TableCell className="text-right">{partition.message_count.toLocaleString()}</TableCell>
+                      <TableCell className="text-right">{formatCount(partition.message_count)}</TableCell>
                       <TableCell className="text-right">
                         <ChevronRight className="ml-auto h-4 w-4 text-muted-foreground" />
                       </TableCell>

@@ -1,21 +1,20 @@
-import { type ComponentType, useMemo } from 'react';
+import { type ComponentType, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft,
   ArrowRight,
   Activity,
-  Clock3,
+  AlertTriangle,
   Columns3,
   Filter,
   FolderSync,
+  Gauge,
   GitCommit,
-  History,
   Pause,
   Play,
   Route,
   SlidersHorizontal,
-  Terminal,
   Trash2,
   TrendingUp,
 } from 'lucide-react';
@@ -24,7 +23,6 @@ import { toast } from 'sonner';
 import {
   useFlow,
   useFlowStats,
-  useFlowProgress,
   useConfig,
   usePauseFlow,
   useResumeFlow,
@@ -44,12 +42,7 @@ import { StatusBadge, type Status } from '@/components/shared/StatusBadge';
 import { ROUTES } from '@/config/routes';
 import { formatNumber, formatDuration } from '@/lib/format';
 import type { FlowStatus } from '@/types/api';
-
-function timestampToDate(value?: number) {
-  if (!value || value <= 0) return null;
-  const date = new Date(value > 1_000_000_000_000 ? value : value * 1000);
-  return Number.isNaN(date.getTime()) ? null : date;
-}
+import { DeleteConfirmDialog } from '../components/DeleteConfirmDialog';
 
 function statusToBadge(status: FlowStatus | string): Status {
   if (status === 'FLOW_STATUS_RUNNING') return 'healthy';
@@ -65,23 +58,6 @@ function statusLabel(status: FlowStatus | string) {
   return 'Idle';
 }
 
-function progressStateToBadge(state?: string): Status {
-  const normalized = state?.toLowerCase();
-  if (normalized?.includes('completed') || normalized?.includes('synced')) return 'healthy';
-  if (normalized?.includes('error') || normalized?.includes('failed')) return 'unhealthy';
-  if (normalized?.includes('syncing') || normalized?.includes('running')) return 'healthy';
-  if (normalized?.includes('pending')) return 'paused';
-  return 'idle';
-}
-
-function progressStateLabel(state?: string) {
-  const normalized = state?.toLowerCase();
-  if (normalized?.includes('completed') || normalized?.includes('synced')) return 'completed';
-  if (normalized?.includes('error') || normalized?.includes('failed')) return 'error';
-  if (normalized?.includes('syncing') || normalized?.includes('running')) return 'syncing';
-  return 'pending';
-}
-
 function RuntimeStatCard({
   title,
   value,
@@ -94,7 +70,7 @@ function RuntimeStatCard({
   value: string;
   description: string;
   icon: ComponentType<{ className?: string }>;
-  tone: 'sky' | 'amber' | 'indigo' | 'emerald';
+  tone: 'sky' | 'amber' | 'indigo' | 'emerald' | 'red' | 'violet';
   loading?: boolean;
 }) {
   const toneClass = {
@@ -102,6 +78,8 @@ function RuntimeStatCard({
     amber: 'bg-amber-500/10 text-amber-500 dark:text-amber-400',
     indigo: 'bg-indigo-500/10 text-indigo-500 dark:text-indigo-400',
     emerald: 'bg-emerald-500/10 text-emerald-500 dark:text-emerald-400',
+    red: 'bg-red-500/10 text-red-500 dark:text-red-400',
+    violet: 'bg-violet-500/10 text-violet-500 dark:text-violet-400',
   }[tone];
 
   return (
@@ -134,10 +112,10 @@ export default function FlowDetailPage() {
   const { t } = useTranslation();
   const { id: flowId } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const { data: flowData, isLoading: flowLoading } = useFlow(flowId || '');
   const { data: statsData, isLoading: statsLoading } = useFlowStats(flowId || '');
-  const { data: progressData, isLoading: progressLoading } = useFlowProgress(flowId || '');
   const { data: configData } = useConfig();
 
   const pauseMutation = usePauseFlow();
@@ -156,7 +134,6 @@ export default function FlowDetailPage() {
     return configData.config.sinks.find((s) => s.instance_id === flow.sink_id) ?? null;
   }, [flow, configData]);
 
-  const lastSyncedAt = timestampToDate(statsData?.last_synced_at);
   const mappingCount = flow?.column_mappings?.filter((mapping) => mapping.enabled).length ?? 0;
   const totalMappings = flow?.column_mappings?.length ?? 0;
   const hasFilter = Boolean(flow?.options?.filter_expression);
@@ -183,14 +160,13 @@ export default function FlowDetailPage() {
 
   const handleDelete = async () => {
     if (!flowId) return;
-    if (confirm(t('manager.flows.confirm.delete'))) {
-      try {
-        await deleteMutation.mutateAsync(flowId);
-        toast.success(t('manager.flows.toast.deleted'));
-        navigate(ROUTES.MANAGER_FLOWS);
-      } catch {
-        toast.error(t('manager.flows.toast.deleteFailed'));
-      }
+    try {
+      await deleteMutation.mutateAsync(flowId);
+      toast.success(t('manager.flows.toast.deleted'));
+      setDeleteOpen(false);
+      navigate(ROUTES.MANAGER_FLOWS);
+    } catch {
+      toast.error(t('manager.flows.toast.deleteFailed'));
     }
   };
 
@@ -267,7 +243,7 @@ export default function FlowDetailPage() {
           <Button
             variant="destructive"
             size="sm"
-            onClick={handleDelete}
+            onClick={() => setDeleteOpen(true)}
             disabled={deleteMutation.isPending}
             className="h-9 cursor-pointer text-xs font-semibold"
           >
@@ -277,7 +253,7 @@ export default function FlowDetailPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <RuntimeStatCard
           title={t('manager.flows.metrics.syncRate')}
           value={`${formatNumber(statsData?.events_per_second || 0)}/s`}
@@ -305,13 +281,24 @@ export default function FlowDetailPage() {
           loading={statsLoading}
         />
         <RuntimeStatCard
-          title={t('manager.flows.metrics.lastSynced')}
-          value={lastSyncedAt ? lastSyncedAt.toLocaleTimeString() : '-'}
-          description={lastSyncedAt
-            ? lastSyncedAt.toLocaleDateString()
-            : t('manager.flows.metrics.neverSynced')}
-          icon={Clock3}
-          tone="emerald"
+          title={t('manager.flows.metrics.failures', { defaultValue: 'Failures' })}
+          value={formatNumber(statsData?.failure_count || 0)}
+          description={t('manager.flows.metrics.failuresDesc', {
+            defaultValue: 'Failed sink writes or mapping errors',
+          })}
+          icon={AlertTriangle}
+          tone={(statsData?.failure_count || 0) > 0 ? 'red' : 'emerald'}
+          loading={statsLoading}
+        />
+        <RuntimeStatCard
+          title={t('manager.flows.metrics.workers', { defaultValue: 'Workers' })}
+          value={`${statsData?.running_workers ?? 0}/${statsData?.pool_capacity ?? flow.options?.partition_count ?? 4}`}
+          description={t('manager.flows.metrics.workersDesc', {
+            defaultValue: '{{value}} pool utilization',
+            value: `${(statsData?.worker_utilization ?? 0).toFixed(0)}%`,
+          })}
+          icon={Gauge}
+          tone="violet"
           loading={statsLoading}
         />
       </div>
@@ -438,65 +425,6 @@ export default function FlowDetailPage() {
               </div>
             )}
           </div>
-
-          <div className="rounded-lg border border-border bg-card p-4">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <History className="h-4 w-4 text-sky-500 dark:text-sky-400" />
-                <h2 className="text-sm font-semibold text-foreground">
-                  {t('manager.flows.detail.tableProgress')}
-                </h2>
-              </div>
-              <Badge variant="outline" className="border-border bg-muted/30 text-xs text-muted-foreground">
-                {progressData?.tables?.length ?? 0}
-              </Badge>
-            </div>
-
-            {progressLoading ? (
-              <div className="h-16 animate-pulse rounded-lg bg-muted" />
-            ) : !progressData?.tables?.length ? (
-              <div className="rounded-lg border border-dashed border-border py-8 text-center text-xs text-muted-foreground">
-                {t('manager.flows.detail.noProgress')}
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {progressData.tables.map((table) => (
-                  <div
-                    key={table.table_name}
-                    className="rounded-lg border border-border bg-muted/20 p-3"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <span className="block truncate font-mono text-xs font-semibold text-foreground">
-                          {table.table_name}
-                        </span>
-                        <span className="mt-0.5 block font-mono text-[10px] text-muted-foreground">
-                          {t('manager.flows.detail.rows', { count: table.rows_synced })}
-                        </span>
-                      </div>
-                      <StatusBadge
-                        status={progressStateToBadge(table.state)}
-                        label={t(`manager.flows.state.${progressStateLabel(table.state)}`)}
-                      />
-                    </div>
-                    {table.last_offset && (
-                      <div className="mt-2 flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                        <Terminal className="h-3 w-3" />
-                        <span className="truncate font-mono">
-                          {t('manager.flows.detail.lastOffset', { offset: table.last_offset })}
-                        </span>
-                      </div>
-                    )}
-                    {table.error_message && (
-                      <div className="mt-2 rounded border border-red-500/10 bg-red-500/5 p-2 font-mono text-[10px] text-red-500">
-                        {table.error_message}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
         </div>
 
         <div className="space-y-6">
@@ -541,6 +469,32 @@ export default function FlowDetailPage() {
                   {mappingCount}/{totalMappings}
                 </p>
               </div>
+              <div className="rounded-md border border-border bg-muted/20 px-3 py-2">
+                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                  {t('manager.flows.metrics.filtered', { defaultValue: 'Filtered' })}
+                </p>
+                <p className="mt-1 font-mono text-sm font-semibold text-foreground">
+                  {formatNumber(statsData?.filtered_count || 0)}
+                </p>
+              </div>
+              <div className="rounded-md border border-border bg-muted/20 px-3 py-2">
+                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                  {t('manager.flows.metrics.dlq', { defaultValue: 'DLQ' })}
+                </p>
+                <p className="mt-1 font-mono text-sm font-semibold text-foreground">
+                  {formatNumber(statsData?.dlq_count || 0)}
+                </p>
+              </div>
+              {statsData?.last_error && (
+                <div className="rounded-md border border-red-500/20 bg-red-500/5 px-3 py-2">
+                  <p className="text-[10px] uppercase tracking-wide text-red-500">
+                    {t('manager.flows.metrics.lastError', { defaultValue: 'Last error' })}
+                  </p>
+                  <p className="mt-1 truncate font-mono text-xs text-red-500">
+                    {statsData.last_error}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -564,6 +518,16 @@ export default function FlowDetailPage() {
           </div>
         </div>
       </div>
+      <DeleteConfirmDialog
+        open={deleteOpen}
+        title={t('manager.flows.delete')}
+        description={t('manager.flows.confirm.delete')}
+        confirmLabel={t('common.delete')}
+        cancelLabel={t('common.cancel')}
+        loading={deleteMutation.isPending}
+        onOpenChange={setDeleteOpen}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }

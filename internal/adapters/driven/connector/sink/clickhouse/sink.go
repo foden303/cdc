@@ -4,17 +4,25 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
-	"github.com/bytedance/sonic"
-	"github.com/bytedance/sonic/ast"
 
+	sinkcommon "github.com/foden/cdc/internal/adapters/driven/connector/sink/common"
 	"github.com/foden/cdc/internal/adapters/driven/registry"
 	"github.com/foden/cdc/internal/core/constant"
 	"github.com/foden/cdc/internal/core/domain"
 	"github.com/foden/cdc/internal/core/ports"
+	"github.com/foden/cdc/pkg/utils"
+)
+
+var clickhouseCDCColumns = []string{"_cdc_op", "_cdc_ts", "_cdc_deleted", "_cdc_lsn"}
+
+const (
+	defaultAddress = "127.0.0.1:9000"
 )
 
 func init() {
@@ -25,8 +33,9 @@ func init() {
 
 // ClickhouseSink writes CDC events to ClickHouse.
 type ClickhouseSink struct {
-	conn clickhouse.Conn
-	cfg  *ports.SinkConfig
+	conn        clickhouse.Conn
+	cfg         *ports.SinkConfig
+	schemaCache sync.Map
 }
 
 // New creates a ClickhouseSink and verifies connection.
@@ -39,7 +48,7 @@ func New(cfg *ports.SinkConfig) (*ClickhouseSink, error) {
 	}
 
 	if addr == "" {
-		addr = "127.0.0.1:9000"
+		addr = defaultAddress
 	}
 
 	conn, err := clickhouse.Open(&clickhouse.Options{
@@ -81,6 +90,7 @@ func (s *ClickhouseSink) WriteBatch(events []*domain.Event) error {
 	for tableName, evts := range tableEvents {
 		if err := s.writeTable(ctx, tableName, evts); err != nil {
 			slog.Error("Clickhouse write table failed", "table", tableName, "error", err)
+			return err
 		}
 	}
 	return nil
@@ -91,64 +101,105 @@ func (s *ClickhouseSink) writeTable(ctx context.Context, tableName string, event
 		return nil
 	}
 
-	// Use the first event to determine columns.
-	var firstNode ast.Node
-	var err error
-	if events[0].Op == constant.OpDelete {
-		firstNode, err = sonic.Get(events[0].Data, "before")
-	} else {
-		firstNode, err = sonic.Get(events[0].Data, "after")
-	}
-
-	if err != nil || !firstNode.Exists() {
-		return fmt.Errorf("failed to get first event node: %w", err)
-	}
-
-	firstData, _ := firstNode.MarshalJSON()
-	var firstMap map[string]interface{}
-	if err := sonic.Unmarshal(firstData, &firstMap); err != nil {
+	firstMap, ok, err := sinkcommon.RowMap(events[0])
+	if err != nil {
 		return fmt.Errorf("failed to unmarshal first event: %w", err)
 	}
-
-	columns := make([]string, 0, len(firstMap))
-	for k := range firstMap {
-		columns = append(columns, k)
+	if !ok {
+		return fmt.Errorf("first event has no row payload")
 	}
 
-	query := fmt.Sprintf("INSERT INTO %s (%s)", tableName, strings.Join(columns, ", "))
+	columns := s.columnsForTable(tableName, firstMap)
+
+	query := buildInsertSQL(tableName, columns)
 	batch, err := s.conn.PrepareBatch(ctx, query)
 	if err != nil {
 		return fmt.Errorf("failed to prepare batch: %w", err)
 	}
 
 	for _, event := range events {
-		var node ast.Node
-		if event.Op == constant.OpDelete {
-			node, err = sonic.Get(event.Data, "before")
-		} else {
-			node, err = sonic.Get(event.Data, "after")
+		m, ok, err := sinkcommon.RowMap(event)
+		if err != nil {
+			return err
 		}
-
-		if err != nil || !node.Exists() {
+		if !ok {
 			continue
 		}
 
-		data, _ := node.MarshalJSON()
-
-		var m map[string]interface{}
-		_ = sonic.Unmarshal(data, &m)
-
-		args := make([]interface{}, len(columns))
-		for i, col := range columns {
-			args[i] = m[col]
-		}
+		args := clickhouseAppendArgs(columns, m, event)
 
 		if err := batch.Append(args...); err != nil {
 			slog.Error("Clickhouse append failed", "error", err)
+			return fmt.Errorf("clickhouse append failed: %w", err)
 		}
 	}
 
 	return batch.Send()
+}
+
+func (s *ClickhouseSink) columnsForTable(table string, row map[string]interface{}) []string {
+	if cached, ok := s.schemaCache.Load(table); ok {
+		return cached.([]string)
+	}
+	columns := clickhouseColumns(row)
+	actual, _ := s.schemaCache.LoadOrStore(table, columns)
+	return actual.([]string)
+}
+
+func clickhouseColumns(row map[string]interface{}) []string {
+	columns := make([]string, 0, len(row)+len(clickhouseCDCColumns))
+	for column := range row {
+		if isClickhouseCDCColumn(column) {
+			continue
+		}
+		columns = append(columns, column)
+	}
+	sort.Strings(columns)
+	columns = append(columns, clickhouseCDCColumns...)
+	return columns
+}
+
+func buildInsertSQL(table string, columns []string) string {
+	quotedColumns := make([]string, 0, len(columns))
+	for _, column := range columns {
+		quotedColumns = append(quotedColumns, utils.QuoteIdentifierBacktick(column))
+	}
+	return fmt.Sprintf("INSERT INTO %s (%s)", utils.QuoteIdentifierBacktick(table), strings.Join(quotedColumns, ", "))
+}
+
+func clickhouseAppendArgs(columns []string, row map[string]interface{}, event *domain.Event) []interface{} {
+	args := make([]interface{}, len(columns))
+	for i, column := range columns {
+		switch column {
+		case "_cdc_op":
+			args[i] = event.Op.String()
+		case "_cdc_ts":
+			args[i] = clickhouseEventTimestamp(event)
+		case "_cdc_deleted":
+			args[i] = event.Op == constant.OpDelete
+		case "_cdc_lsn":
+			args[i] = event.LSN
+		default:
+			args[i] = row[column]
+		}
+	}
+	return args
+}
+
+func clickhouseEventTimestamp(event *domain.Event) time.Time {
+	if event == nil || event.TimestampMS <= 0 {
+		return time.Time{}
+	}
+	return time.UnixMilli(event.TimestampMS).UTC()
+}
+
+func isClickhouseCDCColumn(column string) bool {
+	for _, cdcColumn := range clickhouseCDCColumns {
+		if column == cdcColumn {
+			return true
+		}
+	}
+	return false
 }
 
 // Close closes the ClickHouse connection.

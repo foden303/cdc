@@ -15,15 +15,12 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { MetricCard } from '@/components/shared/MetricCard';
 import { StatusBadge } from '@/components/shared/StatusBadge';
-import { ThroughputChart } from './components/ThroughputChart';
 import { SystemHealthBar } from './components/SystemHealthBar';
 import { ROUTES } from '@/config/routes';
 import {
   dashboardKeys,
   useHealth,
-  useSystemInventory,
-  useLiveTelemetry,
-  useThroughputOverTime,
+  useDashboardSummary,
 } from '@/lib/query/dashboard';
 import { api } from '@/lib/api/client';
 import { ENDPOINTS } from '@/lib/api/endpoints';
@@ -46,28 +43,19 @@ export default function DashboardPage() {
     isFetching: healthFetching,
   } = useHealth();
   const {
-    data: inventory,
-    isLoading: inventoryLoading,
-    isFetching: inventoryFetching,
-  } = useSystemInventory();
-  const {
-    data: telemetry,
-    isLoading: telemetryLoading,
-    isFetching: telemetryFetching,
-  } = useLiveTelemetry();
-  const {
-    data: throughputOverTime,
-    isFetching: throughputFetching,
-  } = useThroughputOverTime();
-
+    data: summary,
+    isLoading: summaryLoading,
+    isFetching: summaryFetching,
+  } = useDashboardSummary();
   const healthy = isHealthyStatus(health?.status);
-  const isRefreshing =
-    healthFetching || inventoryFetching || telemetryFetching || throughputFetching;
+  const isRefreshing = healthFetching || summaryFetching;
+  const inventory = summary?.inventory;
+  const telemetry = summary?.telemetry;
   const dlqCount = telemetry?.failure_count ?? 0;
   const dlqMutation = useMutation({
     mutationFn: () => api.post<ReprocessDLQResponse>(ENDPOINTS.dlqReprocess),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: dashboardKeys.telemetry });
+      queryClient.invalidateQueries({ queryKey: dashboardKeys.summary });
     },
   });
 
@@ -85,7 +73,7 @@ export default function DashboardPage() {
                 v{health.version}
               </span>
             )}
-            {typeof health.uptime === 'number' && (
+            {health.uptime !== undefined && health.uptime !== null && (
               <span className="flex items-center gap-1">
                 {t('dashboard.uptime')}:
                 <span className="font-semibold text-foreground">
@@ -111,7 +99,7 @@ export default function DashboardPage() {
           {t('dashboard.systemInventory')}
         </h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {inventoryLoading ? (
+          {summaryLoading ? (
             Array.from({ length: 4 }).map((_, i) => (
               <Skeleton key={i} className="h-[108px]" />
             ))
@@ -154,7 +142,7 @@ export default function DashboardPage() {
           {t('dashboard.liveTelemetry')}
         </h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {telemetryLoading ? (
+          {summaryLoading ? (
             Array.from({ length: 4 }).map((_, i) => (
               <Skeleton key={i} className="h-[108px]" />
             ))
@@ -190,8 +178,6 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
-
-      <ThroughputChart points={throughputOverTime?.points ?? []} />
 
       <SystemHealthBar
         natsConnected={telemetry?.nats_healthy ?? false}

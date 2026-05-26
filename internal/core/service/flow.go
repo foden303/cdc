@@ -78,10 +78,3 @@ func (s *FlowService) Stats(ctx context.Context, req request.GetFlowStatsRequest
 	}
 	return response.GetFlowStatsResponse{Stats: stats}, nil
 }
-
-func (s *FlowService) TableProgress(
-	_ context.Context,
-	_ request.GetFlowTableProgressRequest,
-) (response.GetFlowTableProgressResponse, error) {
-	return response.GetFlowTableProgressResponse{}, nil
-}

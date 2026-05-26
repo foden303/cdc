@@ -96,8 +96,7 @@ func (c *Client) toNatsMsg(subject string, event *domain.Event) (*nats.Msg, erro
 		headers.Set(constant.HeaderOffset, event.Offset)
 	}
 
-	// Critical for Exactly-Once delivery: Nats-Msg-Id.
-	// Prefer explicit message ids when provided by connectors; fallback keeps backward compatibility.
+	// Critical for idempotent publish: Nats-Msg-Id.
 	msgID := strings.TrimSpace(event.MessageID)
 	if msgID == "" && event.Offset != "" {
 		msgID = fmt.Sprintf("%s-%s", event.InstanceID, event.Offset)

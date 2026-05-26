@@ -9,6 +9,7 @@ import (
 	"github.com/foden/cdc/internal/core/dto/request"
 	"github.com/foden/cdc/internal/core/dto/response"
 	"github.com/foden/cdc/internal/core/ports"
+	coreruntime "github.com/foden/cdc/internal/core/runtime"
 	"github.com/foden/cdc/internal/core/service"
 	cdcerrors "github.com/foden/cdc/pkg/errors"
 	"google.golang.org/grpc/codes"
@@ -24,6 +25,7 @@ type CDCService struct {
 	flowService      *service.FlowService
 	discoveryService *service.DiscoveryService
 	metricsService   *service.MetricsService
+	dashboardService *service.DashboardService
 	dlqService       *service.DLQService
 	explorerService  *service.ExplorerService
 }
@@ -35,13 +37,17 @@ func NewCDCService(
 	registry ports.Registry,
 	discovery ports.Discovery,
 	natsClient ports.NATSClient,
+	runtimeView *coreruntime.View,
+	metricsReader ports.MetricsReader,
+	p99Window string,
 ) *CDCService {
 	return &CDCService{
 		sourceService:    service.NewSourceService(store, discovery),
 		sinkService:      service.NewSinkService(store, discovery),
 		flowService:      service.NewFlowService(flowManager),
 		discoveryService: service.NewDiscoveryService(store, discovery),
-		metricsService:   service.NewMetricsService(store, flowManager),
+		metricsService:   service.NewMetricsService(store, flowManager, runtimeView),
+		dashboardService: service.NewDashboardService(store, flowManager, natsClient, runtimeView, metricsReader, p99Window),
 		dlqService:       service.NewDLQService(natsClient),
 		explorerService:  service.NewExplorerService(natsClient),
 	}
@@ -55,8 +61,9 @@ func NewCDCService(
 func (s *CDCService) HealthCheck(ctx context.Context, req *cdcpb.HealthCheckRequest) (*cdcpb.HealthCheckResponse, error) {
 	health := s.metricsService.HealthCheck(ctx, request.HealthCheckRequest{})
 	return &cdcpb.HealthCheckResponse{
-		Status: health.Status,
-		Uptime: health.Uptime,
+		Status:  health.Status,
+		Version: health.Version,
+		Uptime:  health.Uptime,
 	}, nil
 }
 
@@ -73,26 +80,6 @@ func (s *CDCService) GetStats(ctx context.Context, req *cdcpb.GetStatsRequest) (
 	return &cdcpb.GetStatsResponse{
 		SourceStats: componentStatsMapToProto(stats.SourceStats),
 		SinkStats:   componentStatsMapToProto(stats.SinkStats),
-	}, nil
-}
-
-// GetPerformanceMetrics returns aggregate and per-component performance metrics.
-// For running flows, it uses real flow stats when available and falls back
-// to simulated values when they are not.
-func (s *CDCService) GetPerformanceMetrics(ctx context.Context, req *cdcpb.GetPerformanceMetricsRequest) (*cdcpb.GetPerformanceMetricsResponse, error) {
-	perf, err := s.metricsService.Performance(ctx, request.GetPerformanceMetricsRequest{})
-	if err != nil {
-		slog.Error("GetPerformanceMetrics: failed to load performance metrics", "err", err)
-		return nil, status.Errorf(codes.Internal, "failed to load performance metrics: %v", err)
-	}
-
-	return &cdcpb.GetPerformanceMetricsResponse{
-		Throughput:    perf.Throughput,
-		LatencyP99:    perf.LatencyP99,
-		ActiveWorkers: perf.ActiveWorkers,
-		ErrorRate:     perf.ErrorRate,
-		Sinks:         sinkPerformanceMapToProto(perf.Sinks),
-		Sources:       sourcePerformanceMapToProto(perf.Sources),
 	}, nil
 }
 
@@ -117,6 +104,9 @@ func invalidArgumentIfRequired(err error) error {
 	if errors.Is(err, cdcerrors.ErrSourceConfigRequired) || errors.Is(err, cdcerrors.ErrSinkConfigRequired) {
 		return status.Error(codes.InvalidArgument, err.Error())
 	}
+	if errors.Is(err, cdcerrors.ErrDuplicateConfig) {
+		return status.Error(codes.AlreadyExists, err.Error())
+	}
 	return nil
 }
 
@@ -128,30 +118,11 @@ func componentStatsMapToProto(stats map[string]*response.ComponentStats) map[str
 			FailureCount: stat.FailureCount,
 			LastError:    stat.LastError,
 			PartitionLag: stat.PartitionLag,
-		}
-	}
-	return result
-}
-
-func sourcePerformanceMapToProto(stats map[string]*response.SourcePerformance) map[string]*cdcpb.SourcePerformance {
-	result := make(map[string]*cdcpb.SourcePerformance, len(stats))
-	for id, stat := range stats {
-		result[id] = &cdcpb.SourcePerformance{
-			SourceId:   stat.SourceID,
-			Throughput: stat.Throughput,
-			ErrorRate:  stat.ErrorRate,
-		}
-	}
-	return result
-}
-
-func sinkPerformanceMapToProto(stats map[string]*response.SinkPerformance) map[string]*cdcpb.SinkPerformance {
-	result := make(map[string]*cdcpb.SinkPerformance, len(stats))
-	for id, stat := range stats {
-		result[id] = &cdcpb.SinkPerformance{
-			SinkId:     stat.SinkID,
-			Throughput: stat.Throughput,
-			AvgLatency: stat.AvgLatency,
+			LastEventAt:  stat.LastEventAt,
+			ActiveFlows:  stat.ActiveFlows,
+			Throughput:   stat.Throughput,
+			ErrorRate:    stat.ErrorRate,
+			AvgLatencyMs: stat.AvgLatencyMs,
 		}
 	}
 	return result

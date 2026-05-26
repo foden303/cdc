@@ -90,3 +90,23 @@ func TestHandleFailureUsesConfiguredMaxDeliver(t *testing.T) {
 		t.Fatalf("DLQ moves = %d, want 1", natsClient.dlqMoves)
 	}
 }
+
+func TestApplySinkTableUsesFlowSinkTable(t *testing.T) {
+	event := &domain.Event{Schema: "public", Table: "users"}
+
+	applySinkTable(event, "warehouse.customers")
+
+	if event.Schema != "warehouse" || event.Table != "customers" {
+		t.Fatalf("event table = %s.%s", event.Schema, event.Table)
+	}
+}
+
+func TestApplySinkTableClearsSchemaWhenSinkTableUnqualified(t *testing.T) {
+	event := &domain.Event{Schema: "public", Table: "users"}
+
+	applySinkTable(event, "customers")
+
+	if event.Schema != "" || event.Table != "customers" {
+		t.Fatalf("event table = %s.%s", event.Schema, event.Table)
+	}
+}

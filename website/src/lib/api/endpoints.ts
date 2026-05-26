@@ -3,10 +3,7 @@ export const ENDPOINTS = {
   // System
   health: '/api/v1/health',
   stats: '/api/v1/stats',
-  performance: '/api/v1/metrics/performance',
-  dashboardInventory: '/api/v1/dashboard/system-inventory',
-  dashboardLiveTelemetry: '/api/v1/dashboard/live-telemetry',
-  dashboardThroughputOverTime: '/api/v1/dashboard/throughput-overtime',
+  dashboard: '/api/v1/dashboard',
 
   // Sources CRUD + Test
   sources: '/api/v1/sources',
@@ -26,7 +23,6 @@ export const ENDPOINTS = {
   flowPause: (id: string) => `/api/v1/flows/${id}/pause` as const,
   flowResume: (id: string) => `/api/v1/flows/${id}/resume` as const,
   flowStats: (id: string) => `/api/v1/flows/${id}/stats` as const,
-  flowProgress: (id: string) => `/api/v1/flows/${id}/progress` as const,
 
   // Explorer
   topics: '/api/v1/topics',

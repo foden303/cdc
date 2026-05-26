@@ -19,6 +19,7 @@ import (
 	"github.com/foden/cdc/internal/core/constant"
 	"github.com/foden/cdc/internal/core/domain"
 	"github.com/foden/cdc/internal/core/ports"
+	coreruntime "github.com/foden/cdc/internal/core/runtime"
 	"github.com/foden/cdc/pkg/retry"
 	"github.com/foden/cdc/pkg/utils"
 	"github.com/jackc/pglogrepl"
@@ -80,13 +81,18 @@ type PostgresSource struct {
 	// Single channel for Strict Global Ordering
 	taskChan chan *walTask
 	wg       sync.WaitGroup
+
+	runtimeRegistry *coreruntime.Registry
+	runtimeMetrics  *coreruntime.Metrics
 }
 
 func New(cfg *ports.SourceConfig) (*PostgresSource, error) {
 	return &PostgresSource{
-		cfg:       cfg,
-		stop:      make(chan struct{}),
-		relations: make(map[uint32]*pglogrepl.RelationMessage),
+		cfg:             cfg,
+		stop:            make(chan struct{}),
+		relations:       make(map[uint32]*pglogrepl.RelationMessage),
+		runtimeRegistry: coreruntime.DefaultRegistry(),
+		runtimeMetrics:  coreruntime.DefaultMetrics(),
 		// Larger buffer to absorb bursts while maintaining sequence
 		taskChan: make(chan *walTask, 8192),
 	}, nil
@@ -97,17 +103,7 @@ func (p *PostgresSource) InstanceID() string {
 	return p.cfg.InstanceID
 }
 
-// RegisterTable registers a table that a flow is interested in.
-func (p *PostgresSource) RegisterTable(schema, table string, partitionCount int) {
-	registry.GlobalTableRegistry.Register(p.cfg.InstanceID, schema, table, partitionCount)
-}
-
-// UnregisterTable decrements the reference count for a table.
-func (p *PostgresSource) UnregisterTable(schema, table string) {
-	registry.GlobalTableRegistry.Unregister(p.cfg.InstanceID, schema, table)
-}
-
-func (p *PostgresSource) Start(events chan<- *domain.Event, ackCh <-chan uint64, initialOffset string) error {
+func (p *PostgresSource) Start(events chan<- *domain.Event, ackCh <-chan ports.SourceAck, initialOffset string) error {
 	p.events = events
 
 	if err := p.ensureSetup(); err != nil {
@@ -198,6 +194,9 @@ func (p *PostgresSource) processTask(t *walTask) {
 	)
 
 	p.events <- ev
+	if p.runtimeMetrics != nil {
+		p.runtimeMetrics.RecordSourceProduced(p.cfg.InstanceID, namespace, table, 1, t.ts)
+	}
 	metrics.EventsProducedTotal.WithLabelValues(p.cfg.InstanceID, "success").Inc()
 }
 
@@ -205,16 +204,15 @@ func (p *PostgresSource) processTask(t *walTask) {
 func (p *PostgresSource) calculatePartition(t *walTask) int {
 	partitionCount := t.partitionCount
 	if partitionCount <= 0 {
-		partitionCount = 4 // fallback default
+		partitionCount = 4
 	}
 
 	// Snapshot rows use a map, WAL tasks use pglogrepl.TupleDataColumn
 	var pkValues []string
 
 	if t.op == constant.OpSnapshot {
-		// Snapshot best-effort partitioning:
-		// 1) prefer a stable row key from common PK-like columns
-		// 2) fallback to table-based hash so we avoid always routing to partition 0
+		// Snapshot rows prefer a stable row key; table hashing keeps distribution useful
+		// when the row key is not available.
 		if t.key != "" {
 			return utils.GeneratePartition(t.key, partitionCount)
 		}
@@ -240,7 +238,7 @@ func (p *PostgresSource) calculatePartition(t *walTask) int {
 	}
 
 	if len(pkValues) == 0 {
-		return 0 // No PK found, fallback to partition 0
+		return 0
 	}
 
 	// Hash the combined PK values using the configured partition count
@@ -275,7 +273,7 @@ func (p *PostgresSource) decodeToJSONRaw(rel *pglogrepl.RelationMessage, cols []
 		case 'n': // Null
 			obj[name] = nil
 		case 't': // Text formatted value
-			obj[name] = p.parseOid(string(col.Data), oid)
+			obj[name] = p.parseOid(col.Data, oid)
 		}
 	}
 
@@ -284,20 +282,20 @@ func (p *PostgresSource) decodeToJSONRaw(rel *pglogrepl.RelationMessage, cols []
 }
 
 // parseOid maps Postgres types to Go types for proper JSON encoding (numbers vs strings)
-func (p *PostgresSource) parseOid(val string, oid uint32) interface{} {
+func (p *PostgresSource) parseOid(val []byte, oid uint32) interface{} {
 	switch oid {
 	case 16: // bool
-		return val == "t"
+		return len(val) == 1 && val[0] == 't'
 	case 20, 21, 23: // int8, int2, int4
-		i, _ := strconv.ParseInt(val, 10, 64)
+		i, _ := strconv.ParseInt(string(val), 10, 64)
 		return i
 	case 700, 701, 1700: // float4, float8, numeric
-		f, _ := strconv.ParseFloat(val, 64)
+		f, _ := strconv.ParseFloat(string(val), 64)
 		return f
 	case 114, 3802: // json, jsonb
 		return json.RawMessage(val)
 	default:
-		return val
+		return string(val)
 	}
 }
 
@@ -371,6 +369,7 @@ func (p *PostgresSource) singleOrderedWorker() {
 // dispatchToWorkers pushes the task to the worker pool channel
 func (p *PostgresSource) dispatchToWorkers(msg pglogrepl.Message, lsn uint64) {
 	ts := time.Now().UnixMilli()
+	changeIdx := 0
 
 	// 1. Handle RelationMessage because it needs Write Lock
 	if v, ok := msg.(*pglogrepl.RelationMessage); ok {
@@ -388,12 +387,13 @@ func (p *PostgresSource) dispatchToWorkers(msg pglogrepl.Message, lsn uint64) {
 		if !ok {
 			return
 		}
-		// Check global table registry
-		partitionCount, active := registry.GlobalTableRegistry.Lookup(p.cfg.InstanceID, rel.Namespace, rel.RelationName)
+		interest, active := p.runtimeRegistry.LookupTable(p.cfg.InstanceID, rel.Namespace, rel.RelationName)
 		if !active {
 			return // No flow needs this table
 		}
-		p.taskChan <- &walTask{op: constant.OpCreate, rel: rel, new: v.Tuple.Columns, lsn: lsn, ts: ts, partitionCount: partitionCount}
+		msgID := p.walMessageID(lsn, v.RelationID, changeIdx, rel, constant.OpCreate)
+		changeIdx++
+		p.taskChan <- &walTask{op: constant.OpCreate, rel: rel, new: v.Tuple.Columns, lsn: lsn, msgID: msgID, ts: ts, partitionCount: int(interest.PartitionCount)}
 	case *pglogrepl.UpdateMessage:
 		p.relMu.RLock()
 		rel, ok := p.relations[v.RelationID]
@@ -401,12 +401,13 @@ func (p *PostgresSource) dispatchToWorkers(msg pglogrepl.Message, lsn uint64) {
 		if !ok {
 			return
 		}
-		// Check global table registry
-		partitionCount, active := registry.GlobalTableRegistry.Lookup(p.cfg.InstanceID, rel.Namespace, rel.RelationName)
+		interest, active := p.runtimeRegistry.LookupTable(p.cfg.InstanceID, rel.Namespace, rel.RelationName)
 		if !active {
 			return
 		}
-		p.taskChan <- &walTask{op: constant.OpUpdate, rel: rel, old: v.OldTuple.Columns, new: v.NewTuple.Columns, lsn: lsn, ts: ts, partitionCount: partitionCount}
+		msgID := p.walMessageID(lsn, v.RelationID, changeIdx, rel, constant.OpUpdate)
+		changeIdx++
+		p.taskChan <- &walTask{op: constant.OpUpdate, rel: rel, old: v.OldTuple.Columns, new: v.NewTuple.Columns, lsn: lsn, msgID: msgID, ts: ts, partitionCount: int(interest.PartitionCount)}
 	case *pglogrepl.DeleteMessage:
 		p.relMu.RLock()
 		rel, ok := p.relations[v.RelationID]
@@ -414,13 +415,27 @@ func (p *PostgresSource) dispatchToWorkers(msg pglogrepl.Message, lsn uint64) {
 		if !ok {
 			return
 		}
-		// Check global table registry
-		partitionCount, active := registry.GlobalTableRegistry.Lookup(p.cfg.InstanceID, rel.Namespace, rel.RelationName)
+		interest, active := p.runtimeRegistry.LookupTable(p.cfg.InstanceID, rel.Namespace, rel.RelationName)
 		if !active {
 			return
 		}
-		p.taskChan <- &walTask{op: constant.OpDelete, rel: rel, old: v.OldTuple.Columns, lsn: lsn, ts: ts, partitionCount: partitionCount}
+		msgID := p.walMessageID(lsn, v.RelationID, changeIdx, rel, constant.OpDelete)
+		changeIdx++
+		p.taskChan <- &walTask{op: constant.OpDelete, rel: rel, old: v.OldTuple.Columns, lsn: lsn, msgID: msgID, ts: ts, partitionCount: int(interest.PartitionCount)}
 	}
+}
+
+func (p *PostgresSource) walMessageID(lsn uint64, relationID uint32, changeIdx int, rel *pglogrepl.RelationMessage, op constant.Op) string {
+	return fmt.Sprintf(
+		"%s-postgres-%d-%d-%d-%s.%s-%s",
+		p.cfg.InstanceID,
+		lsn,
+		relationID,
+		changeIdx,
+		rel.Namespace,
+		rel.RelationName,
+		string(op),
+	)
 }
 
 func (p *PostgresSource) Stop() error {
@@ -457,25 +472,7 @@ func (p *PostgresSource) ensureSetup() error {
 		return fmt.Errorf("wal_level must be 'logical', current: %s", walLevel)
 	}
 
-	// Create publication if not exists
-	pubName := p.publicationName()
-	var exists bool
-	_ = conn.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM pg_publication WHERE pubname = $1)", pubName).Scan(&exists)
-
-	if !exists {
-		sql := p.buildCreatePublicationSQL(pubName)
-		if _, err := conn.Exec(ctx, sql); err != nil {
-			return fmt.Errorf("failed to create publication: %w", err)
-		}
-	}
 	return nil
-}
-
-func (p *PostgresSource) buildCreatePublicationSQL(pubName string) string {
-	quotedPub := utils.QuoteIdent(pubName)
-	// In the new architecture, table filtering is handled at the Flow level.
-	// The source publishes ALL tables and flows filter what they need.
-	return fmt.Sprintf("CREATE PUBLICATION %s FOR ALL TABLES", quotedPub)
 }
 
 // doConnect establishes the physical replication connection.
@@ -564,11 +561,14 @@ func (p *PostgresSource) readLoopWithReconnect(startLSN pglogrepl.LSN) {
 }
 
 // ackLoop manages the LSN feedback loop from the downstream flow.
-func (p *PostgresSource) ackLoop(ackCh <-chan uint64) {
-	for lsn := range ackCh {
+func (p *PostgresSource) ackLoop(ackCh <-chan ports.SourceAck) {
+	for ack := range ackCh {
+		if ack.LSN == 0 {
+			continue
+		}
 		current := atomic.LoadUint64(&p.flushedLSN)
-		if lsn > current {
-			atomic.StoreUint64(&p.flushedLSN, lsn)
+		if ack.LSN > current {
+			atomic.StoreUint64(&p.flushedLSN, ack.LSN)
 		}
 	}
 }

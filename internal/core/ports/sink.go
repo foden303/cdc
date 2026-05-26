@@ -6,9 +6,9 @@ import "github.com/foden/cdc/internal/core/domain"
 // Implementations are responsible for:
 //   - Accepting batches of CDC events and writing them to the target system
 //   - Handling idempotency (deduplication via event MsgID)
-//   - Managing connection pooling and retries internally
+//   - Managing destination connections and returning write failures to the flow
 //
-// Sinks do NOT own flow-level concerns (batching strategy, partition assignment).
+// Sinks do NOT own flow-level concerns (batching strategy, partition assignment, retries).
 // Those are managed by the FlowManager.
 type Sink interface {
 	// WriteBatch writes a batch of events to the destination.
@@ -41,5 +41,4 @@ type SinkConfig struct {
 	URL         []string `json:"url,omitempty"`          // Elasticsearch: cluster URLs
 	APIKey      string   `json:"api_key,omitempty"`      // Elasticsearch: API key auth
 	IndexPrefix string   `json:"index_prefix,omitempty"` // Elasticsearch: index naming prefix
-	MaxRetries  int32    `json:"max_retries,omitempty"`  // Retry count for transient failures
 }

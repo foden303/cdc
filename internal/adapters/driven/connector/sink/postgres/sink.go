@@ -7,16 +7,15 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/bytedance/sonic"
-	"github.com/bytedance/sonic/ast"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/foden/cdc/config"
+	sinkcommon "github.com/foden/cdc/internal/adapters/driven/connector/sink/common"
 	"github.com/foden/cdc/internal/adapters/driven/registry"
 	"github.com/foden/cdc/internal/core/constant"
 	"github.com/foden/cdc/internal/core/domain"
 	"github.com/foden/cdc/internal/core/ports"
+	"github.com/foden/cdc/pkg/utils"
 )
 
 func init() {
@@ -27,11 +26,10 @@ func init() {
 
 // PostgresSink writes CDC events to another PostgreSQL database.
 type PostgresSink struct {
-	pool *pgxpool.Pool
-	cfg  *ports.SinkConfig
-
-	// tableCache tracks tables we've already ensured exist in this session
-	tableCache sync.Map
+	pool          *pgxpool.Pool
+	cfg           *ports.SinkConfig
+	metadataCache sync.Map
+	loadMetadata  func(context.Context, string, string) (sinkcommon.TableMetadata, error)
 }
 
 // New creates a new PostgresSink instance.
@@ -49,7 +47,9 @@ func New(cfg *ports.SinkConfig) (*PostgresSink, error) {
 		return nil, fmt.Errorf("failed to connect to postgres: %w", err)
 	}
 
-	return &PostgresSink{pool: pool, cfg: cfg}, nil
+	sink := &PostgresSink{pool: pool, cfg: cfg}
+	sink.loadMetadata = sink.loadTableMetadata
+	return sink, nil
 }
 
 // WriteBatch writes events to PostgreSQL in a single transaction.
@@ -62,54 +62,33 @@ func (s *PostgresSink) WriteBatch(events []*domain.Event) error {
 	defer tx.Rollback(ctx)
 
 	for _, event := range events {
-		var node ast.Node
-		var parseErr error
-
-		if event.Op == constant.OpDelete {
-			node, parseErr = sonic.Get(event.Data, "before")
-		} else {
-			node, parseErr = sonic.Get(event.Data, "after")
-		}
-
-		if parseErr != nil || !node.Exists() {
-			continue
-		}
-
-		docBytes, err := node.MarshalJSON()
+		data, ok, err := sinkcommon.RowMap(event)
 		if err != nil {
-			continue
+			return err
 		}
-
-		var data map[string]interface{}
-		if err := sonic.Unmarshal(docBytes, &data); err != nil {
-			slog.Error("unmarshal data failed in postgres sink", "err", err)
+		if !ok {
 			continue
 		}
 
 		tableName := event.Table
-
-		// Use "id" as default primary key (detection from data)
-		pk := "id"
-
-		pkValue, ok := data[pk]
-		if !ok && event.Op != constant.OpCreate {
-			slog.Warn("primary key not found in data", "pk", pk, "table", tableName)
-			continue
+		meta, err := s.metadataForTable(ctx, event.Schema, tableName)
+		if err != nil {
+			return err
 		}
 
-		// Self-healing: Ensure table exists
-		if err := s.ensureTable(ctx, tableName, data, pk); err != nil {
-			return fmt.Errorf("failed to ensure table %s: %w", tableName, err)
+		pkValues, err := primaryKeyValues(data, meta.PrimaryKeys)
+		if err != nil {
+			return err
 		}
 
 		switch event.Op {
 		case constant.OpDelete:
-			query := fmt.Sprintf("DELETE FROM %s WHERE %s = $1", tableName, pk)
-			if _, err := tx.Exec(ctx, query, pkValue); err != nil {
+			if _, err := tx.Exec(ctx, meta.DeleteSQL, pkValues...); err != nil {
 				return fmt.Errorf("delete failed: %w", err)
 			}
 		case constant.OpCreate, constant.OpUpdate, constant.OpSnapshot:
-			if err := s.upsertTx(ctx, tx, tableName, pk, data); err != nil {
+			values := valuesForColumns(data, meta.Columns)
+			if _, err := tx.Exec(ctx, meta.UpsertSQL, values...); err != nil {
 				return fmt.Errorf("upsert failed: %w", err)
 			}
 		default:
@@ -123,87 +102,175 @@ func (s *PostgresSink) WriteBatch(events []*domain.Event) error {
 	return nil
 }
 
-func (s *PostgresSink) upsertTx(ctx context.Context, tx pgx.Tx, table string, pk string, data map[string]interface{}) error {
-	cols := make([]string, 0, len(data))
-	vals := make([]interface{}, 0, len(data))
-	placeholders := make([]string, 0, len(data))
-	updates := make([]string, 0, len(data)-1)
+func (s *PostgresSink) metadataForTable(ctx context.Context, schema, table string) (sinkcommon.TableMetadata, error) {
+	key, base, err := sinkcommon.PostgresTableKey(schema, table)
+	if err != nil {
+		return sinkcommon.TableMetadata{}, err
+	}
+	if cached, ok := s.metadataCache.Load(key); ok {
+		return cached.(sinkcommon.TableMetadata), nil
+	}
+	loader := s.loadMetadata
+	if loader == nil {
+		loader = s.loadTableMetadata
+	}
+	meta, err := loader(ctx, base.Schema, base.Table)
+	if err != nil {
+		return sinkcommon.TableMetadata{}, err
+	}
+	meta.Schema = base.Schema
+	meta.Table = base.Table
+	if len(meta.Columns) == 0 {
+		return sinkcommon.TableMetadata{}, fmt.Errorf("postgres sink table %s has no columns or does not exist", key)
+	}
+	if len(meta.PrimaryKeys) == 0 {
+		return sinkcommon.TableMetadata{}, fmt.Errorf("postgres sink table %s has no primary key", key)
+	}
+	qualifiedTable := key
+	meta.UpsertSQL = buildUpsertSQLForColumns(qualifiedTable, meta.PrimaryKeys, meta.Columns)
+	meta.DeleteSQL = buildDeleteSQL(qualifiedTable, meta.PrimaryKeys)
+	actual, _ := s.metadataCache.LoadOrStore(key, meta)
+	return actual.(sinkcommon.TableMetadata), nil
+}
 
-	i := 1
-	for k, v := range data {
-		cols = append(cols, k)
-		vals = append(vals, v)
-		placeholders = append(placeholders, fmt.Sprintf("$%d", i))
-		if k != pk {
-			updates = append(updates, fmt.Sprintf("%s = EXCLUDED.%s", k, k))
+func (s *PostgresSink) loadTableMetadata(ctx context.Context, schema, table string) (sinkcommon.TableMetadata, error) {
+	columns, err := s.queryColumns(ctx, schema, table)
+	if err != nil {
+		return sinkcommon.TableMetadata{}, err
+	}
+	primaryKeys, err := s.queryPrimaryKeys(ctx, schema, table)
+	if err != nil {
+		return sinkcommon.TableMetadata{}, err
+	}
+	return sinkcommon.TableMetadata{Schema: schema, Table: table, Columns: columns, PrimaryKeys: primaryKeys}, nil
+}
+
+func (s *PostgresSink) queryColumns(ctx context.Context, schema, table string) ([]string, error) {
+	rows, err := s.pool.Query(ctx, `
+SELECT column_name
+FROM information_schema.columns
+WHERE table_schema = $1 AND table_name = $2
+ORDER BY ordinal_position`, schema, table)
+	if err != nil {
+		return nil, fmt.Errorf("query postgres columns for %s.%s: %w", schema, table, err)
+	}
+	defer rows.Close()
+
+	columns := make([]string, 0)
+	for rows.Next() {
+		var column string
+		if err := rows.Scan(&column); err != nil {
+			return nil, fmt.Errorf("scan postgres column for %s.%s: %w", schema, table, err)
 		}
-		i++
+		columns = append(columns, column)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("read postgres columns for %s.%s: %w", schema, table, err)
+	}
+	return columns, nil
+}
+
+func (s *PostgresSink) queryPrimaryKeys(ctx context.Context, schema, table string) ([]string, error) {
+	rows, err := s.pool.Query(ctx, `
+SELECT kcu.column_name
+FROM information_schema.table_constraints tc
+JOIN information_schema.key_column_usage kcu
+  ON tc.constraint_name = kcu.constraint_name
+ AND tc.table_schema = kcu.table_schema
+ AND tc.table_name = kcu.table_name
+WHERE tc.constraint_type = 'PRIMARY KEY'
+  AND tc.table_schema = $1
+  AND tc.table_name = $2
+ORDER BY kcu.ordinal_position`, schema, table)
+	if err != nil {
+		return nil, fmt.Errorf("query postgres primary keys for %s.%s: %w", schema, table, err)
+	}
+	defer rows.Close()
+
+	primaryKeys := make([]string, 0)
+	for rows.Next() {
+		var column string
+		if err := rows.Scan(&column); err != nil {
+			return nil, fmt.Errorf("scan postgres primary key for %s.%s: %w", schema, table, err)
+		}
+		primaryKeys = append(primaryKeys, column)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("read postgres primary keys for %s.%s: %w", schema, table, err)
+	}
+	return primaryKeys, nil
+}
+
+func buildUpsertSQLForColumns(table string, primaryKeys []string, cols []string) string {
+	pkSet := makeStringSet(primaryKeys)
+	placeholders := make([]string, 0, len(cols))
+	updates := make([]string, 0, len(cols)-1)
+	for i, col := range cols {
+		placeholders = append(placeholders, fmt.Sprintf("$%d", i+1))
+		if !pkSet[col] {
+			quoted := utils.QuoteIdentifierDoubleQuote(col)
+			updates = append(updates, fmt.Sprintf("%s = EXCLUDED.%s", quoted, quoted))
+		}
+	}
+	if len(updates) == 0 {
+		quotedPK := utils.QuoteIdentifierDoubleQuote(primaryKeys[0])
+		updates = append(updates, fmt.Sprintf("%s = EXCLUDED.%s", quotedPK, quotedPK))
 	}
 
 	query := fmt.Sprintf(
 		"INSERT INTO %s (%s) VALUES (%s) ON CONFLICT (%s) DO UPDATE SET %s",
-		table,
-		strings.Join(cols, ", "),
+		utils.QuoteIdentifierDoubleQuote(table),
+		quotePostgresIdentifiers(cols),
 		strings.Join(placeholders, ", "),
-		pk,
+		quotePostgresIdentifiers(primaryKeys),
 		strings.Join(updates, ", "),
 	)
 
-	_, err := tx.Exec(ctx, query, vals...)
-	return err
+	return query
 }
 
-func (s *PostgresSink) ensureTable(ctx context.Context, table string, data map[string]interface{}, pk string) error {
-	if _, ok := s.tableCache.Load(table); ok {
-		return nil
+func quotePostgresIdentifiers(cols []string) string {
+	quoted := make([]string, 0, len(cols))
+	for _, col := range cols {
+		quoted = append(quoted, utils.QuoteIdentifierDoubleQuote(col))
 	}
+	return strings.Join(quoted, ", ")
+}
 
-	var exists bool
-	checkQuery := "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = $1)"
-	if err := s.pool.QueryRow(ctx, checkQuery, table).Scan(&exists); err != nil {
-		return err
+func buildDeleteSQL(table string, primaryKeys []string) string {
+	clauses := make([]string, 0, len(primaryKeys))
+	for i, pk := range primaryKeys {
+		clauses = append(clauses, fmt.Sprintf("%s = $%d", utils.QuoteIdentifierDoubleQuote(pk), i+1))
 	}
+	return fmt.Sprintf("DELETE FROM %s WHERE %s", utils.QuoteIdentifierDoubleQuote(table), strings.Join(clauses, " AND "))
+}
 
-	if exists {
-		s.tableCache.Store(table, true)
-		return nil
+func makeStringSet(values []string) map[string]bool {
+	set := make(map[string]bool, len(values))
+	for _, value := range values {
+		set[value] = true
 	}
+	return set
+}
 
-	slog.Info("self-healing: creating table", "table", table, "pk", pk)
-	cols := make([]string, 0, len(data))
-	for k, v := range data {
-		pgType := s.inferPGType(v)
-		colDef := fmt.Sprintf("%s %s", k, pgType)
-		if k == pk {
-			colDef += " PRIMARY KEY"
+func primaryKeyValues(row map[string]interface{}, primaryKeys []string) ([]interface{}, error) {
+	values := make([]interface{}, 0, len(primaryKeys))
+	for _, key := range primaryKeys {
+		value, ok := row[key]
+		if !ok || value == nil || value == "" {
+			return nil, fmt.Errorf("missing primary key column %q", key)
 		}
-		cols = append(cols, colDef)
+		values = append(values, value)
 	}
-
-	createSQL := fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s (%s)", table, strings.Join(cols, ", "))
-	if _, err := s.pool.Exec(ctx, createSQL); err != nil {
-		return fmt.Errorf("create table failed: %w", err)
-	}
-
-	s.tableCache.Store(table, true)
-	return nil
+	return values, nil
 }
 
-func (s *PostgresSink) inferPGType(v interface{}) string {
-	switch v.(type) {
-	case bool:
-		return "BOOLEAN"
-	case int, int32, int64:
-		return "BIGINT"
-	case float32, float64:
-		return "DOUBLE PRECISION"
-	case string:
-		return "TEXT"
-	case map[string]interface{}, []interface{}:
-		return "JSONB"
-	default:
-		return "TEXT"
+func valuesForColumns(row map[string]interface{}, columns []string) []interface{} {
+	values := make([]interface{}, 0, len(columns))
+	for _, column := range columns {
+		values = append(values, row[column])
 	}
+	return values
 }
 
 // Close closes the connection pool.

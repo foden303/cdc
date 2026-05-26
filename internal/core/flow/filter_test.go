@@ -3,8 +3,6 @@ package flow
 import (
 	"encoding/json"
 	"testing"
-
-	"github.com/foden/cdc/internal/core/domain"
 )
 
 func TestNewFilter_EmptyExpression(t *testing.T) {
@@ -15,8 +13,8 @@ func TestNewFilter_EmptyExpression(t *testing.T) {
 	if f == nil {
 		t.Fatal("expected non-nil filter")
 	}
-	if f.cond != nil {
-		t.Error("expected nil condition for empty expression")
+	if f.program != nil {
+		t.Error("expected nil CEL program for empty expression")
 	}
 }
 
@@ -25,8 +23,8 @@ func TestNewFilter_WhitespaceExpression(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if f.cond != nil {
-		t.Error("expected nil condition for whitespace-only expression")
+	if f.program != nil {
+		t.Error("expected nil CEL program for whitespace-only expression")
 	}
 }
 
@@ -37,6 +35,8 @@ func TestNewFilter_InvalidSyntax(t *testing.T) {
 		"op = c",
 		"== c",
 		"!= c",
+		`op == "c"`,
+		`table == "users"`,
 	}
 	for _, expr := range cases {
 		_, err := NewFilter(expr)
@@ -53,146 +53,10 @@ func TestNewFilter_UnsupportedField(t *testing.T) {
 	}
 }
 
-func TestNewFilter_ValidExpressions(t *testing.T) {
-	cases := []struct {
-		expr  string
-		field string
-		op    operator
-		value string
-	}{
-		{`op == "c"`, "op", opEq, "c"},
-		{`op == c`, "op", opEq, "c"},
-		{`table == "users"`, "table", opEq, "users"},
-		{`schema == public`, "schema", opEq, "public"},
-		{`instance_id != "abc-123"`, "instance_id", opNe, "abc-123"},
-		{`op != d`, "op", opNe, "d"},
-		{`table == 'orders'`, "table", opEq, "orders"},
-	}
-	for _, tc := range cases {
-		f, err := NewFilter(tc.expr)
-		if err != nil {
-			t.Errorf("NewFilter(%q) error: %v", tc.expr, err)
-			continue
-		}
-		if f.cond == nil {
-			t.Errorf("NewFilter(%q) cond is nil", tc.expr)
-			continue
-		}
-		if f.cond.field != tc.field {
-			t.Errorf("NewFilter(%q) field = %q, want %q", tc.expr, f.cond.field, tc.field)
-		}
-		if f.cond.op != tc.op {
-			t.Errorf("NewFilter(%q) op = %v, want %v", tc.expr, f.cond.op, tc.op)
-		}
-		if f.cond.value != tc.value {
-			t.Errorf("NewFilter(%q) value = %q, want %q", tc.expr, f.cond.value, tc.value)
-		}
-	}
-}
-
-func TestFilter_Match_PassAll(t *testing.T) {
-	f, _ := NewFilter("")
-	ev := &domain.Event{Op: "c", Table: "users", Schema: "public", InstanceID: "src-1"}
-
-	if !f.Match(ev) {
-		t.Error("empty filter should pass all events")
-	}
-}
-
-func TestFilter_Match_NilFilter(t *testing.T) {
-	var f *Filter
-	ev := &domain.Event{Op: "c", Table: "users", Schema: "public"}
-
-	if !f.Match(ev) {
-		t.Error("nil filter should pass all events")
-	}
-}
-
-func TestFilter_Match_NilEvent(t *testing.T) {
-	f, _ := NewFilter("op == c")
-	if f.Match(nil) {
-		t.Error("nil event should not match any condition")
-	}
-}
-
-func TestFilter_Match_EqualOperator(t *testing.T) {
-	f, _ := NewFilter(`op == "c"`)
-
-	tests := []struct {
-		event *domain.Event
-		want  bool
-	}{
-		{&domain.Event{Op: "c"}, true},
-		{&domain.Event{Op: "u"}, false},
-		{&domain.Event{Op: "d"}, false},
-		{&domain.Event{Op: ""}, false},
-	}
-
-	for _, tc := range tests {
-		got := f.Match(tc.event)
-		if got != tc.want {
-			t.Errorf("Match(op=%q) = %v, want %v", tc.event.Op, got, tc.want)
-		}
-	}
-}
-
-func TestFilter_Match_NotEqualOperator(t *testing.T) {
-	f, _ := NewFilter(`op != "d"`)
-
-	tests := []struct {
-		event *domain.Event
-		want  bool
-	}{
-		{&domain.Event{Op: "c"}, true},
-		{&domain.Event{Op: "u"}, true},
-		{&domain.Event{Op: "d"}, false},
-	}
-
-	for _, tc := range tests {
-		got := f.Match(tc.event)
-		if got != tc.want {
-			t.Errorf("Match(op=%q) = %v, want %v", tc.event.Op, got, tc.want)
-		}
-	}
-}
-
-func TestFilter_Match_TableField(t *testing.T) {
-	f, _ := NewFilter(`table == "users"`)
-
-	if !f.Match(&domain.Event{Table: "users"}) {
-		t.Error("expected match for table=users")
-	}
-	if f.Match(&domain.Event{Table: "orders"}) {
-		t.Error("expected no match for table=orders")
-	}
-}
-
-func TestFilter_Match_SchemaField(t *testing.T) {
-	f, _ := NewFilter(`schema == "public"`)
-
-	if !f.Match(&domain.Event{Schema: "public"}) {
-		t.Error("expected match for schema=public")
-	}
-	if f.Match(&domain.Event{Schema: "private"}) {
-		t.Error("expected no match for schema=private")
-	}
-}
-
-func TestFilter_Match_InstanceIDField(t *testing.T) {
-	f, _ := NewFilter(`instance_id == "src-abc"`)
-
-	if !f.Match(&domain.Event{InstanceID: "src-abc"}) {
-		t.Error("expected match for instance_id=src-abc")
-	}
-	if f.Match(&domain.Event{InstanceID: "src-xyz"}) {
-		t.Error("expected no match for instance_id=src-xyz")
-	}
-}
-
 func TestFilter_Expression(t *testing.T) {
-	f, _ := NewFilter(`op == "c"`)
-	if f.Expression() != `op == "c"` {
-		t.Errorf("Expression() = %q, want %q", f.Expression(), `op == "c"`)
+	f, _ := NewFilter(`data.op == "c"`)
+	if f.Expression() != `data.op == "c"` {
+		t.Errorf("Expression() = %q, want %q", f.Expression(), `data.op == "c"`)
 	}
 
 	var nilFilter *Filter
@@ -200,29 +64,6 @@ func TestFilter_Expression(t *testing.T) {
 		t.Error("nil filter Expression() should return empty string")
 	}
 }
-
-func TestStripQuotes(t *testing.T) {
-	cases := []struct {
-		input string
-		want  string
-	}{
-		{`"hello"`, "hello"},
-		{`'hello'`, "hello"},
-		{`hello`, "hello"},
-		{`"`, `"`},
-		{`""`, ""},
-		{`''`, ""},
-		{`"mixed'`, `"mixed'`},
-	}
-	for _, tc := range cases {
-		got := stripQuotes(tc.input)
-		if got != tc.want {
-			t.Errorf("stripQuotes(%q) = %q, want %q", tc.input, got, tc.want)
-		}
-	}
-}
-
-// --- CEL Expression Evaluate Tests ---
 
 func TestNewFilter_CELExpression(t *testing.T) {
 	f, err := NewFilter(`data.status == "active"`)
@@ -383,7 +224,6 @@ func TestFilter_Evaluate_HasField(t *testing.T) {
 }
 
 func TestFilter_Evaluate_WithEventData(t *testing.T) {
-	// Simulate how the worker would use Evaluate with event.Data
 	f, _ := NewFilter(`data.status == "active"`)
 
 	payload := map[string]interface{}{
@@ -393,13 +233,7 @@ func TestFilter_Evaluate_WithEventData(t *testing.T) {
 	}
 	data, _ := json.Marshal(payload)
 
-	ev := &domain.Event{
-		Op:    "c",
-		Table: "users",
-		Data:  data,
-	}
-
-	if !f.Evaluate(ev.Data) {
+	if !f.Evaluate(data) {
 		t.Error("expected event with active status to pass filter")
 	}
 }

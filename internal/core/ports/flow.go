@@ -48,11 +48,14 @@ type ColumnMapping struct {
 type FlowStats struct {
 	EventsPerSecond      float64 `json:"events_per_second"`
 	ReplicationLagMs     int64   `json:"replication_lag_ms"`
-	LastSyncedAt         int64   `json:"last_synced_at"`
 	TotalEventsProcessed uint64  `json:"total_events_processed"`
 	RunningWorkers       uint32  `json:"running_workers"`
 	PoolCapacity         uint32  `json:"pool_capacity"`
 	WorkerUtilization    float64 `json:"worker_utilization"`
+	FailureCount         uint64  `json:"failure_count"`
+	DLQCount             uint64  `json:"dlq_count"`
+	FilteredCount        uint64  `json:"filtered_count"`
+	LastError            string  `json:"last_error"`
 }
 
 // FlowManager defines the lifecycle operations for flows.
