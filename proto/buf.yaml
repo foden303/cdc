@@ -1,0 +1,15 @@
+version: v2
+modules:
+  - path: cdc/v1
+    name: buf.build/cdc/v1
+lint:
+  use:
+    - STANDARD
+  except:
+    - IMPORT_USED
+    - PACKAGE_DIRECTORY_MATCH
+deps:
+  - buf.build/googleapis/googleapis
+breaking:
+  use:
+    - FILE

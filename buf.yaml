@@ -1,6 +1,0 @@
-version: v2
-modules:
-  - path: api/proto/v1
-    name: buf.build/cdc/v1
-deps:
-  - buf.build/googleapis/googleapis

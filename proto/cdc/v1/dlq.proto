@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package cdc.v1;
+
+option go_package = "github.com/foden/cdc/api/proto/v1;cdcpb";
+
+import "common.proto";
+
+message DLQMessage {
+  uint64 sequence = 1;
+  int64 timestamp = 2;
+  string subject = 3;
+  bytes data = 4;
+  map<string, string> headers = 5;
+  string reason = 6;
+  string original_subject = 7;
+}
+
+message ListDLQMessagesRequest {
+  OffsetPaginationRequest pagination = 1;
+}
+
+message ListDLQMessagesResponse {
+  repeated DLQMessage data = 1;
+  OffsetPaginationResponse pagination = 2;
+}
+
+message ReprocessDLQRequest {}
+
+message ReprocessDLQResponse {
+  int32 count = 1;
+}

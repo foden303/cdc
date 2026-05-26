@@ -1,4 +1,4 @@
-/config.yaml
+/pkg/config/config.yaml
 /.vscode
 /cdclight
 /data

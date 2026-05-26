@@ -1,0 +1,212 @@
+syntax = "proto3";
+
+package cdc.v1;
+
+option go_package = "github.com/foden/cdc/api/proto/v1;cdcpb";
+
+import "google/api/annotations.proto";
+import "health.proto";
+import "source.proto";
+import "sink.proto";
+import "explorer.proto";
+import "metrics.proto";
+import "dlq.proto";
+import "flow.proto";
+import "dashboard.proto";
+
+// CDC Service — gRPC API for the CDC system.
+service CDCService {
+
+  // Health & Metrics
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse) {
+    option (google.api.http) = {
+      get : "/api/v1/health"
+    };
+  }
+
+  rpc GetStats(GetStatsRequest) returns (GetStatsResponse) {
+    option (google.api.http) = {
+      get : "/api/v1/stats"
+    };
+  }
+
+  rpc GetDashboardSummary(GetDashboardSummaryRequest) returns (GetDashboardSummaryResponse) {
+    option (google.api.http) = {
+      get : "/api/v1/dashboard"
+    };
+  }
+
+  // Sources CRUD + Test
+  rpc CreateSource(CreateSourceRequest) returns (CreateSourceResponse) {
+    option (google.api.http) = {
+      post : "/api/v1/sources"
+      body : "*"
+    };
+  }
+
+  rpc GetSource(GetSourceRequest) returns (GetSourceResponse) {
+    option (google.api.http) = {
+      get : "/api/v1/sources/{instance_id}"
+    };
+  }
+
+  rpc ListSources(ListSourcesRequest) returns (ListSourcesResponse) {
+    option (google.api.http) = {
+      get : "/api/v1/sources"
+    };
+  }
+
+  rpc DeleteSource(DeleteSourceRequest) returns (DeleteSourceResponse) {
+    option (google.api.http) = {
+      delete : "/api/v1/sources/{instance_id}"
+    };
+  }
+
+  rpc TestSourceConnection(TestSourceConnectionRequest) returns (TestSourceConnectionResponse) {
+    option (google.api.http) = {
+      post : "/api/v1/test/source"
+      body : "*"
+    };
+  }
+
+  // Sinks CRUD + Test
+  rpc CreateSink(CreateSinkRequest) returns (CreateSinkResponse) {
+    option (google.api.http) = {
+      post : "/api/v1/sinks"
+      body : "*"
+    };
+  }
+
+  rpc GetSink(GetSinkRequest) returns (GetSinkResponse) {
+    option (google.api.http) = {
+      get : "/api/v1/sinks/{instance_id}"
+    };
+  }
+
+  rpc ListSinks(ListSinksRequest) returns (ListSinksResponse) {
+    option (google.api.http) = {
+      get : "/api/v1/sinks"
+    };
+  }
+
+  rpc DeleteSink(DeleteSinkRequest) returns (DeleteSinkResponse) {
+    option (google.api.http) = {
+      delete : "/api/v1/sinks/{instance_id}"
+    };
+  }
+
+  rpc TestSinkConnection(TestSinkConnectionRequest) returns (TestSinkConnectionResponse) {
+    option (google.api.http) = {
+      post : "/api/v1/test/sink"
+      body : "*"
+    };
+  }
+
+  // Flows CRUD + Lifecycle
+  rpc CreateFlow(CreateFlowRequest) returns (CreateFlowResponse) {
+    option (google.api.http) = {
+      post : "/api/v1/flows"
+      body : "*"
+    };
+  }
+
+  rpc GetFlow(GetFlowRequest) returns (GetFlowResponse) {
+    option (google.api.http) = {
+      get : "/api/v1/flows/{flow_id}"
+    };
+  }
+
+  rpc ListFlows(ListFlowsRequest) returns (ListFlowsResponse) {
+    option (google.api.http) = {
+      get : "/api/v1/flows"
+    };
+  }
+
+  rpc UpdateFlow(UpdateFlowRequest) returns (UpdateFlowResponse) {
+    option (google.api.http) = {
+      put : "/api/v1/flows/{flow_id}"
+      body : "*"
+    };
+  }
+
+  rpc DeleteFlow(DeleteFlowRequest) returns (DeleteFlowResponse) {
+    option (google.api.http) = {
+      delete : "/api/v1/flows/{flow_id}"
+    };
+  }
+
+  rpc PauseFlow(PauseFlowRequest) returns (PauseFlowResponse) {
+    option (google.api.http) = {
+      post : "/api/v1/flows/{flow_id}/pause"
+    };
+  }
+
+  rpc ResumeFlow(ResumeFlowRequest) returns (ResumeFlowResponse) {
+    option (google.api.http) = {
+      post : "/api/v1/flows/{flow_id}/resume"
+    };
+  }
+
+  rpc GetFlowStats(GetFlowStatsRequest) returns (GetFlowStatsResponse) {
+    option (google.api.http) = {
+      get : "/api/v1/flows/{flow_id}/stats"
+    };
+  }
+
+  // Discovery
+  rpc DiscoverTables(DiscoverTablesRequest) returns (DiscoverTablesResponse) {
+    option (google.api.http) = {
+      get : "/api/v1/discover/tables/{source_id}"
+    };
+  }
+
+  rpc DiscoverSinkTables(DiscoverSinkTablesRequest) returns (DiscoverSinkTablesResponse) {
+    option (google.api.http) = {
+      get : "/api/v1/discover/sink-tables/{sink_id}"
+    };
+  }
+
+  // Explorer API
+  rpc ListMessages(ListMessagesRequest) returns (ListMessagesResponse) {
+    option (google.api.http) = {
+      get : "/api/v1/messages"
+    };
+  }
+
+  rpc GetConsumerInfo(GetConsumerInfoRequest) returns (GetConsumerInfoResponse) {
+    option (google.api.http) = {
+      get : "/api/v1/consumer"
+    };
+  }
+
+  rpc ListConsumers(ListConsumersRequest) returns (ListConsumersResponse) {
+    option (google.api.http) = {
+      get : "/api/v1/consumers"
+    };
+  }
+
+  rpc ListTopics(ListTopicsRequest) returns (ListTopicsResponse) {
+    option (google.api.http) = {
+      get : "/api/v1/topics"
+    };
+  }
+
+  rpc ListPartitions(ListPartitionsRequest) returns (ListPartitionsResponse) {
+    option (google.api.http) = {
+      get : "/api/v1/partitions"
+    };
+  }
+
+  // DLQ
+  rpc ListDLQMessages(ListDLQMessagesRequest) returns (ListDLQMessagesResponse) {
+    option (google.api.http) = {
+      get : "/api/v1/dlq/messages"
+    };
+  }
+
+  rpc ReprocessDLQ(ReprocessDLQRequest) returns (ReprocessDLQResponse) {
+    option (google.api.http) = {
+      post : "/api/v1/dlq/reprocess"
+    };
+  }
+}

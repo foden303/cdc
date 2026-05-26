@@ -3,25 +3,25 @@ package pool
 import (
 	"sync"
 
-	"github.com/foden/cdc/pkg/models"
+	"github.com/foden/cdc/internal/core/domain"
 )
 
 var eventPool = sync.Pool{
 	New: func() any {
-		return new(models.Event)
+		return new(domain.Event)
 	},
 }
 
 // GetEvent retrieves an Event from the pool or allocates a new one.
-func GetEvent() *models.Event {
-	return eventPool.Get().(*models.Event)
+func GetEvent() *domain.Event {
+	return eventPool.Get().(*domain.Event)
 }
 
 // PutEvent resets the Event fields and returns it to the pool.
-func PutEvent(ev *models.Event) {
+func PutEvent(ev *domain.Event) {
 	if ev == nil {
 		return
 	}
-	*ev = models.Event{}
+	ev.Reset() // Explicitly clear fields
 	eventPool.Put(ev)
 }

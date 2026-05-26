@@ -1,0 +1,41 @@
+services:
+  nats-1:
+    image: nats:latest
+    container_name: nats-node-1
+    command: ["-js", "-sd", "/data", "-m", "8222"]
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    volumes:
+      - ./nats-data:/data
+    networks:
+      - cdc-network
+
+  # cdc-app:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   container_name: cdc-app
+  #   ports:
+  #     - "9090:9090"   # gRPC API
+  #     - "9091:9091"   # REST API
+  #   volumes:
+  #     - ./deploy/app/config.yaml:/app/config.yaml
+  #   depends_on:
+  #     - nats-1
+  #   networks:
+  #     - cdc-network
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9095:9090"
+    volumes:
+      - ./deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - cdc-network
+
+networks:
+  cdc-network:
+    driver: bridge

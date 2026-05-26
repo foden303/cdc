@@ -1,0 +1,105 @@
+syntax = "proto3";
+
+package cdc.v1;
+
+option go_package = "github.com/foden/cdc/api/proto/v1;cdcpb";
+
+import "common.proto";
+
+// Message delivery status.
+enum MessageStatus {
+  MESSAGE_STATUS_UNSPECIFIED = 0;
+  MESSAGE_STATUS_SENT = 1;
+  MESSAGE_STATUS_UNSENT = 2;
+}
+
+// Request to list messages with optional filters.
+message ListMessagesRequest {
+  MessageStatus status = 1;
+  optional string source_id = 2;
+  optional string topic = 3;
+  optional string partition = 4;
+  OffsetPaginationRequest pagination = 5;
+}
+
+// Response containing a page of messages.
+message ListMessagesResponse {
+  repeated MessageItem data = 1;
+  uint64 total_count = 2;
+  OffsetPaginationResponse pagination = 3;
+}
+
+// A single message item.
+message MessageItem {
+  uint64 sequence = 1;
+  string timestamp = 2;
+  string subject = 3;
+  bytes data = 4;
+  map<string, string> headers = 5;
+}
+
+// Request to get consumer information.
+message GetConsumerInfoRequest {
+  string consumer_name = 1;
+}
+
+// Response with consumer state.
+message GetConsumerInfoResponse {
+  uint64 ack_floor = 1;
+  uint64 pending_count = 2;
+}
+
+message ConsumerSummary {
+  string name = 1;
+  repeated string filter_subjects = 2;
+  uint64 num_pending = 3;
+  uint64 num_ack_pending = 4;
+  uint64 delivered_stream_seq = 5;
+  uint64 ack_floor_stream_seq = 6;
+}
+
+message ListConsumersRequest {
+  OffsetPaginationRequest pagination = 1;
+}
+
+message ListConsumersResponse {
+  repeated ConsumerSummary data = 1;
+  OffsetPaginationResponse pagination = 2;
+}
+
+// Request to list topics.
+message ListTopicsRequest {
+  OffsetPaginationRequest pagination = 1;
+}
+
+// Response containing a page of topics.
+message ListTopicsResponse {
+  repeated TopicSummary data = 1;
+  OffsetPaginationResponse pagination = 2;
+}
+
+// Summary information for a topic.
+message TopicSummary {
+  string name = 1;
+  uint64 message_count = 2;
+  int32 partition_count = 3;
+}
+
+// Request to list partitions for a topic.
+message ListPartitionsRequest {
+  string topic = 1;
+  OffsetPaginationRequest pagination = 2;
+}
+
+// Response containing a page of partitions.
+message ListPartitionsResponse {
+  repeated PartitionSummary data = 1;
+  OffsetPaginationResponse pagination = 2;
+}
+
+// Summary information for a partition.
+message PartitionSummary {
+  string id = 1;
+  uint64 message_count = 2;
+  string topic = 3;
+}

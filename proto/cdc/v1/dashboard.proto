@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package cdc.v1;
+
+option go_package = "github.com/foden/cdc/api/proto/v1;cdcpb";
+
+message GetDashboardSummaryRequest {}
+
+message GetDashboardSummaryResponse {
+  DashboardSystemInventory inventory = 1;
+  DashboardLiveTelemetry telemetry = 2;
+}
+
+message DashboardSystemInventory {
+  int32 sources_count = 1;
+  int32 sinks_count = 2;
+  int32 flows_count = 3;
+}
+
+message DashboardLiveTelemetry {
+  double throughput = 1;
+  double latency_p99 = 2;
+  uint32 active_workers = 3;
+  double channel_utilization = 4;
+  bool nats_healthy = 5;
+  double error_rate = 6;
+  uint64 total_synced_events = 7;
+  uint64 failure_count = 8;
+}
