@@ -11,7 +11,6 @@ import {
   Database,
   HardDrive,
   SlidersHorizontal,
-  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -55,6 +54,8 @@ interface FlowWizardProps {
   onOpenChange: (open: boolean) => void;
 }
 
+const UNMAPPED_COLUMN_VALUE = "__unmapped__";
+
 export function FlowWizard({ open, onOpenChange }: FlowWizardProps) {
   const { t } = useTranslation();
   const [step, setStep] = useState(1);
@@ -94,6 +95,8 @@ export function FlowWizard({ open, onOpenChange }: FlowWizardProps) {
   }, [configData, selectedSinkId]);
 
   // Find column info for selected tables
+  const tableFullName = (schema: string, name: string) => `${schema}.${name}`;
+
   const sourceTableColumns = useMemo(() => {
     if (!sourceTablesData?.tables || !selectedSourceTable) return [];
     const tInfo = sourceTablesData.tables.find(
@@ -114,6 +117,14 @@ export function FlowWizard({ open, onOpenChange }: FlowWizardProps) {
     return tInfo?.columns || [];
   }, [sinkTablesData, selectedSinkTable]);
 
+  useEffect(() => {
+    setSelectedSourceTable("");
+  }, [selectedSourceId]);
+
+  useEffect(() => {
+    setSelectedSinkTable("");
+  }, [selectedSinkId]);
+
   // Initialize Column Mappings
   useEffect(() => {
     if (sourceTableColumns.length > 0) {
@@ -126,10 +137,10 @@ export function FlowWizard({ open, onOpenChange }: FlowWizardProps) {
 
         return {
           source_column: srcCol.name,
-          sink_column: matchingSinkCol ? matchingSinkCol.name : srcCol.name,
+          sink_column: matchingSinkCol ? matchingSinkCol.name : "",
           source_type: srcCol.type,
-          sink_type: matchingSinkCol ? matchingSinkCol.type : srcCol.type,
-          enabled: true,
+          sink_type: matchingSinkCol ? matchingSinkCol.type : "",
+          enabled: !!matchingSinkCol,
         };
       });
       setColumnMappings(mappings);
@@ -147,8 +158,11 @@ export function FlowWizard({ open, onOpenChange }: FlowWizardProps) {
       return !!selectedSourceTable && !!selectedSinkTable;
     }
     if (step === 3) {
-      // At least one enabled column mapping
-      return columnMappings.some((m) => m.enabled);
+      const enabledMappings = columnMappings.filter((m) => m.enabled);
+      return (
+        enabledMappings.length > 0 &&
+        enabledMappings.every((m) => !!m.sink_column && !!m.sink_type)
+      );
     }
     return true;
   }, [
@@ -369,7 +383,10 @@ export function FlowWizard({ open, onOpenChange }: FlowWizardProps) {
                       </SelectTrigger>
                       <SelectContent>
                         {sourceTablesData?.tables?.map((tInfo) => {
-                          const fullName = `${tInfo.schema}.${tInfo.name}`;
+                          const fullName = tableFullName(
+                            tInfo.schema,
+                            tInfo.name,
+                          );
                           return (
                             <SelectItem
                               key={fullName}
@@ -413,7 +430,10 @@ export function FlowWizard({ open, onOpenChange }: FlowWizardProps) {
                       </SelectTrigger>
                       <SelectContent>
                         {sinkTablesData?.tables?.map((tInfo) => {
-                          const fullName = `${tInfo.schema}.${tInfo.name}`;
+                          const fullName = tableFullName(
+                            tInfo.schema,
+                            tInfo.name,
+                          );
                           return (
                             <SelectItem
                               key={fullName}
@@ -424,29 +444,11 @@ export function FlowWizard({ open, onOpenChange }: FlowWizardProps) {
                             </SelectItem>
                           );
                         })}
-                        <SelectItem value="custom_input" className="text-xs">
-                          {t("manager.flows.placeholders.customTable")}
-                        </SelectItem>
                       </SelectContent>
                     </Select>
                   )}
                 </div>
               </div>
-
-              {selectedSinkTable === "custom_input" && (
-                <div>
-                  <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1.5 block">
-                    {t("manager.flows.fields.customTargetTable")}
-                  </label>
-                  <Input
-                    placeholder={t(
-                      "manager.flows.placeholders.customTargetTable",
-                    )}
-                    onChange={(e) => setSelectedSinkTable(e.target.value)}
-                    className="h-10 text-xs"
-                  />
-                </div>
-              )}
             </div>
           )}
 
@@ -505,6 +507,35 @@ export function FlowWizard({ open, onOpenChange }: FlowWizardProps) {
                         setColumnMappings(next);
                       };
 
+                      const selectSinkColumn = (columnName: string | null) => {
+                        if (!columnName) {
+                          return;
+                        }
+                        if (columnName === UNMAPPED_COLUMN_VALUE) {
+                          const next = [...columnMappings];
+                          next[idx] = {
+                            ...next[idx],
+                            sink_column: "",
+                            sink_type: "",
+                            enabled: false,
+                          };
+                          setColumnMappings(next);
+                          return;
+                        }
+
+                        const sinkColumn = sinkTableColumns.find(
+                          (col) => col.name === columnName,
+                        );
+                        const next = [...columnMappings];
+                        next[idx] = {
+                          ...next[idx],
+                          sink_column: columnName,
+                          sink_type: sinkColumn?.type || "",
+                          enabled: true,
+                        };
+                        setColumnMappings(next);
+                      };
+
                       return (
                         <TableRow
                           key={m.source_column}
@@ -531,23 +562,47 @@ export function FlowWizard({ open, onOpenChange }: FlowWizardProps) {
                             <ArrowRight className="h-3.5 w-3.5 text-muted-foreground inline" />
                           </TableCell>
                           <TableCell className="px-4 py-3">
-                            <Input
-                              value={m.sink_column}
-                              disabled={!m.enabled}
-                              onChange={(e) =>
-                                updateMapping("sink_column", e.target.value)
+                            <Select
+                              value={
+                                m.sink_column || UNMAPPED_COLUMN_VALUE
                               }
-                              className="h-7 px-2 font-mono text-xs focus-visible:ring-0 max-w-[150px]"
-                            />
-                            {/* Allow sink type edits to force resolve compatibility warning if needed */}
-                            <Input
-                              value={m.sink_type}
-                              disabled={!m.enabled}
-                              onChange={(e) =>
-                                updateMapping("sink_type", e.target.value)
-                              }
-                              className="h-6 px-2 font-mono text-[9px] mt-1 text-muted-foreground max-w-[120px]"
-                            />
+                              onValueChange={selectSinkColumn}
+                              disabled={sinkTableColumns.length === 0}
+                            >
+                              <SelectTrigger className="h-8 max-w-[220px] font-mono text-xs">
+                                <SelectValue
+                                  placeholder={t(
+                                    "manager.flows.placeholders.chooseColumn",
+                                  )}
+                                />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem
+                                  value={UNMAPPED_COLUMN_VALUE}
+                                  className="text-xs text-muted-foreground"
+                                >
+                                  {t("manager.flows.placeholders.noTargetColumn")}
+                                </SelectItem>
+                                {sinkTableColumns.map((column) => (
+                                  <SelectItem
+                                    key={column.name}
+                                    value={column.name}
+                                    className="text-xs"
+                                  >
+                                    <span className="font-mono">
+                                      {column.name}
+                                    </span>
+                                    <span className="ml-2 text-[10px] text-muted-foreground">
+                                      {column.type}
+                                    </span>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <div className="mt-1 min-h-4 font-mono text-[10px] text-muted-foreground">
+                              {m.sink_type ||
+                                t("manager.flows.validation.notMapped")}
+                            </div>
                           </TableCell>
                           <TableCell className="px-4 py-3">
                             {m.enabled ? (

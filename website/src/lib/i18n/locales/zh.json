@@ -341,7 +341,8 @@
         "warningDesc": "我们检测到字段类型存在兼容性警告。请确保类型匹配，或禁用这些字段的同步。",
         "compatible": "兼容",
         "warning": "警告",
-        "disabled": "已禁用"
+        "disabled": "已禁用",
+        "notMapped": "未映射"
       },
       "desc": "配置映射活动表和数据库复制流的管道。",
       "createDesc": "定义将 CDC 事件从源传输到目标的高性能管道。",
@@ -351,7 +352,6 @@
         "selectSink": "选择目标端连接器",
         "sourceTable": "源表",
         "targetTableIndex": "目标表 / 索引",
-        "customTargetTable": "自定义目标表名",
         "flowName": "同步任务名称",
         "batchSize": "批次大小（事件）",
         "flushInterval": "刷新间隔（毫秒）",
@@ -362,10 +362,10 @@
         "chooseSource": "-- 选择源端 --",
         "chooseSink": "-- 选择目标端 --",
         "chooseTable": "-- 选择数据表 --",
+        "chooseColumn": "-- 选择字段 --",
+        "noTargetColumn": "-- 不映射目标字段 --",
         "targetIndex": "例如 users_index",
         "webhookDirect": "直接推送至端点",
-        "customTable": "-- 输入自定义名称 --",
-        "customTargetTable": "例如 public.users_sink",
         "flowName": "例如 sync-orders-flow",
         "filterExpression": "例如 event.op == 'u' || event.data.amount > 1000"
       },

@@ -341,7 +341,8 @@
         "warningDesc": "We detected columns with type compatibility warnings. Make sure types match, or disable these column syncs.",
         "compatible": "Compatible",
         "warning": "Warning",
-        "disabled": "Disabled"
+        "disabled": "Disabled",
+        "notMapped": "Not mapped"
       },
       "desc": "Configure pipelines mapping active tables and database replication flows.",
       "createDesc": "Define a high-performance pipeline transferring CDC events from source to sink.",
@@ -351,7 +352,6 @@
         "selectSink": "Select Sink Connector",
         "sourceTable": "Source Table",
         "targetTableIndex": "Target Table / Index",
-        "customTargetTable": "Custom Target Table Name",
         "flowName": "Sync Flow Name",
         "batchSize": "Batch Size (events)",
         "flushInterval": "Flush Interval (ms)",
@@ -362,10 +362,10 @@
         "chooseSource": "-- Choose Source --",
         "chooseSink": "-- Choose Sink --",
         "chooseTable": "-- Choose Table --",
+        "chooseColumn": "-- Choose Column --",
+        "noTargetColumn": "-- No target column --",
         "targetIndex": "e.g. users_index",
         "webhookDirect": "Direct push to endpoint",
-        "customTable": "-- Enter custom name --",
-        "customTargetTable": "e.g. public.users_sink",
         "flowName": "e.g. sync-orders-flow",
         "filterExpression": "e.g. event.op == 'u' || event.data.amount > 1000"
       },

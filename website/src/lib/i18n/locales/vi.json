@@ -341,7 +341,8 @@
         "warningDesc": "Chúng tôi phát hiện các cột có cảnh báo tương thích về kiểu dữ liệu. Hãy đảm bảo các kiểu dữ liệu khớp nhau, hoặc vô hiệu hóa việc đồng bộ các cột này.",
         "compatible": "Tương thích",
         "warning": "Cảnh báo",
-        "disabled": "Đã tắt"
+        "disabled": "Đã tắt",
+        "notMapped": "Chưa map"
       },
       "desc": "Cấu hình các đường ống ánh xạ các bảng đang hoạt động và luồng sao chép cơ sở dữ liệu.",
       "createDesc": "Định nghĩa một đường ống hiệu năng cao để truyền các sự kiện CDC từ nguồn đến đích.",
@@ -351,7 +352,6 @@
         "selectSink": "Chọn kết nối đích",
         "sourceTable": "Bảng nguồn",
         "targetTableIndex": "Bảng đích / Index",
-        "customTargetTable": "Tên bảng đích tùy chỉnh",
         "flowName": "Tên luồng đồng bộ",
         "batchSize": "Kích thước Batch (sự kiện)",
         "flushInterval": "Khoảng thời gian Flush (ms)",
@@ -362,10 +362,10 @@
         "chooseSource": "-- Chọn nguồn --",
         "chooseSink": "-- Chọn đích --",
         "chooseTable": "-- Chọn bảng --",
+        "chooseColumn": "-- Chọn cột --",
+        "noTargetColumn": "-- Không map cột đích --",
         "targetIndex": "ví dụ: users_index",
         "webhookDirect": "Đẩy trực tiếp vào endpoint",
-        "customTable": "-- Nhập tên tùy chỉnh --",
-        "customTargetTable": "ví dụ: public.users_sink",
         "flowName": "ví dụ: sync-orders-flow",
         "filterExpression": "ví dụ: event.op == 'u' || event.data.amount > 1000"
       },
